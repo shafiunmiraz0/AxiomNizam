@@ -1,0 +1,60 @@
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="t d">
+  <title id="t">AxiomNizam Logo Minimal</title>
+  <desc id="d">Minimal Islamic-inspired emblem with crescent and Quran pages, using Bangladesh and Iran colors.</desc>
+
+  <defs>
+    <radialGradient id="bgGrad" cx="35%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#008C63"/>
+      <stop offset="100%" stop-color="#004D38"/>
+    </radialGradient>
+    <radialGradient id="redGrad" cx="35%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#FF5D6E"/>
+      <stop offset="100%" stop-color="#D8172B"/>
+    </radialGradient>
+    <linearGradient id="silverAccent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="50%" stop-color="#C8DACA"/>
+      <stop offset="100%" stop-color="#FFFFFF"/>
+    </linearGradient>
+    <linearGradient id="flagGreen" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#239F40"/>
+      <stop offset="100%" stop-color="#006A4E"/>
+    </linearGradient>
+    <linearGradient id="pageGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#F0F4F2"/>
+    </linearGradient>
+    <filter id="softShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="1.5" stdDeviation="2" flood-color="#000000" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+
+  <circle cx="64" cy="64" r="58" fill="url(#bgGrad)" filter="url(#softShadow)"/>
+  <circle cx="64" cy="64" r="55" stroke="url(#silverAccent)" stroke-width="2" opacity="0.9"/>
+  <circle cx="64" cy="64" r="21" fill="url(#redGrad)"/>
+
+  <path filter="url(#softShadow)" d="M64 30C55 30 47 37.2 47 46C47 54.8 55 62 64 62C72.2 62 79.2 56.2 80.9 48.4C79.2 52.8 74.8 56 69.8 56C63.3 56 58 50.7 58 44.2C58 37.7 63.3 32.4 69.8 32.4C74.7 32.4 79.1 35.6 80.8 40C78.9 34.2 73.9 30 64 30Z" fill="#FFFFFF"/>
+  <path d="M80.5 36.5L82 39.8L85.6 40.1L82.9 42.5L83.7 46L80.5 44.1L77.3 46L78.1 42.5L75.4 40.1L79 39.8L80.5 36.5Z" fill="url(#redGrad)" filter="url(#softShadow)"/>
+
+  <!-- Quran pages adapted from the main logo -->
+  <g transform="translate(24 71)" filter="url(#softShadow)">
+    <path d="M0 29V18.5C0 13.8 3.6 10 8.2 10H30.5C35.3 10 40 11.8 44 15.1V38.5C40.2 35.4 35.2 33.6 30.3 33.6H8.2C3.7 33.6 0 30 0 25.5V29Z" fill="url(#pageGrad)"/>
+    <path d="M80 29V18.5C80 13.8 76.4 10 71.8 10H49.5C44.7 10 40 11.8 36 15.1V38.5C39.8 35.4 44.8 33.6 49.7 33.6H71.8C76.3 33.6 80 30 80 25.5V29Z" fill="url(#pageGrad)"/>
+
+    <path d="M0 29V18.5C0 13.8 3.6 10 8.2 10H30.5C35.3 10 40 11.8 44 15.1V38.5C40.2 35.4 35.2 33.6 30.3 33.6H8.2C3.7 33.6 0 30 0 25.5" stroke="url(#flagGreen)" stroke-width="2"/>
+    <path d="M80 29V18.5C80 13.8 76.4 10 71.8 10H49.5C44.7 10 40 11.8 36 15.1V38.5C39.8 35.4 44.8 33.6 49.7 33.6H71.8C76.3 33.6 80 30 80 25.5" stroke="url(#redGrad)" stroke-width="2"/>
+
+    <line x1="40" y1="15" x2="40" y2="40" stroke="url(#redGrad)" stroke-width="2.4" stroke-linecap="round"/>
+
+    <!-- Arabic ayat text fitted inside the Quran pages -->
+    <text x="20" y="16.4" text-anchor="middle" textLength="28" lengthAdjust="spacingAndGlyphs" font-family="Amiri, Noto Naskh Arabic, Scheherazade New, serif" font-size="2.25" fill="#004D38">الَّذِي عَلَّمَ بِالْقَلَمِ</text>
+    <text x="20" y="20.0" text-anchor="middle" textLength="28" lengthAdjust="spacingAndGlyphs" font-family="Amiri, Noto Naskh Arabic, Scheherazade New, serif" font-size="2.25" fill="#C21A2A">عَلَّمَ الْإِنسَانَ مَا لَمْ يَعْلَمْ</text>
+
+    <text x="60" y="15.8" text-anchor="middle" textLength="28" lengthAdjust="spacingAndGlyphs" font-family="Amiri, Noto Naskh Arabic, Scheherazade New, serif" font-size="1.72" fill="#004D38">إِنَّا نَحْنُ نُحْيِي الْمَوْتَىٰ</text>
+    <text x="60" y="18.9" text-anchor="middle" textLength="28" lengthAdjust="spacingAndGlyphs" font-family="Amiri, Noto Naskh Arabic, Scheherazade New, serif" font-size="1.72" fill="#C21A2A">وَنَكْتُبُ مَا قَدَّمُوا</text>
+    <text x="60" y="22.0" text-anchor="middle" textLength="28" lengthAdjust="spacingAndGlyphs" font-family="Amiri, Noto Naskh Arabic, Scheherazade New, serif" font-size="1.72" fill="#004D38">وَآثَارَهُمْ ۚ وَكُلَّ شَيْءٍ</text>
+    <text x="60" y="25.1" text-anchor="middle" textLength="28" lengthAdjust="spacingAndGlyphs" font-family="Amiri, Noto Naskh Arabic, Scheherazade New, serif" font-size="1.72" fill="#C21A2A">أَحْصَيْنَاهُ فِي إِمَامٍ مُّبِينٍ</text>
+  </g>
+
+  <rect x="24" y="110" width="80" height="4" rx="2" fill="url(#flagGreen)" filter="url(#softShadow)"/>
+</svg>
