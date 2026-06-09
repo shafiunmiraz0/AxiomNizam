@@ -56,7 +56,8 @@ services:
   postgres:
     image: postgres:latest
     container_name: postgres
-    # Phase 15: NO host port — only accessible via data-net
+    ports:
+      - "5432:5432"  # Local testing — remove for production
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-axiomnizam}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
