@@ -599,11 +599,16 @@ func (h *APIBuilderHandler) InvokeCustomAPI(c *gin.Context) {
 
 	var response interface{}
 	if query != "" {
-		dbType := strings.ToLower(strings.TrimSpace(api.SourceDatabase))
-		dbConn := h.db[dbType]
-		if dbType == "" || dbConn == nil {
+		// Prefer source_server (specific server key) over source_database (db type)
+		lookupKey := strings.ToLower(strings.TrimSpace(api.SourceServer))
+		if lookupKey == "" {
+			lookupKey = strings.ToLower(strings.TrimSpace(api.SourceDatabase))
+		}
+		dbConn := h.db[lookupKey]
+		if lookupKey == "" || dbConn == nil {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error":           "source database is not configured for this custom api",
+				"source_server":   api.SourceServer,
 				"source_database": api.SourceDatabase,
 			})
 			return
