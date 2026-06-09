@@ -1,0 +1,32 @@
+# docker-compose.dev.yml — Development overrides
+#
+# Exposes database ports to localhost for local development tools.
+# Usage: docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+#
+services:
+  postgres:
+    ports:
+      - "5432:5432"
+
+  mongodb:
+    ports:
+      - "27017:27017"
+
+  percona:
+    ports:
+      - "3308:3306"
+
+  etcd:
+    ports:
+      - "2379:2379"
+      - "2380:2380"
+
+  rabbitmq:
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+  kafka:
+    ports:
+      - "9092:9092"
+      - "9093:9093"

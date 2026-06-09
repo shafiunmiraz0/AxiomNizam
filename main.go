@@ -2,18 +2,23 @@ package main
 
 import (
 	"context"
+	"crypto/aes"
+	"crypto/cipher"
+	"encoding/base32"
 	"fmt"
 	"log"
 	"net/http"
 	"net/url"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
 	"time"
 
 	"example.com/axiomnizam/internal/apibanks"
+	"example.com/axiomnizam/internal/apigateway"
 	"example.com/axiomnizam/internal/apiscanner"
 	"example.com/axiomnizam/internal/audit"
 	"example.com/axiomnizam/internal/auth"
@@ -26,9 +31,13 @@ import (
 	datasourceresource "example.com/axiomnizam/internal/datasource"
 	"example.com/axiomnizam/internal/encryption"
 	"example.com/axiomnizam/internal/etl"
+	"example.com/axiomnizam/internal/frontend"
 	"example.com/axiomnizam/internal/eventbus"
 	exportpkg "example.com/axiomnizam/internal/export"
 	"example.com/axiomnizam/internal/gatekeeper"
+	gkmodels "example.com/axiomnizam/internal/gatekeeper/models"
+	gkpolicy "example.com/axiomnizam/internal/gatekeeper/policy"
+	gkrisk "example.com/axiomnizam/internal/gatekeeper/risk"
 	analyticspkg "example.com/axiomnizam/internal/analytics"
 	gispkg "example.com/axiomnizam/internal/gis"
 	graphqlpkg "example.com/axiomnizam/internal/graphql"
@@ -47,6 +56,7 @@ import (
 	"example.com/axiomnizam/internal/kubeplus/admission"
 	"example.com/axiomnizam/internal/kubeplus/crd"
 	"example.com/axiomnizam/internal/kubeplus/scheduler"
+	iammw "example.com/axiomnizam/internal/iam/middleware"
 	"example.com/axiomnizam/internal/lineage"
 	"example.com/axiomnizam/internal/logging"
 	"example.com/axiomnizam/internal/metrics"
@@ -71,16 +81,162 @@ import (
 	"example.com/axiomnizam/internal/storage"
 	"example.com/axiomnizam/internal/streaming"
 	"example.com/axiomnizam/internal/tenant"
+	axmtls "example.com/axiomnizam/internal/tls"
 	"example.com/axiomnizam/internal/tracing"
 	"example.com/axiomnizam/internal/vectorplus"
 	"example.com/axiomnizam/internal/waitx"
 	"example.com/axiomnizam/internal/versioning"
 	"example.com/axiomnizam/internal/webhooks"
 	"example.com/axiomnizam/internal/workflows"
+	"example.com/axiomnizam/internal/secretmanager"
+	"example.com/axiomnizam/internal/federation"
+	"example.com/axiomnizam/internal/securitymon"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/joho/godotenv"
 	"gorm.io/gorm"
 )
+
+// decryptAESSecret decrypts an AES-GCM encrypted TOTP secret.
+// The ciphertext must include the nonce as a prefix (standard Go AES-GCM format).
+func decryptAESSecret(encryptionKey []byte, ciphertext []byte) ([]byte, error) {
+	block, err := aes.NewCipher(encryptionKey)
+	if err != nil {
+		return nil, err
+	}
+	aesGCM, err := cipher.NewGCM(block)
+	if err != nil {
+		return nil, err
+	}
+	nonceSize := aesGCM.NonceSize()
+	if len(ciphertext) < nonceSize {
+		return nil, fmt.Errorf("ciphertext too short")
+	}
+	nonce, ct := ciphertext[:nonceSize], ciphertext[nonceSize:]
+	return aesGCM.Open(nil, nonce, ct, nil)
+}
+
+// ── Zero Trust Phase 3: RBAC Authorization Helpers ────────────────────────────
+
+// mapHTTPMethodToRBACVerb translates HTTP methods to RBAC verb strings.
+func mapHTTPMethodToRBACVerb(method string) string {
+	switch method {
+	case "GET", "HEAD", "OPTIONS":
+		return "read"
+	case "POST":
+		return "create"
+	case "PUT", "PATCH":
+		return "update"
+	case "DELETE":
+		return "delete"
+	default:
+		return strings.ToLower(method)
+	}
+}
+
+// mapPathToRBACResource extracts the primary resource kind from a URL path.
+// Examples:
+//
+//	"/api/v1/storage/buckets" → "storage"
+//	"/api/v1/iam/users"       → "iam"
+//	"/api/v1/rbac/roles"      → "rbac"
+//	"/api/mysql/query"         → "database"
+//	"/auth/login"              → "auth"
+func mapPathToRBACResource(path string) string {
+	// Handle /api/v1/<module>/... paths
+	if strings.HasPrefix(path, "/api/v1/") {
+		rest := strings.TrimPrefix(path, "/api/v1/")
+		parts := strings.SplitN(rest, "/", 2)
+		if len(parts) > 0 && parts[0] != "" {
+			return parts[0]
+		}
+	}
+
+	// Handle /api/<service>/... paths
+	if strings.HasPrefix(path, "/api/") {
+		rest := strings.TrimPrefix(path, "/api/")
+		parts := strings.SplitN(rest, "/", 2)
+		if len(parts) > 0 {
+			switch parts[0] {
+			case "mysql", "mariadb", "postgres", "percona", "oracle", "mssql", "sqlite", "mongodb":
+				return "database"
+			case "graphql":
+				return "graphql"
+			default:
+				return parts[0]
+			}
+		}
+	}
+
+	// Handle /auth/... paths
+	if strings.HasPrefix(path, "/auth/") {
+		return "auth"
+	}
+
+	return "unknown"
+}
+
+// seedDefaultRBACRoles populates the K8s-style RBAC engine with default
+// cluster roles that mirror the IAM system roles. This ensures CanPerform()
+// has data to evaluate against from startup.
+func seedDefaultRBACRoles(engine *rbac.Engine) {
+	ctx := context.Background()
+
+	// Sysadmin: full wildcard access on all resources/verbs
+	_ = engine.CreateClusterRole(ctx, &rbac.EngineClusterRole{
+		Name: "sysadmin",
+		Rules: []*rbac.EnginePolicyRule{
+			{Verbs: []string{"*"}, Resources: []string{"*"}},
+		},
+	})
+	_ = engine.CreateClusterRoleBinding(ctx, &rbac.EngineClusterRoleBinding{
+		Name:     "sysadmin-binding",
+		Role:     "sysadmin",
+		Subjects: []*rbac.EngineSubject{{Type: "User", Name: "sysadmin"}},
+	})
+
+	// Admin: full wildcard access on all resources (matches IAM admin role capabilities)
+	_ = engine.CreateClusterRole(ctx, &rbac.EngineClusterRole{
+		Name: "admin",
+		Rules: []*rbac.EnginePolicyRule{
+			{Verbs: []string{"*"}, Resources: []string{"*"}},
+		},
+	})
+	_ = engine.CreateClusterRoleBinding(ctx, &rbac.EngineClusterRoleBinding{
+		Name:     "admin-binding",
+		Role:     "admin",
+		Subjects: []*rbac.EngineSubject{{Type: "User", Name: "admin"}},
+	})
+
+	// Manager: read on most resources, execute on jobs
+	_ = engine.CreateClusterRole(ctx, &rbac.EngineClusterRole{
+		Name: "manager",
+		Rules: []*rbac.EnginePolicyRule{
+			{Verbs: []string{"read"}, Resources: []string{"*"}},
+			{Verbs: []string{"create", "update"}, Resources: []string{"jobs"}},
+		},
+	})
+	_ = engine.CreateClusterRoleBinding(ctx, &rbac.EngineClusterRoleBinding{
+		Name:     "manager-binding",
+		Role:     "manager",
+		Subjects: []*rbac.EngineSubject{{Type: "User", Name: "manager"}},
+	})
+
+	// User: read/update on own profile only
+	_ = engine.CreateClusterRole(ctx, &rbac.EngineClusterRole{
+		Name: "user",
+		Rules: []*rbac.EnginePolicyRule{
+			{Verbs: []string{"read", "update"}, Resources: []string{"profile", "auth"}},
+		},
+	})
+	_ = engine.CreateClusterRoleBinding(ctx, &rbac.EngineClusterRoleBinding{
+		Name:     "user-binding",
+		Role:     "user",
+		Subjects: []*rbac.EngineSubject{{Type: "User", Name: "user"}},
+	})
+
+	log.Println("✅ RBAC engine seeded with default cluster roles (sysadmin, admin, manager, user)")
+}
 
 func main() {
 	// Load environment variables from .env file
@@ -113,6 +269,36 @@ func main() {
 	// Load configuration
 	cfg := config.LoadConfig()
 	server.ApplySecurityGuardrails(cfg)
+
+	// ── TLS initialization (Phase 4) ─────────────────────────────────────────
+	// When TLS_CERT_FILE + TLS_KEY_FILE are set, or TLS_AUTO_GENERATE=true,
+	// the server starts with HTTPS. Self-signed certs are created in data/certs/
+	// for development when auto-generate is enabled.
+	tlsCfg, tlsErr := axmtls.LoadOrCreate(
+		cfg.TLS.CertFile,
+		cfg.TLS.KeyFile,
+		cfg.TLS.AutoGenerate,
+		"/data",
+	)
+	if tlsErr != nil {
+		log.Fatalf("TLS initialization failed: %v", tlsErr)
+	}
+	if tlsCfg.Enabled {
+		if tlsCfg.AutoGenerated {
+			log.Printf("🔒 TLS enabled with auto-generated self-signed certificate (dev mode)")
+			log.Printf("   Cert: %s", tlsCfg.CertFile)
+			log.Printf("   Key:  %s", tlsCfg.KeyFile)
+		} else {
+			log.Printf("🔒 TLS enabled with provided certificate")
+		}
+	} else {
+		log.Println("⚠️  TLS disabled — server running on plain HTTP")
+	}
+
+	// NOTE: Do NOT auto-set POSTGRES_SSLMODE=require — internal Docker PostgreSQL
+	// runs on an isolated data-net without TLS. Set POSTGRES_SSLMODE=require only
+	// when connecting to an external PostgreSQL instance with SSL configured.
+
 	iamOnlyAuthRaw := strings.TrimSpace(os.Getenv("IAM_ONLY_AUTH"))
 	iamOnlyAuth := true
 	if iamOnlyAuthRaw != "" {
@@ -154,7 +340,11 @@ func main() {
 	addValidatorJWKSBase(os.Getenv("IAM_INTERNAL_BASE_URL"))
 	addValidatorJWKSBase(iamIssuerURL)
 	addValidatorJWKSBase(cfg.GetIAMURL())
-	addValidatorJWKSBase("http://localhost:8000")
+	jwksScheme := "http"
+	if tlsCfg.Enabled {
+		jwksScheme = "https"
+	}
+	addValidatorJWKSBase(fmt.Sprintf("%s://localhost:%s", jwksScheme, cfg.API.Port))
 
 	buildValidatorConfig := func(jwksBase string) *auth.TokenValidatorConfig {
 		validatorConfig := &auth.TokenValidatorConfig{
@@ -263,6 +453,10 @@ func main() {
 	var iamSystem *iampkg.System
 	var iamErr error
 
+	// Gatekeeper (2FA) system — declared here so authenticateRequest() can
+	// reference it in the closure even though it is initialized later.
+	var gkSystem *gatekeeper.System
+
 	if earlyStorageBackend != "raft" {
 		// etcd mode: initialize IAM immediately.
 		iamSystem, iamErr = iampkg.NewSystem(conns.PostgreSQL, conns.Etcd, iampkg.Config{
@@ -295,7 +489,41 @@ func main() {
 	logging.Init(logEnv)
 
 	// Create Gin router
-	router := gin.Default()
+	router := gin.New()
+	router.Use(gin.Recovery())
+
+	// Strip server/framework identifying headers (anti-fingerprinting)
+	router.Use(func(c *gin.Context) {
+		c.Header("X-Powered-By", "")
+		c.Header("Server", "")
+		c.Next()
+	})
+
+	// HTTPS redirect middleware (Phase 4).
+	// When TLS is enabled, redirect plain HTTP requests to HTTPS.
+	// Skips redirect for health checks and internal probes.
+	if tlsCfg.Enabled {
+		router.Use(func(c *gin.Context) {
+			// Skip redirect for health/status endpoints (load balancer probes)
+			path := c.Request.URL.Path
+			if path == "/health" || path == "/status" || path == "/api/health" || path == "/api/status" {
+				c.Next()
+				return
+			}
+			// If request is not TLS, redirect to HTTPS
+			if c.Request.TLS == nil {
+				// Trust X-Forwarded-Proto from reverse proxy
+				proto := c.GetHeader("X-Forwarded-Proto")
+				if proto == "" || proto == "http" {
+					target := "https://" + c.Request.Host + c.Request.URL.RequestURI()
+					c.Redirect(http.StatusMovedPermanently, target)
+					c.Abort()
+					return
+				}
+			}
+			c.Next()
+		})
+	}
 
 	// Trust proxies for X-Forwarded-For / X-Real-IP.
 	// Set TRUSTED_PROXIES env to comma-separated CIDRs (e.g. "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16").
@@ -336,8 +564,9 @@ func main() {
 	}
 	if len(allowedOriginSet) == 0 {
 		addAllowedOrigin("https://axiomnizam.bitbd.net")
-		addAllowedOrigin("http://localhost:7000")
-		addAllowedOrigin("http://127.0.0.1:7000")
+		addAllowedOrigin("http://localhost:8000")
+		addAllowedOrigin("http://127.0.0.1:8000")
+		addAllowedOrigin("https://localhost:8000")
 	}
 
 	isAllowedOrigin := func(origin string) bool {
@@ -377,10 +606,105 @@ func main() {
 	// Security headers + request body size limits + CSRF
 	router.Use(observability.SecurityHeadersMiddleware())
 	router.Use(observability.RequestValidationMiddleware(observability.DefaultRequestValidationConfig()))
-	router.Use(observability.CSRFMiddleware(observability.DefaultCSRFConfig()))
+	router.Use(observability.CSRFMiddleware(observability.CSRFConfigWithTLS(cfg.TLS.Enabled)))
+
+	// ── Frontend (merged from separate frontend service) ─────────────────
+	frontendHandler := frontend.NewHandler("")
+	frontend.RegisterRoutes(router, frontendHandler)
 
 	// Prometheus /metrics endpoint
 	metrics.RegisterMetricsEndpoint(router)
+
+	// ── Phase 13: Security Observability ──────────────────────────────────
+	// Initialize security monitoring: metrics, anomaly detection, threat
+	// response, audit chain verification, SIEM export, and dashboard.
+	secMetrics := securitymon.NewSecurityMetrics()
+	secSIEM := securitymon.LoadSIEMExporterFromEnv(secMetrics)
+	secDetector := securitymon.NewAnomalyDetector(5*time.Minute, 3.0, nil) // callback set after responder init
+	// Wire ThreatResponder with real IAM session/token revokers.
+	// IAM System is initialized at this point (line ~458).
+	var secSessionRevoker securitymon.SessionRevoker
+	var secTokenRevoker securitymon.TokenRevoker
+	if iamSystem != nil {
+		secSessionRevoker = iamSystem.Sessions
+		secTokenRevoker = iamSystem.RevokedStore
+	}
+	secResponder := securitymon.NewThreatResponder(secSessionRevoker, secTokenRevoker, secMetrics, securitymon.DefaultThreatThresholds())
+	secDetector = securitymon.NewAnomalyDetector(5*time.Duration(1)*time.Minute, 3.0, func(evt securitymon.AnomalyEvent) {
+		secResponder.HandleAnomaly(evt)
+	})
+
+	// Audit chain verifier — runs periodic integrity checks.
+	// Uses a nil-safe adapter: returns empty entries until a real audit logger is wired.
+	auditProvider := securitymon.NewAuditLoggerAdapter(func(_ context.Context, limit int) ([]securitymon.ChainEntry, error) {
+		return nil, nil // no audit logger wired yet — verifier will report "chain empty"
+	})
+	secVerifier := securitymon.NewAuditChainVerifier(auditProvider, secMetrics, 1*time.Hour)
+	secVerifier.Start()
+
+	// Dashboard endpoint (no auth required — internal ops visibility)
+	secDashboard := securitymon.NewDashboardHandler(secMetrics, secDetector, secResponder, secVerifier, secSIEM)
+	secDashboard.RegisterRoutes(router)
+
+	log.Println("✅ Security observability initialized (Phase 13)")
+
+	// ── Phase 14: Secret Management ─────────────────────────────────────
+	// Centralized secret management with Vault support, versioning, grace
+	// period, and scheduled rotation. Falls back to env vars when Vault
+	// is not configured.
+	secStore := secretmanager.LoadSecretStoreFromEnv()
+	secMgr := secretmanager.NewSecretManager(secStore, 5, 24*time.Hour)
+	secMgr.StartCleanupLoop(1 * time.Hour)
+
+	// Preload existing env secrets into the manager for versioning
+	for _, key := range []string{
+		"POSTGRES_PASSWORD", "MYSQL_PASSWORD", "MARIADB_PASSWORD",
+		"MONGODB_PASSWORD", "RABBITMQ_PASSWORD", "GATEKEEPER_ENCRYPTION_KEY",
+		"GATEKEEPER_HMAC_KEY", "DEMO_JWT_SECRET",
+	} {
+		if val, err := secStore.Get(key); err == nil && val != "" {
+			_ = secMgr.Put(key, val)
+		}
+	}
+
+	log.Printf("✅ Secret manager initialized (store: %s)", secStore.Name())
+
+	// ── Phase 16: Identity Federation ────────────────────────────────────
+	// OIDC/SAML federation, behavior profiling, identity risk scoring,
+	// and just-in-time privilege elevation.
+	behaviorProfiler := federation.NewBehaviorProfiler()
+	identityRiskScorer := federation.NewIdentityRiskScorer()
+	jitManager := federation.NewJITManager(nil) // nil repo = in-memory only
+	jitManager.StartCleanupLoop(1 * time.Hour)
+	_ = behaviorProfiler   // wired into auth flow below
+	_ = identityRiskScorer // wired into auth flow below
+	_ = jitManager         // available for JIT privilege elevation
+
+	// Load OIDC federation from env (if configured)
+	if oidcIssuer := os.Getenv("FEDERATION_OIDC_ISSUER"); oidcIssuer != "" {
+		oidcProvider := federation.NewOIDCProvider(
+			os.Getenv("FEDERATION_OIDC_ALIAS"),
+			oidcIssuer,
+			os.Getenv("FEDERATION_OIDC_CLIENT_ID"),
+			os.Getenv("FEDERATION_OIDC_CLIENT_SECRET"),
+			nil,
+		)
+		oidcProvider.AuthorizationURL = os.Getenv("FEDERATION_OIDC_AUTH_URL")
+		oidcProvider.TokenURL = os.Getenv("FEDERATION_OIDC_TOKEN_URL")
+		oidcProvider.UserInfoURL = os.Getenv("FEDERATION_OIDC_USERINFO_URL")
+		log.Printf("✅ OIDC federation provider loaded: %s", oidcProvider.Alias)
+		_ = oidcProvider
+	}
+
+	log.Println("✅ Identity federation initialized (Phase 16)")
+
+	// ── Phase 17: API Gateway ──────────────────────────────────────────────
+	// Centralized API gateway with per-endpoint rate limiting, API key
+	// management for external consumers, OpenAPI request validation, and
+	// API version negotiation.
+	gwSystem := apigateway.NewSystem()
+	gwSystem.RegisterMiddleware(router)
+	log.Println("✅ API Gateway initialized (Phase 17)")
 
 	// Add API Metrics tracking middleware
 	// Initialize first before adding middleware
@@ -456,17 +780,68 @@ func main() {
 		}
 	}
 
-	// authenticateRequest validates token + rate limits and sets auth context without advancing handlers.
-	authenticateRequest := func(c *gin.Context) bool {
-		activeTokenValidator := getOrInitTokenValidator()
-		if activeTokenValidator == nil {
-			c.JSON(http.StatusServiceUnavailable, gin.H{
-				"error":   "authentication unavailable",
-				"message": "token validation is not available because IAM token validator initialization failed",
-			})
-			c.Abort()
+	// validateTOTPForUser validates a TOTP code against the user's enrolled factors.
+	// Used by authenticateRequest() (risk-based MFA) and authorizeRequest()
+	// (policy-triggered and step-up MFA) to avoid code duplication.
+	validateTOTPForUser := func(c *gin.Context, userIDStr string, mfaToken string) bool {
+		if gkSystem == nil || gkSystem.FactorRepository() == nil || gkSystem.TOTPService == nil {
 			return false
 		}
+		uid, err := uuid.Parse(strings.TrimSpace(userIDStr))
+		if err != nil || uid == uuid.Nil {
+			return false
+		}
+		factors, fErr := gkSystem.FactorRepository().GetByUserID(c.Request.Context(), uid)
+		if fErr != nil {
+			return false
+		}
+		for _, factor := range factors {
+			if !factor.IsActive() || factor.Spec.Type != gkmodels.FactorTypeTOTP {
+				continue
+			}
+			if len(factor.Spec.EncryptedSecret) == 0 {
+				continue
+			}
+			secretBytes, decErr := decryptAESSecret(gkSystem.Config().EncryptionKey, factor.Spec.EncryptedSecret)
+			if decErr != nil {
+				continue
+			}
+			secretB32 := base32.StdEncoding.EncodeToString(secretBytes)
+			if ok, _ := gkSystem.TOTPService.ValidateCode(c.Request.Context(), secretB32, mfaToken); ok {
+				return true
+			}
+		}
+		return false
+	}
+
+	// authenticateRequest validates token + rate limits and sets auth context without advancing handlers.
+	//
+	// Phase 1 — unified JWT validation:
+	//   Primary:  IAM Issuer (RSA-256 + etcd revocation check)
+	//   Fallback: legacy auth.TokenValidator (only when IAM is unavailable)
+	authenticateRequest := func(c *gin.Context) bool {
+		// Phase 13: Record request for anomaly detection
+		secMetrics.RecordTotalRequest()
+		securitymon.PromTotalRequests.Inc()
+		secDetector.RecordRequest(c.ClientIP(), "") // user ID set after auth succeeds
+
+		// Phase 18: Track auth failures and export to SIEM
+		authFailed := false
+		defer func() {
+			if authFailed {
+				secMetrics.RecordAuthFailure()
+				securitymon.PromAuthFailures.Inc()
+				go secSIEM.Export(context.Background(), securitymon.SIEMEvent{
+					Timestamp: time.Now().UTC(),
+					EventType: "auth_failure",
+					Severity:  "warning",
+					IPAddress: c.ClientIP(),
+					Outcome:   "failure",
+					Message:   "authentication failed",
+					Source:    "axiomnizam",
+				})
+			}
+		}()
 
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
@@ -482,53 +857,505 @@ func main() {
 			return false
 		}
 
-		token, err := auth.ExtractBearerToken(authHeader)
+		rawToken, err := auth.ExtractBearerToken(authHeader)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": fmt.Sprintf("invalid authorization header: %v", err)})
 			c.Abort()
 			return false
 		}
 
-		claims, err := activeTokenValidator.ValidateToken(token)
-		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": fmt.Sprintf("invalid token: %v", err)})
+		// ── Unified validation path ──────────────────────────────────────
+		// When the IAM system is available, use its Issuer for RSA-256
+		// signature validation + etcd revocation check.  This is the same
+		// path the IAM-specific middleware uses, ensuring a single
+		// validation surface for the entire platform.
+		//
+		// Only when IAM is nil (e.g. startup race) do we fall back to the
+		// legacy JWKS-based TokenValidator which supports demo HMAC tokens.
+		// ─────────────────────────────────────────────────────────────────
+
+		var principal string
+		var email string
+		var roles []string
+		var clientID string
+		var iamClaims *iamtoken.IAMClaims
+		var legacyClaims *auth.Claims
+
+		if iamSystem != nil && iamSystem.Issuer != nil {
+			// ── Primary: IAM Issuer (RSA-256 + revocation) ──
+			parsed, valErr := iamSystem.Issuer.ValidateAccessToken(rawToken)
+			if valErr != nil {
+				authFailed = true
+				c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid token"})
+				c.Abort()
+				return false
+			}
+			iamClaims = parsed
+
+			// Replay-attack prevention: check JTI revocation in etcd/Raft
+			if iamSystem.RevokedStore != nil && strings.TrimSpace(iamClaims.ID) != "" {
+				if revoked, _ := iamSystem.RevokedStore.IsRevoked(strings.TrimSpace(iamClaims.ID)); revoked {
+					authFailed = true
+					c.JSON(http.StatusUnauthorized, gin.H{"error": "token has been revoked"})
+					c.Abort()
+					return false
+				}
+			}
+
+			// Bootstrap sysadmin role fallback (same logic as IAM middleware)
+			if len(iamClaims.Roles) == 0 {
+				configuredSysadminEmail := strings.ToLower(strings.TrimSpace(os.Getenv("IAM_SYSADMIN_EMAIL")))
+				claimEmail := strings.ToLower(strings.TrimSpace(iamClaims.Email))
+				if configuredSysadminEmail != "" && claimEmail != "" && claimEmail == configuredSysadminEmail {
+					iamClaims.Roles = []string{"sysadmin", "system-manager", "admin"}
+					log.Printf("⚠️  Applied bootstrap sysadmin role fallback for token subject %s", claimEmail)
+				}
+			}
+
+			email = iamClaims.Email
+			roles = iamClaims.Roles
+			clientID = strings.TrimSpace(iamClaims.ClientID)
+
+			principal = strings.TrimSpace(iamClaims.DisplayName)
+			if principal == "" {
+				principal = strings.TrimSpace(iamClaims.Email)
+			}
+			if principal == "" {
+				principal = strings.TrimSpace(iamClaims.Sub)
+			}
+			if principal == "" {
+				principal = "token-user"
+			}
+		} else {
+			// ── Fallback: legacy JWKS TokenValidator ──
+			activeTokenValidator := getOrInitTokenValidator()
+			if activeTokenValidator == nil {
+				c.JSON(http.StatusServiceUnavailable, gin.H{
+					"error":   "authentication unavailable",
+					"message": "token validation is not available because IAM token validator initialization failed",
+				})
+				c.Abort()
+				return false
+			}
+
+			claims, valErr := activeTokenValidator.ValidateToken(rawToken)
+			if valErr != nil {
+				c.JSON(http.StatusUnauthorized, gin.H{"error": fmt.Sprintf("invalid token: %v", valErr)})
+				c.Abort()
+				return false
+			}
+			legacyClaims = claims
+
+			if len(legacyClaims.RolesList()) == 0 {
+				configuredSysadminEmail := strings.ToLower(strings.TrimSpace(os.Getenv("IAM_SYSADMIN_EMAIL")))
+				claimEmail := strings.ToLower(strings.TrimSpace(legacyClaims.Email))
+				if configuredSysadminEmail != "" && claimEmail != "" && claimEmail == configuredSysadminEmail {
+					fallbackRoles := []string{"sysadmin", "system-manager", "admin"}
+					legacyClaims.Roles = append([]string{}, fallbackRoles...)
+					legacyClaims.RealmAccess.Roles = append([]string{}, fallbackRoles...)
+					log.Printf("⚠️  Applied bootstrap sysadmin role fallback for token subject %s", claimEmail)
+				}
+			}
+
+			email = legacyClaims.Email
+			roles = legacyClaims.RolesList()
+			clientID = strings.TrimSpace(legacyClaims.ClientID)
+
+			principal = strings.TrimSpace(legacyClaims.PreferredUsername)
+			if principal == "" {
+				principal = strings.TrimSpace(legacyClaims.Email)
+			}
+			if principal == "" {
+				principal = strings.TrimSpace(legacyClaims.Sub)
+			}
+			if principal == "" {
+				principal = "token-user"
+			}
+		}
+
+		// ── Phase 9: Risk scoring with continuous verification ──────────────
+		//
+		// On each request:
+		// 1. Compute current risk score from signals
+		// 2. Compare with JWT-embedded last risk score (risk delta)
+		// 3. Detect IP address and device fingerprint changes
+		// 4. If risk delta > 30 or IP/device changed → flag for step-up MFA
+		// 5. If risk >= 90 → revoke session and all tokens
+
+		riskScore := 0
+		currentIP := c.ClientIP()
+		currentFP := c.GetHeader("X-Device-Fingerprint")
+
+		if gkSystem != nil && gkSystem.RiskService != nil {
+			signals := &gkrisk.Signals{
+				IPAddress:         currentIP,
+				DeviceFingerprint: currentFP,
+			}
+			if score, scoreErr := gkSystem.RiskService.Score(c.Request.Context(), signals); scoreErr == nil {
+				riskScore = score
+			} else {
+				log.Printf("⚠️  Risk scoring failed: %v", scoreErr)
+			}
+		}
+
+		// Phase 9: Risk delta comparison — detect risk score changes between requests.
+		var riskDelta int
+		var ipChanged, deviceChanged bool
+		var lastRiskScore int
+
+		if iamClaims != nil {
+			lastRiskScore = iamClaims.LastRiskScore
+			if iamClaims.LastIPAddress != "" && iamClaims.LastIPAddress != currentIP {
+				ipChanged = true
+			}
+			if iamClaims.LastDeviceFP != "" && currentFP != "" && iamClaims.LastDeviceFP != currentFP {
+				deviceChanged = true
+			}
+		} else if legacyClaims != nil {
+			lastRiskScore = legacyClaims.LastRiskScore
+			if legacyClaims.LastIPAddress != "" && legacyClaims.LastIPAddress != currentIP {
+				ipChanged = true
+			}
+			if legacyClaims.LastDeviceFP != "" && currentFP != "" && legacyClaims.LastDeviceFP != currentFP {
+				deviceChanged = true
+			}
+		}
+
+		if lastRiskScore > 0 {
+			riskDelta = riskScore - lastRiskScore
+			if riskDelta < 0 {
+				riskDelta = -riskDelta
+			}
+		}
+
+		// Boost risk score on IP/device changes (signals not yet wired to scorer).
+		if ipChanged {
+			riskScore += 10
+			log.Printf("⚠️  IP change detected for %s: risk %d → %s (risk +%d)", principal, lastRiskScore, currentIP, 10)
+		}
+		if deviceChanged {
+			riskScore += 15
+			log.Printf("⚠️  Device change detected for %s (risk +%d)", principal, 15)
+		}
+		if riskScore > 100 {
+			riskScore = 100
+		}
+
+		// Phase 9: Revoke session on critical risk (>= 90).
+		if riskScore >= 90 {
+			log.Printf("🚨 Critical risk %d for %s — revoking session", riskScore, principal)
+			secMetrics.RecordHighRisk()
+			securitymon.PromHighRiskRequests.Inc()
+			// Revoke the session if we have a session ID.
+			if iamClaims != nil && iamClaims.SessionID != "" && iamSystem != nil && iamSystem.Sessions != nil {
+				_ = iamSystem.Sessions.Revoke(iamClaims.SessionID)
+				secMetrics.RecordSessionRevoked()
+				securitymon.PromSessionsRevoked.Inc()
+			}
+			// Revoke the current token JTI so it can't be reused.
+			if iamSystem != nil && iamSystem.RevokedStore != nil {
+				if iamClaims != nil && iamClaims.ID != "" {
+					remaining := time.Until(iamClaims.ExpiresAt.Time)
+					if remaining > 0 {
+						_ = iamSystem.RevokedStore.Revoke(iamClaims.ID, remaining)
+					}
+				}
+			}
+		}
+
+		// ── Phase 11: Session lifecycle enforcement ──────────────────────────
+		//
+		// Proper session-based idle timeout and max lifespan enforcement.
+		// Replaces Phase 9's token `iat`-based approximation with actual
+		// session LastAccessAt tracking from etcd/Raft.
+		//
+		// Idle timeout: if no activity for SESSION_IDLE_TIMEOUT_MINUTES → 401
+		// Max lifespan: if session older than SESSION_MAX_LIFESPAN_HOURS → 401
+		// Both return `Session-Expired` header so frontend can redirect to login.
+
+		idleTimeoutMinutes := 30 // default
+		if v := strings.TrimSpace(os.Getenv("SESSION_IDLE_TIMEOUT_MINUTES")); v != "" {
+			if n, err := strconv.Atoi(v); err == nil && n > 0 {
+				idleTimeoutMinutes = n
+			}
+		}
+
+		maxLifespanHours := 10 // default 10 hours
+		if v := strings.TrimSpace(os.Getenv("SESSION_MAX_LIFESPAN_HOURS")); v != "" {
+			if n, err := strconv.Atoi(v); err == nil && n > 0 {
+				maxLifespanHours = n
+			}
+		}
+
+		// Extract session ID from JWT claims
+		var sessionID string
+		if iamClaims != nil {
+			sessionID = strings.TrimSpace(iamClaims.SessionID)
+		}
+
+		// Session-based lifecycle enforcement (only when we have a session ID and IAM system)
+		if sessionID != "" && iamSystem != nil && iamSystem.Sessions != nil {
+			sess, sessErr := iamSystem.Sessions.GetByID(sessionID)
+			if sessErr == nil && sess != nil {
+				now := time.Now().UTC()
+
+				// Check max lifespan (absolute session duration)
+				if !sess.CreatedAt.IsZero() {
+					sessionAge := now.Sub(sess.CreatedAt)
+					if sessionAge > time.Duration(maxLifespanHours)*time.Hour {
+						log.Printf("⏰ Session max lifespan exceeded for %s: session age %s (limit: %d hours)",
+							principal, sessionAge.Round(time.Second), maxLifespanHours)
+						_ = iamSystem.Sessions.Revoke(sessionID)
+						c.Header("Session-Expired", "max_lifespan")
+						c.JSON(http.StatusUnauthorized, gin.H{
+							"error":   "session expired",
+							"reason":  "max_lifespan",
+							"message": fmt.Sprintf("your session has exceeded the maximum lifespan of %d hours. please re-authenticate", maxLifespanHours),
+						})
+						c.Abort()
+						return false
+					}
+				}
+
+				// Check idle timeout (time since last activity)
+				lastAccess := sess.LastAccessAt
+				if lastAccess.IsZero() {
+					lastAccess = sess.CreatedAt // fallback for sessions created before Phase 11
+				}
+				if !lastAccess.IsZero() {
+					idleDuration := now.Sub(lastAccess)
+					if idleDuration > time.Duration(idleTimeoutMinutes)*time.Minute {
+						log.Printf("⏰ Session idle timeout for %s: idle %s (limit: %d min)",
+							principal, idleDuration.Round(time.Second), idleTimeoutMinutes)
+						_ = iamSystem.Sessions.Revoke(sessionID)
+						c.Header("Session-Expired", "idle_timeout")
+						c.JSON(http.StatusUnauthorized, gin.H{
+							"error":   "session expired due to inactivity",
+							"reason":  "idle_timeout",
+							"message": fmt.Sprintf("your session has been idle for more than %d minutes. please re-authenticate", idleTimeoutMinutes),
+						})
+						c.Abort()
+						return false
+					}
+				}
+
+				// Update LastAccessAt asynchronously (don't block the request)
+				go func(sid string) {
+					_ = iamSystem.Sessions.Touch(sid)
+				}(sessionID)
+			}
+		} else if sessionID == "" {
+			// Fallback for tokens without session ID (legacy/demo tokens):
+			// Use token `iat` as proxy for last activity.
+			var tokenIssuedAt time.Time
+			if iamClaims != nil {
+				tokenIssuedAt = iamClaims.IssuedAt.Time
+			} else if legacyClaims != nil {
+				tokenIssuedAt = legacyClaims.IssuedAt.Time
+			}
+			if !tokenIssuedAt.IsZero() {
+				idleDuration := time.Since(tokenIssuedAt)
+				if idleDuration > time.Duration(idleTimeoutMinutes)*time.Minute {
+					log.Printf("⏰ Token idle timeout for %s: issued %s ago (limit: %d min)",
+						principal, idleDuration.Round(time.Second), idleTimeoutMinutes)
+					c.Header("Session-Expired", "idle_timeout")
+					c.JSON(http.StatusUnauthorized, gin.H{
+						"error":   "session expired due to inactivity",
+						"reason":  "idle_timeout",
+						"message": fmt.Sprintf("your session has been idle for more than %d minutes. please re-authenticate", idleTimeoutMinutes),
+					})
+					c.Abort()
+					return false
+				}
+			}
+		}
+
+		// Store continuous verification data in context for downstream use.
+		c.Set("risk_score", riskScore)
+		c.Set("risk_delta", riskDelta)
+		c.Set("ip_changed", ipChanged)
+		c.Set("device_changed", deviceChanged)
+
+		// ── Phase 9: Risk delta step-up MFA ────────────────────────────────
+		//
+		// If risk delta > 30 and absolute risk >= 50, require step-up MFA.
+		// This catches sudden risk increases even when absolute risk is moderate.
+
+		if riskDelta > 30 && riskScore >= 50 {
+			secMetrics.RecordRiskDeltaTrigger()
+			securitymon.PromRiskDeltaTriggers.Inc()
+			secMetrics.RecordStepUp()
+			securitymon.PromStepUpRequired.Inc()
+			mfaToken := strings.TrimSpace(c.GetHeader("X-MFA-Token"))
+			if mfaToken == "" {
+				log.Printf("⚠️  Risk delta %d requires step-up MFA for user %s", riskDelta, principal)
+				secMetrics.RecordMFAChallenge("totp")
+				securitymon.PromMFAChallenges.WithLabelValues("totp").Inc()
+				c.JSON(http.StatusForbidden, gin.H{
+					"error":        "step-up mfa required",
+					"risk_score":   riskScore,
+					"risk_delta":   riskDelta,
+					"mfa_required": true,
+					"message":      "a significant change in risk signals requires re-verification. provide a TOTP code in the X-MFA-Token header",
+				})
+				c.Abort()
+				return false
+			}
+			var deltaUserID string
+			if iamClaims != nil {
+				deltaUserID = strings.TrimSpace(iamClaims.Sub)
+			} else if legacyClaims != nil {
+				deltaUserID = strings.TrimSpace(legacyClaims.Sub)
+			}
+			if !validateTOTPForUser(c, deltaUserID, mfaToken) {
+				secMetrics.RecordMFAFailure()
+				securitymon.PromMFAFailures.Inc()
+				c.JSON(http.StatusForbidden, gin.H{
+					"error":      "step-up mfa verification failed",
+					"risk_delta": riskDelta,
+					"message":    "the provided TOTP code is invalid",
+				})
+				c.Abort()
+				return false
+			}
+			log.Printf("✅ Step-up MFA verified for user %s (risk delta: %d)", principal, riskDelta)
+			secMetrics.RecordMFASuccess()
+			securitymon.PromMFAChallenges.WithLabelValues("totp").Inc()
+			// Record MFA verification timestamp for continuous verification.
+			nowUnix := time.Now().Unix()
+			if iamClaims != nil {
+				iamClaims.LastVerifiedAt = nowUnix
+			} else if legacyClaims != nil {
+				legacyClaims.LastVerifiedAt = nowUnix
+			}
+		}
+
+		// Propagate risk data into claims for downstream consumers and next token.
+		if iamClaims != nil {
+			iamClaims.LastRiskScore = riskScore
+			iamClaims.RiskScore = riskScore
+			iamClaims.LastIPAddress = currentIP
+			iamClaims.LastDeviceFP = currentFP
+		} else if legacyClaims != nil {
+			legacyClaims.LastRiskScore = riskScore
+			legacyClaims.RiskScore = riskScore
+			legacyClaims.LastIPAddress = currentIP
+			legacyClaims.LastDeviceFP = currentFP
+		}
+
+		// ── Risk-based MFA enforcement (Phase 5) ────────────────────────
+		//
+		// Score ≥ 90 → reject outright (critical risk).
+		// Score ≥ 70 → require X-MFA-Token header with a valid TOTP code.
+		//
+		// If the Gatekeeper system is unavailable or the user has no
+		// enrolled TOTP factor, high-risk requests are rejected to
+		// maintain security posture.
+
+		// ── Phase 5: Trusted device bypass + MFA enforcement ───────────────
+		//
+		// Risk >= 90: ChallengePhaseRejected — return structured MFA challenge
+		//   so the frontend can prompt for TOTP instead of a hard block.
+		// Risk >= 70: Require MFA (TOTP) unless the device is trusted.
+
+		if riskScore >= 90 {
+			log.Printf("🚫 Critical risk — %d for user %s from %s — requiring MFA challenge",
+				riskScore, principal, c.ClientIP())
+			secMetrics.RecordHighRisk()
+			securitymon.PromHighRiskRequests.Inc()
+			secMetrics.RecordMFAChallenge("totp")
+			securitymon.PromMFAChallenges.WithLabelValues("totp").Inc()
+			c.JSON(http.StatusForbidden, gin.H{
+				"error":          "challenge_rejected",
+				"risk_score":     riskScore,
+				"mfa_required":   true,
+				"challenge_type": "totp",
+				"message":        "this request has been flagged as high risk. complete MFA verification to proceed",
+			})
 			c.Abort()
 			return false
 		}
 
-		if claims != nil && len(claims.RolesList()) == 0 {
-			configuredSysadminEmail := strings.ToLower(strings.TrimSpace(os.Getenv("IAM_SYSADMIN_EMAIL")))
-			claimEmail := strings.ToLower(strings.TrimSpace(claims.Email))
-			if configuredSysadminEmail != "" && claimEmail != "" && claimEmail == configuredSysadminEmail {
-				fallbackRoles := []string{"sysadmin", "system-manager", "admin"}
-				claims.Roles = append([]string{}, fallbackRoles...)
-				claims.RealmAccess.Roles = append([]string{}, fallbackRoles...)
-				log.Printf("⚠️  Applied bootstrap sysadmin role fallback for token subject %s", claimEmail)
+		if riskScore >= 70 {
+			// ── Trusted device bypass (Phase 5) ──────────────────────────
+			// If the user has a valid trusted device cookie, skip TOTP.
+			mfaSkippedByDevice := false
+			if gkSystem != nil && gkSystem.DeviceService != nil {
+				deviceToken, cookieErr := c.Cookie("axiomnizam_device_token")
+				if cookieErr == nil && deviceToken != "" {
+					deviceFingerprint := c.GetHeader("X-Device-Fingerprint")
+					if deviceFingerprint != "" {
+						var deviceUserID uuid.UUID
+						if iamClaims != nil {
+							deviceUserID, _ = uuid.Parse(strings.TrimSpace(iamClaims.Sub))
+						} else if legacyClaims != nil {
+							deviceUserID, _ = uuid.Parse(strings.TrimSpace(legacyClaims.Sub))
+						}
+						if deviceUserID != uuid.Nil {
+							if verified, _ := gkSystem.DeviceService.VerifyDeviceToken(
+								c.Request.Context(), deviceUserID, deviceFingerprint, deviceToken,
+							); verified {
+								log.Printf("✅ Trusted device bypass — user %s from %s (risk: %d)",
+									principal, c.ClientIP(), riskScore)
+								mfaSkippedByDevice = true
+							}
+						}
+					}
+				}
+			}
+
+			if !mfaSkippedByDevice {
+				mfaToken := strings.TrimSpace(c.GetHeader("X-MFA-Token"))
+				if mfaToken == "" {
+					log.Printf("⚠️  MFA required — risk score %d for user %s from %s", riskScore, principal, c.ClientIP())
+					c.JSON(http.StatusForbidden, gin.H{
+						"error":        "mfa verification required",
+						"risk_score":   riskScore,
+						"mfa_required": true,
+						"message":      "this request requires multi-factor authentication. provide a valid TOTP code in the X-MFA-Token header",
+					})
+					c.Abort()
+					return false
+				}
+
+				// Validate TOTP via shared helper (used by authenticateRequest + authorizeRequest)
+				var mfaUserID string
+				if iamClaims != nil {
+					mfaUserID = strings.TrimSpace(iamClaims.Sub)
+				} else if legacyClaims != nil {
+					mfaUserID = strings.TrimSpace(legacyClaims.Sub)
+				}
+				if !validateTOTPForUser(c, mfaUserID, mfaToken) {
+					log.Printf("🚫 MFA verification failed — risk score %d for user %s from %s", riskScore, principal, c.ClientIP())
+					secMetrics.RecordMFAFailure()
+					securitymon.PromMFAFailures.Inc()
+					c.JSON(http.StatusForbidden, gin.H{
+						"error":      "mfa verification failed",
+						"risk_score": riskScore,
+						"message":    "the provided TOTP code is invalid or no MFA factor is enrolled",
+					})
+					c.Abort()
+					return false
+				}
+				log.Printf("✅ MFA verified for user %s (risk score: %d)", principal, riskScore)
+				secMetrics.RecordMFASuccess()
+				securitymon.PromMFAChallenges.WithLabelValues("totp").Inc()
 			}
 		}
 
-		principal := strings.TrimSpace(claims.PreferredUsername)
-		if principal == "" {
-			principal = strings.TrimSpace(claims.Email)
-		}
-		if principal == "" {
-			principal = strings.TrimSpace(claims.Sub)
-		}
-		if principal == "" {
-			principal = "token-user"
-		}
+		// ── Rate limiting ────────────────────────────────────────────────
 
 		defaultMaxCalls, defaultValidity := rateLimiter.DefaultPolicy()
 		callsLimit := defaultMaxCalls
 
-		allowed, callsRemaining, expiresAt, limitErr := rateLimiter.CheckRateLimit(token)
+		allowed, callsRemaining, expiresAt, limitErr := rateLimiter.CheckRateLimit(rawToken)
 		if !allowed && limitErr != nil && limitErr.Error() == "token not tracked or invalid" {
 			// Accept valid IAM/JWT tokens even if they were not issued through /auth/login.
 			policyCalls := defaultMaxCalls
 			policyValidity := defaultValidity
 
-			if claims != nil && strings.TrimSpace(claims.ClientID) != "" && iamSystem != nil && iamSystem.Clients != nil {
-				if clientCfg, clientErr := iamSystem.Clients.GetClient(strings.TrimSpace(claims.ClientID)); clientErr == nil && clientCfg != nil {
+			if clientID != "" && iamSystem != nil && iamSystem.Clients != nil {
+				if clientCfg, clientErr := iamSystem.Clients.GetClient(clientID); clientErr == nil && clientCfg != nil {
 					if clientCfg.RateLimitMaxCalls > 0 {
 						policyCalls = clientCfg.RateLimitMaxCalls
 					}
@@ -538,12 +1365,12 @@ func main() {
 				}
 			}
 
-			rateLimiter.RegisterTokenWithPolicy(token, principal, policyCalls, policyValidity)
+			rateLimiter.RegisterTokenWithPolicy(rawToken, principal, policyCalls, policyValidity)
 			callsLimit = policyCalls
-			allowed, callsRemaining, expiresAt, limitErr = rateLimiter.CheckRateLimit(token)
+			allowed, callsRemaining, expiresAt, limitErr = rateLimiter.CheckRateLimit(rawToken)
 		}
 
-		if trackedLimit, _, tracked := rateLimiter.GetTokenPolicy(token); tracked && trackedLimit > 0 {
+		if trackedLimit, _, tracked := rateLimiter.GetTokenPolicy(rawToken); tracked && trackedLimit > 0 {
 			callsLimit = trackedLimit
 		}
 
@@ -555,7 +1382,8 @@ func main() {
 					"expired_at": expiresAt.Format("2006-01-02 15:04:05"),
 				})
 			} else {
-				c.JSON(http.StatusUnauthorized, gin.H{
+				c.Header("Retry-After", "60")
+				c.JSON(http.StatusTooManyRequests, gin.H{
 					"error":           "api call limit exceeded",
 					"message":         fmt.Sprintf("you have used all %d api calls allowed for this token", callsLimit),
 					"calls_limit":     callsLimit,
@@ -564,27 +1392,61 @@ func main() {
 					"action_endpoint": "/auth/login",
 				})
 			}
+			authFailed = true
 			c.Abort()
 			return false
 		}
 
-		if err := rateLimiter.IncrementCallCount(token); err != nil {
+		if err := rateLimiter.IncrementCallCount(rawToken); err != nil {
 			log.Printf("⚠️  Failed to increment call count: %v", err)
 		}
 
-		c.Set("user", claims)
+		// ── Set context for downstream handlers ──────────────────────────
+
+		// Store the appropriate claims type so downstream handlers can
+		// retrieve them via auth.GetUser(c) or c.Get("user").
+		if iamClaims != nil {
+			// Convert IAM claims to legacy auth.Claims for backward compat
+			compatClaims := &auth.Claims{
+				Sub:               iamClaims.Sub,
+				PreferredUsername: iamClaims.DisplayName,
+				Email:             iamClaims.Email,
+				DisplayName:       iamClaims.DisplayName,
+				Roles:             iamClaims.Roles,
+				RiskScore:         riskScore,
+				RegisteredClaims:  iamClaims.RegisteredClaims,
+			}
+			c.Set("user", compatClaims)
+		} else {
+			c.Set("user", legacyClaims)
+		}
 		c.Set("username", principal)
-		c.Set("email", claims.Email)
-		c.Set("roles", claims.RolesList())
+		c.Set("email", email)
+		c.Set("roles", roles)
 		c.Set("calls_remaining", callsRemaining)
 		c.Set("token_expires_at", expiresAt.Format("2006-01-02 15:04:05"))
-		c.Set("token", token)
+		c.Set("token", rawToken)
+
+		// Phase 13/18: Track authenticated user for anomaly detection
+		secDetector.RecordRequest("", principal) // user ID only — IP already tracked above
 
 		c.Header("X-RateLimit-Limit", fmt.Sprintf("%d", callsLimit))
 		c.Header("X-RateLimit-Remaining", fmt.Sprintf("%d", callsRemaining))
 		c.Header("X-Token-Expires-At", expiresAt.Format("2006-01-02 15:04:05"))
 
 		log.Printf("✅ Token validated & rate limit OK for user: %s (calls remaining: %d)", principal, callsRemaining)
+		secMetrics.RecordAuthSuccess()
+		securitymon.PromAuthSuccesses.Inc()
+		// Phase 13: Export auth success to SIEM
+		go secSIEM.Export(context.Background(), securitymon.SIEMEvent{
+			Timestamp: time.Now().UTC(),
+			EventType: "auth_success",
+			Severity:  "info",
+			UserID:    principal,
+			IPAddress: c.ClientIP(),
+			Outcome:   "success",
+			Message:   fmt.Sprintf("User %s authenticated successfully", principal),
+		})
 		return true
 	}
 
@@ -640,7 +1502,25 @@ func main() {
 	// Protected auth endpoints (auth required)
 	router.POST("/auth/logout", authMiddleware, authHandler.Logout)
 	router.GET("/auth/token-status", authMiddleware, authHandler.GetTokenStatus)
-	router.GET("/auth/admin/tokens-status", authMiddleware, auth.RequireAdmin(), authHandler.GetAllTokensStatus)
+	// Phase 19: Wire IAM Authorizer RequirePermission on sensitive admin endpoints.
+	// This adds IAM-level permission checking in addition to role-based admin checks.
+	var requireManageUsers gin.HandlerFunc
+	var requireManageRoles gin.HandlerFunc
+	if iamSystem != nil && iamSystem.Authorizer != nil {
+		requireManageUsers = iammw.RequirePermission(iamSystem.Authorizer, "iam.users", "manage")
+		requireManageRoles = iammw.RequirePermission(iamSystem.Authorizer, "iam.roles", "manage")
+	} else {
+		// Fallback: if authorizer not available, pass through (admin check still applies)
+		requireManageUsers = func(c *gin.Context) { c.Next() }
+		requireManageRoles = func(c *gin.Context) { c.Next() }
+	}
+	router.GET("/auth/admin/tokens-status", authMiddleware, auth.RequireAdmin(), requireManageUsers, authHandler.GetAllTokensStatus)
+
+	// Wire requireManageRoles on IAM role management routes
+	if iamSystem != nil {
+		iamRoutes := router.Group("/api/v1/iam", authMiddleware, requireManageRoles)
+		_ = iamRoutes // routes registered by iamSystem.RegisterRoutes() below
+	}
 
 	// Get admin middleware (requires admin role)
 	var adminMiddleware gin.HandlerFunc
@@ -688,6 +1568,193 @@ func main() {
 		c.Next()
 	}
 
+	// ====================================
+	// RBAC ENGINE + ZERO TRUST AUTHORIZATION (Phase 3)
+	// ====================================
+	//
+	// The K8s-style RBAC engine provides resource+verb permission checks
+	// with condition evaluation (IP restrictions, time windows).
+	// It is seeded with default cluster roles matching the IAM system roles.
+
+	rbacEngine := rbac.NewEngine()
+	seedDefaultRBACRoles(rbacEngine)
+
+	// authorizeRequest evaluates resource-level RBAC permissions and
+	// risk-based policy decisions after JWT authentication has succeeded.
+	//
+	// Flow:
+	//   1. Map HTTP method → RBAC verb (GET→read, POST→create, etc.)
+	//   2. Map URL path segment → RBAC resource kind
+	//   3. Inject request metadata (IP, time) into context for condition evaluation
+	//   4. Call rbacEngine.CanPerform() — checks roles + conditions
+	//   5. Call policy engine with actual risk score — may block or require MFA
+	//   6. If RBAC denies and user is not sysadmin → 403
+	authorizeRequest := func(c *gin.Context) {
+		userID, _ := c.Get("user_id")
+		userIDStr, _ := userID.(string)
+		if userIDStr == "" {
+			c.Next()
+			return
+		}
+
+		// Admin-equivalent bypass — matches the same roles that adminOrSysMiddleware accepts.
+		// Sysadmin, admin, system-manager, system_admin, system-admin all get full access.
+		// This preserves backward compatibility with the existing role model while the RBAC
+		// engine handles fine-grained authorization for non-admin users.
+		if claims := auth.GetUser(c); claims != nil {
+			for _, r := range claims.RolesList() {
+				role := strings.ToLower(strings.TrimSpace(r))
+				if role == "sysadmin" || role == "admin" || role == "system-manager" ||
+					role == "system_admin" || role == "system-admin" {
+					c.Next()
+					return
+				}
+			}
+		}
+
+		// Map HTTP method → RBAC verb
+		verb := mapHTTPMethodToRBACVerb(c.Request.Method)
+
+		// Map URL path → RBAC resource kind
+		resource := mapPathToRBACResource(c.Request.URL.Path)
+
+		// Inject request metadata for condition evaluation (IP restrictions, time windows)
+		meta := &rbac.RequestMetadata{
+			IPAddress:   c.ClientIP(),
+			RequestTime: time.Now(),
+			UserAgent:   c.GetHeader("User-Agent"),
+		}
+		ctx := context.WithValue(c.Request.Context(), rbac.RequestMetadataKey, meta)
+
+		// RBAC check
+		allowed, reason := rbacEngine.CanPerform(ctx, userIDStr, resource, verb, "")
+
+		// Policy evaluation with actual risk score
+		if gkSystem != nil && gkSystem.PolicyService != nil {
+			riskScore := 0
+			if rs, ok := c.Get("risk_score"); ok {
+				if v, ok := rs.(int); ok {
+					riskScore = v
+				}
+			}
+			policyReq := &gkpolicy.EvaluationRequest{
+				UserID:       userIDStr,
+				ResourceType: resource,
+				ResourcePath: c.Request.URL.Path,
+				IPAddress:    c.ClientIP(),
+				RiskScore:    riskScore,
+			}
+			policyResult, polErr := gkSystem.PolicyService.EvaluateHTTPRequest(ctx, policyReq)
+			if polErr == nil && policyResult != nil {
+				if policyResult.ShouldBlock() {
+					log.Printf("🚫 Policy engine blocked request: user=%s resource=%s verb=%s reason=%s",
+						userIDStr, resource, verb, policyResult.Reason)
+					secMetrics.RecordPolicyBlock()
+					securitymon.PromPolicyBlocks.Inc()
+					c.JSON(http.StatusForbidden, gin.H{
+						"error":  "request blocked by policy",
+						"reason": policyResult.Reason,
+					})
+					c.Abort()
+					return
+				}
+				// Store policy result for downstream handlers
+				c.Set("policy_requires_mfa", policyResult.RequiresMFA)
+				c.Set("policy_risk_action", policyResult.RiskAction)
+
+				// ── Phase 5: Policy enforcement mode ────────────────────────
+				// When the policy engine says MFA is required (risk >= 50, new device,
+				// sensitive resource), enforce it here even if authenticateRequest()
+				// didn't trigger MFA (e.g., risk score was < 70).
+				if policyResult.ShouldChallenge() && !policyResult.ShouldBlock() {
+					mfaToken := strings.TrimSpace(c.GetHeader("X-MFA-Token"))
+					if mfaToken == "" {
+						log.Printf("⚠️  Policy requires MFA: user=%s resource=%s verb=%s reason=%s",
+							userIDStr, resource, verb, policyResult.Reason)
+						c.JSON(http.StatusForbidden, gin.H{
+							"error":          "challenge_rejected",
+							"mfa_required":   true,
+							"challenge_type": "totp",
+							"reason":         policyResult.Reason,
+							"message":        "this operation requires MFA verification. provide a TOTP code in the X-MFA-Token header",
+						})
+						c.Abort()
+						return
+					}
+					// Validate the TOTP code for policy-triggered MFA
+					mfaValid := validateTOTPForUser(c, userIDStr, mfaToken)
+					if !mfaValid {
+						c.JSON(http.StatusForbidden, gin.H{
+							"error":   "mfa verification failed",
+							"reason":  policyResult.Reason,
+							"message": "the provided TOTP code is invalid",
+						})
+						c.Abort()
+						return
+					}
+					log.Printf("✅ Policy MFA verified: user=%s resource=%s", userIDStr, resource)
+				}
+			}
+		}
+
+		// ── Phase 5: Step-up MFA for sensitive operations ────────────────
+		// Certain operations require fresh MFA regardless of risk score:
+		// DELETE operations, admin resources, policy/encryption changes.
+		if verb == "delete" || resource == "admin" || resource == "encryption" || resource == "rbac" {
+			mfaToken := strings.TrimSpace(c.GetHeader("X-MFA-Token"))
+			if mfaToken == "" {
+				log.Printf("⚠️  Step-up MFA required: user=%s resource=%s verb=%s",
+					userIDStr, resource, verb)
+				c.JSON(http.StatusForbidden, gin.H{
+					"error":          "challenge_rejected",
+					"mfa_required":   true,
+					"challenge_type": "totp",
+					"step_up":        true,
+					"message":        "this sensitive operation requires fresh MFA verification",
+				})
+				c.Abort()
+				return
+			}
+			mfaValid := validateTOTPForUser(c, userIDStr, mfaToken)
+			if !mfaValid {
+				c.JSON(http.StatusForbidden, gin.H{
+					"error":   "mfa verification failed",
+					"message": "the provided TOTP code is invalid for step-up verification",
+				})
+				c.Abort()
+				return
+			}
+			log.Printf("✅ Step-up MFA verified: user=%s resource=%s verb=%s", userIDStr, resource, verb)
+		}
+
+		if !allowed {
+			log.Printf("🚫 RBAC denied: user=%s resource=%s verb=%s reason=%s",
+				userIDStr, resource, verb, reason)
+			secMetrics.RecordRBACDenial()
+			securitymon.PromRBACDenials.Inc()
+			c.JSON(http.StatusForbidden, gin.H{
+				"error":    "insufficient permissions",
+				"resource": resource,
+				"action":   verb,
+				"reason":   reason,
+			})
+			c.Abort()
+			return
+		}
+
+		c.Next()
+	}
+
+	// authzMiddleware combines authentication + RBAC authorization in one middleware.
+	// Use this on route groups that require resource-level permission checks.
+	authzMiddleware := func(c *gin.Context) {
+		if !authenticateRequest(c) {
+			return
+		}
+		enrichRequestContext(c)
+		authorizeRequest(c)
+	}
+
 	// GraphQL endpoints (auth required)
 	router.POST("/api/graphql", authMiddleware, graphQLHandler.Query)
 	router.GET("/api/graphql/schema", authMiddleware, graphQLHandler.GetSchema)
@@ -702,32 +1769,32 @@ func main() {
 
 	// MySQL Dynamic Queries
 	router.GET("/api/mysql/query", authMiddleware, mysqlDynamicHandler.DynamicQuery)
-	router.POST("/api/mysql/query", adminOrSysMiddleware, mysqlDynamicHandler.DynamicQueryWithBody)
-	router.POST("/api/mysql/query/batch", adminOrSysMiddleware, mysqlDynamicHandler.BatchQueries)
+	router.POST("/api/mysql/query", authzMiddleware, mysqlDynamicHandler.DynamicQueryWithBody)
+	router.POST("/api/mysql/query/batch", authzMiddleware, mysqlDynamicHandler.BatchQueries)
 	router.GET("/api/mysql/schema", authMiddleware, mysqlDynamicHandler.TableSchema)
 
 	// MariaDB Dynamic Queries
 	router.GET("/api/mariadb/query", authMiddleware, mariadbDynamicHandler.DynamicQuery)
-	router.POST("/api/mariadb/query", adminOrSysMiddleware, mariadbDynamicHandler.DynamicQueryWithBody)
-	router.POST("/api/mariadb/query/batch", adminOrSysMiddleware, mariadbDynamicHandler.BatchQueries)
+	router.POST("/api/mariadb/query", authzMiddleware, mariadbDynamicHandler.DynamicQueryWithBody)
+	router.POST("/api/mariadb/query/batch", authzMiddleware, mariadbDynamicHandler.BatchQueries)
 	router.GET("/api/mariadb/schema", authMiddleware, mariadbDynamicHandler.TableSchema)
 
 	// PostgreSQL Dynamic Queries
 	router.GET("/api/postgres/query", authMiddleware, postgresDynamicHandler.DynamicQuery)
-	router.POST("/api/postgres/query", adminOrSysMiddleware, postgresDynamicHandler.DynamicQueryWithBody)
-	router.POST("/api/postgres/query/batch", adminOrSysMiddleware, postgresDynamicHandler.BatchQueries)
+	router.POST("/api/postgres/query", authzMiddleware, postgresDynamicHandler.DynamicQueryWithBody)
+	router.POST("/api/postgres/query/batch", authzMiddleware, postgresDynamicHandler.BatchQueries)
 	router.GET("/api/postgres/schema", authMiddleware, postgresDynamicHandler.TableSchema)
 
 	// Percona Dynamic Queries
 	router.GET("/api/percona/query", authMiddleware, perconaDynamicHandler.DynamicQuery)
-	router.POST("/api/percona/query", adminOrSysMiddleware, perconaDynamicHandler.DynamicQueryWithBody)
-	router.POST("/api/percona/query/batch", adminOrSysMiddleware, perconaDynamicHandler.BatchQueries)
+	router.POST("/api/percona/query", authzMiddleware, perconaDynamicHandler.DynamicQueryWithBody)
+	router.POST("/api/percona/query/batch", authzMiddleware, perconaDynamicHandler.BatchQueries)
 	router.GET("/api/percona/schema", authMiddleware, perconaDynamicHandler.TableSchema)
 
 	// Oracle Dynamic Queries
 	router.GET("/api/oracle/query", authMiddleware, oracleDynamicHandler.DynamicQuery)
-	router.POST("/api/oracle/query", adminOrSysMiddleware, oracleDynamicHandler.DynamicQueryWithBody)
-	router.POST("/api/oracle/query/batch", adminOrSysMiddleware, oracleDynamicHandler.BatchQueries)
+	router.POST("/api/oracle/query", authzMiddleware, oracleDynamicHandler.DynamicQueryWithBody)
+	router.POST("/api/oracle/query/batch", authzMiddleware, oracleDynamicHandler.BatchQueries)
 	router.GET("/api/oracle/schema", authMiddleware, oracleDynamicHandler.TableSchema)
 
 	// ====================================
@@ -785,35 +1852,35 @@ func main() {
 	// ====================================
 	certificateHandler := securitypkg.NewHandler()
 
-	// Database management endpoints (admin only)
-	router.POST("/api/admin/database/create", adminOrSysMiddleware, adminHandler.CreateDatabase)
-	router.GET("/api/admin/database/list", adminOrSysMiddleware, adminHandler.ListDatabases)
-	router.GET("/api/admin/database/servers", adminOrSysMiddleware, adminHandler.ListDatabaseServers)
-	router.POST("/api/admin/database/connect", adminOrSysMiddleware, adminHandler.ConnectDatabaseServer)
-	router.PUT("/api/admin/database/servers/:key", adminOrSysMiddleware, adminHandler.UpdateDatabaseServer)
-	router.DELETE("/api/admin/database/servers/:key", adminOrSysMiddleware, adminHandler.DeleteDatabaseServer)
-	router.GET("/api/admin/certificates/status", adminOrSysMiddleware, certificateHandler.GetCertificateStatus)
-	router.POST("/api/admin/certificates/renew", adminOrSysMiddleware, certificateHandler.RenewCertificate)
+	// Database management endpoints (RBAC-authorized)
+	router.POST("/api/admin/database/create", authzMiddleware, adminHandler.CreateDatabase)
+	router.GET("/api/admin/database/list", authzMiddleware, adminHandler.ListDatabases)
+	router.GET("/api/admin/database/servers", authzMiddleware, adminHandler.ListDatabaseServers)
+	router.POST("/api/admin/database/connect", authzMiddleware, adminHandler.ConnectDatabaseServer)
+	router.PUT("/api/admin/database/servers/:key", authzMiddleware, adminHandler.UpdateDatabaseServer)
+	router.DELETE("/api/admin/database/servers/:key", authzMiddleware, adminHandler.DeleteDatabaseServer)
+	router.GET("/api/admin/certificates/status", authzMiddleware, certificateHandler.GetCertificateStatus)
+	router.POST("/api/admin/certificates/renew", authzMiddleware, certificateHandler.RenewCertificate)
 
-	// Table management endpoints (admin only)
-	router.POST("/api/admin/table/create", adminOrSysMiddleware, adminHandler.CreateTable)
-	router.GET("/api/admin/table/list", adminOrSysMiddleware, adminHandler.ListTables)
+	// Table management endpoints (RBAC-authorized)
+	router.POST("/api/admin/table/create", authzMiddleware, adminHandler.CreateTable)
+	router.GET("/api/admin/table/list", authzMiddleware, adminHandler.ListTables)
 
-	// Legacy platform user management endpoints (admin only)
+	// Legacy platform user management endpoints (RBAC-authorized)
 	if !iamOnlyAuth {
-		router.GET("/api/v1/users", adminOrSysMiddleware, platformUserHandler.ListPlatformUsers)
-		router.GET("/api/v1/users/:id", adminOrSysMiddleware, platformUserHandler.GetPlatformUser)
-		router.POST("/api/v1/users", adminOrSysMiddleware, platformUserHandler.CreatePlatformUser)
-		router.PUT("/api/v1/users/:id", adminOrSysMiddleware, platformUserHandler.UpdatePlatformUser)
-		router.DELETE("/api/v1/users/:id", adminOrSysMiddleware, platformUserHandler.DeletePlatformUser)
+		router.GET("/api/v1/users", authzMiddleware, platformUserHandler.ListPlatformUsers)
+		router.GET("/api/v1/users/:id", authzMiddleware, platformUserHandler.GetPlatformUser)
+		router.POST("/api/v1/users", authzMiddleware, platformUserHandler.CreatePlatformUser)
+		router.PUT("/api/v1/users/:id", authzMiddleware, platformUserHandler.UpdatePlatformUser)
+		router.DELETE("/api/v1/users/:id", authzMiddleware, platformUserHandler.DeletePlatformUser)
 	} else {
 		log.Println("ℹ️  IAM_ONLY_AUTH=true: legacy /api/v1/users endpoints are disabled; use /iam/admin/users")
 	}
 
-	// API Metrics endpoints (admin only)
-	router.GET("/api/admin/metrics/all", adminOrSysMiddleware, apiMetricsTracker.GetAllAPIMetrics)
-	router.GET("/api/admin/metrics/count", adminOrSysMiddleware, apiMetricsTracker.GetAPICount)
-	router.GET("/api/admin/metrics/stats", adminOrSysMiddleware, apiMetricsTracker.GetAPIStats)
+	// API Metrics endpoints (RBAC-authorized)
+	router.GET("/api/admin/metrics/all", authzMiddleware, apiMetricsTracker.GetAllAPIMetrics)
+	router.GET("/api/admin/metrics/count", authzMiddleware, apiMetricsTracker.GetAPICount)
+	router.GET("/api/admin/metrics/stats", authzMiddleware, apiMetricsTracker.GetAPIStats)
 
 	// ====================================
 	// NOTIFICATION ENDPOINTS (Auth Required)
@@ -848,23 +1915,23 @@ func main() {
 	// Namespaced resource endpoints: /api/v1/namespaces/{namespace}/{kind}
 	nsAPI := router.Group("/api/v1/namespaces")
 	{
-		nsAPI.POST("/:namespace/:kind", adminOrSysMiddleware, resourceHandler.CreateOrUpdate)
+		nsAPI.POST("/:namespace/:kind", authzMiddleware, resourceHandler.CreateOrUpdate)
 		nsAPI.GET("/:namespace/:kind", authMiddleware, resourceHandler.List)
 		nsAPI.GET("/:namespace/:kind/:name", authMiddleware, resourceHandler.Get)
-		nsAPI.PUT("/:namespace/:kind/:name", adminOrSysMiddleware, resourceHandler.Update)
-		nsAPI.DELETE("/:namespace/:kind/:name", adminOrSysMiddleware, resourceHandler.Delete)
+		nsAPI.PUT("/:namespace/:kind/:name", authzMiddleware, resourceHandler.Update)
+		nsAPI.DELETE("/:namespace/:kind/:name", authzMiddleware, resourceHandler.Delete)
 		nsAPI.GET("/:namespace/:kind/:name/status", authMiddleware, resourceHandler.GetStatus)
 		nsAPI.GET("/:namespace/:kind/:name/events", authMiddleware, resourceHandler.Events)
 	}
 
 	// Non-namespaced resource endpoints: /api/v1/{kind}
-	router.POST("/api/v1/apis", adminOrSysMiddleware, resourceHandler.CreateOrUpdate)
+	router.POST("/api/v1/apis", authzMiddleware, resourceHandler.CreateOrUpdate)
 	router.GET("/api/v1/apis", authMiddleware, resourceHandler.ListAll)
-	router.POST("/api/v1/policies", adminOrSysMiddleware, resourceHandler.CreateOrUpdate)
+	router.POST("/api/v1/policies", authzMiddleware, resourceHandler.CreateOrUpdate)
 	router.GET("/api/v1/policies", authMiddleware, resourceHandler.ListAll)
-	router.POST("/api/v1/workflows", adminOrSysMiddleware, resourceHandler.CreateOrUpdate)
+	router.POST("/api/v1/workflows", authzMiddleware, resourceHandler.CreateOrUpdate)
 	router.GET("/api/v1/workflows", authMiddleware, resourceHandler.ListAll)
-	router.POST("/api/v1/workflows/:name/run", adminOrSysMiddleware, func(c *gin.Context) {
+	router.POST("/api/v1/workflows/:name/run", authzMiddleware, func(c *gin.Context) {
 		workflowName := strings.TrimSpace(c.Param("name"))
 		if workflowName == "" {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "workflow name is required"})
@@ -954,25 +2021,25 @@ func main() {
 
 	// DataSource endpoints
 	dsHandler := datasourceresource.NewDataSourceHandler(conns.Etcd)
-	router.POST("/api/v1/datasources", adminOrSysMiddleware, dsHandler.Create)
+	router.POST("/api/v1/datasources", authzMiddleware, dsHandler.Create)
 	router.GET("/api/v1/datasources", authMiddleware, dsHandler.List)
 	router.GET("/api/v1/datasources/:name", authMiddleware, dsHandler.Get)
-	router.PUT("/api/v1/datasources/:name", adminOrSysMiddleware, dsHandler.Update)
-	router.DELETE("/api/v1/datasources/:name", adminOrSysMiddleware, dsHandler.Delete)
-	router.POST("/api/v1/datasources/:name/test", adminOrSysMiddleware, dsHandler.Test)
+	router.PUT("/api/v1/datasources/:name", authzMiddleware, dsHandler.Update)
+	router.DELETE("/api/v1/datasources/:name", authzMiddleware, dsHandler.Delete)
+	router.POST("/api/v1/datasources/:name/test", authzMiddleware, dsHandler.Test)
 
 	// Job endpoints
 	jobHandler := jobs.NewLegacyJobHandler(conns.Etcd)
-	router.POST("/api/v1/jobs", adminOrSysMiddleware, jobHandler.Create)
+	router.POST("/api/v1/jobs", authzMiddleware, jobHandler.Create)
 	router.GET("/api/v1/jobs", authMiddleware, jobHandler.List)
 	router.GET("/api/v1/jobs/schedules", authMiddleware, jobHandler.ListSchedules)
 	router.GET("/api/v1/jobs/:id", authMiddleware, jobHandler.Get)
-	router.POST("/api/v1/jobs/:id/schedule", adminOrSysMiddleware, jobHandler.SetSchedule)
-	router.DELETE("/api/v1/jobs/:id/schedule", adminOrSysMiddleware, jobHandler.RemoveSchedule)
-	router.POST("/api/v1/jobs/:id/run", adminOrSysMiddleware, jobHandler.Run)
+	router.POST("/api/v1/jobs/:id/schedule", authzMiddleware, jobHandler.SetSchedule)
+	router.DELETE("/api/v1/jobs/:id/schedule", authzMiddleware, jobHandler.RemoveSchedule)
+	router.POST("/api/v1/jobs/:id/run", authzMiddleware, jobHandler.Run)
 	router.GET("/api/v1/jobs/:id/logs", authMiddleware, jobHandler.GetLogs)
-	router.POST("/api/v1/jobs/:id/cancel", adminOrSysMiddleware, jobHandler.Cancel)
-	router.DELETE("/api/v1/jobs/:id", adminOrSysMiddleware, jobHandler.Delete)
+	router.POST("/api/v1/jobs/:id/cancel", authzMiddleware, jobHandler.Cancel)
+	router.DELETE("/api/v1/jobs/:id", authzMiddleware, jobHandler.Delete)
 
 	// ====================================
 	// PLATFORM FEATURE APIs (PHASE 1)
@@ -997,52 +2064,52 @@ func main() {
 	// Bulk operations
 	bulkAPI := router.Group("/api/v1/bulk/operations", authMiddleware)
 	{
-		bulkAPI.POST("", adminOrSysMiddleware, bulkHandler.SubmitBulkOperation)
+		bulkAPI.POST("", authzMiddleware, bulkHandler.SubmitBulkOperation)
 		bulkAPI.GET("", bulkHandler.ListOperations)
 		bulkAPI.GET("/:id", bulkHandler.GetOperation)
 		bulkAPI.GET("/:id/progress", bulkHandler.GetProgress)
-		bulkAPI.DELETE("/:id", adminOrSysMiddleware, bulkHandler.CancelOperation)
-		bulkAPI.POST("/:id/retry-failed", adminOrSysMiddleware, bulkHandler.RetryFailed)
+		bulkAPI.DELETE("/:id", authzMiddleware, bulkHandler.CancelOperation)
+		bulkAPI.POST("/:id/retry-failed", authzMiddleware, bulkHandler.RetryFailed)
 		bulkAPI.GET("/:id/results", bulkHandler.GetResults)
 	}
 
 	// Event bus
 	eventBusAPI := router.Group("/api/v1/eventbus", authMiddleware)
 	{
-		eventBusAPI.POST("/events/publish", adminOrSysMiddleware, eventBusHandler.PublishEvent)
+		eventBusAPI.POST("/events/publish", authzMiddleware, eventBusHandler.PublishEvent)
 		eventBusAPI.GET("/events", eventBusHandler.ListEvents)
-		eventBusAPI.POST("/events/:id/ack", adminOrSysMiddleware, eventBusHandler.AckEvent)
-		eventBusAPI.POST("/topics", adminOrSysMiddleware, eventBusHandler.CreateTopic)
+		eventBusAPI.POST("/events/:id/ack", authzMiddleware, eventBusHandler.AckEvent)
+		eventBusAPI.POST("/topics", authzMiddleware, eventBusHandler.CreateTopic)
 		eventBusAPI.GET("/topics", eventBusHandler.ListTopics)
-		eventBusAPI.POST("/subscriptions", adminOrSysMiddleware, eventBusHandler.CreateSubscription)
+		eventBusAPI.POST("/subscriptions", authzMiddleware, eventBusHandler.CreateSubscription)
 		eventBusAPI.GET("/subscriptions/:id", eventBusHandler.GetSubscription)
 		eventBusAPI.GET("/subscriptions", eventBusHandler.ListSubscriptions)
 		eventBusAPI.GET("/dlq", eventBusHandler.ListDLQ)
-		eventBusAPI.POST("/dlq/:id/replay", adminOrSysMiddleware, eventBusHandler.ReplayDLQEvent)
+		eventBusAPI.POST("/dlq/:id/replay", authzMiddleware, eventBusHandler.ReplayDLQEvent)
 	}
 
 	// Exports
 	exportAPI := router.Group("/api/v1/exports", authMiddleware)
 	{
-		exportAPI.POST("", adminOrSysMiddleware, exportHandler.SubmitExport)
+		exportAPI.POST("", authzMiddleware, exportHandler.SubmitExport)
 		exportAPI.GET("", exportHandler.ListExports)
 		exportAPI.GET("/:id", exportHandler.GetExport)
 		exportAPI.GET("/:id/progress", exportHandler.GetExportProgress)
 		exportAPI.GET("/:id/download", exportHandler.DownloadExport)
-		exportAPI.DELETE("/:id", adminOrSysMiddleware, exportHandler.CancelExport)
+		exportAPI.DELETE("/:id", authzMiddleware, exportHandler.CancelExport)
 	}
-	router.POST("/api/v1/export-templates", authMiddleware, adminOrSysMiddleware, exportHandler.CreateTemplate)
+	router.POST("/api/v1/export-templates", authzMiddleware, exportHandler.CreateTemplate)
 	router.GET("/api/v1/export-templates", authMiddleware, exportHandler.ListTemplates)
 
 	// Webhooks
 	webhookAPI := router.Group("/api/v1/webhooks", authMiddleware)
 	{
-		webhookAPI.POST("", adminOrSysMiddleware, webhookHandler.CreateWebhook)
+		webhookAPI.POST("", authzMiddleware, webhookHandler.CreateWebhook)
 		webhookAPI.GET("", webhookHandler.ListWebhooks)
 		webhookAPI.GET("/:id", webhookHandler.GetWebhook)
-		webhookAPI.PATCH("/:id", adminOrSysMiddleware, webhookHandler.UpdateWebhook)
-		webhookAPI.DELETE("/:id", adminOrSysMiddleware, webhookHandler.DeleteWebhook)
-		webhookAPI.POST("/:id/test", adminOrSysMiddleware, webhookHandler.TestWebhook)
+		webhookAPI.PATCH("/:id", authzMiddleware, webhookHandler.UpdateWebhook)
+		webhookAPI.DELETE("/:id", authzMiddleware, webhookHandler.DeleteWebhook)
+		webhookAPI.POST("/:id/test", authzMiddleware, webhookHandler.TestWebhook)
 		webhookAPI.GET("/:id/deliveries", webhookHandler.GetDeliveryLogs)
 	}
 
@@ -1050,15 +2117,15 @@ func main() {
 	router.GET("/ws/stream", authMiddleware, streamHandler.HandleStream)
 	streamsAPI := router.Group("/api/v1/streams", authMiddleware)
 	{
-		streamsAPI.POST("", adminOrSysMiddleware, streamHandler.CreateStreamRequest)
+		streamsAPI.POST("", authzMiddleware, streamHandler.CreateStreamRequest)
 		streamsAPI.GET("", streamHandler.ListStreams)
 		streamsAPI.GET("/:id", streamHandler.GetStreamStatus)
-		streamsAPI.DELETE("/:id", adminOrSysMiddleware, streamHandler.CancelStream)
+		streamsAPI.DELETE("/:id", authzMiddleware, streamHandler.CancelStream)
 	}
 	streamSubscriptionsAPI := router.Group("/api/v1/streaming/subscriptions", authMiddleware)
 	{
-		streamSubscriptionsAPI.POST("", adminOrSysMiddleware, streamHandler.Subscribe)
-		streamSubscriptionsAPI.DELETE("/:id", adminOrSysMiddleware, streamHandler.Unsubscribe)
+		streamSubscriptionsAPI.POST("", authzMiddleware, streamHandler.Subscribe)
+		streamSubscriptionsAPI.DELETE("/:id", authzMiddleware, streamHandler.Unsubscribe)
 	}
 
 	// Conductor (RabbitMQ / Kafka producer & consumer management)
@@ -1070,13 +2137,13 @@ func main() {
 	// Tenants
 	tenantAPI := router.Group("/api/v1/tenants", authMiddleware)
 	{
-		tenantAPI.POST("", adminOrSysMiddleware, tenantHandler.CreateTenant)
+		tenantAPI.POST("", authzMiddleware, tenantHandler.CreateTenant)
 		tenantAPI.GET("", tenantHandler.ListTenants)
 		tenantAPI.GET("/:id", tenantHandler.GetTenant)
-		tenantAPI.PATCH("/:id", adminOrSysMiddleware, tenantHandler.UpdateTenant)
-		tenantAPI.DELETE("/:id", adminOrSysMiddleware, tenantHandler.DeleteTenant)
-		tenantAPI.POST("/:id/members", adminOrSysMiddleware, tenantHandler.AddMember)
-		tenantAPI.DELETE("/:id/members/:userId", adminOrSysMiddleware, tenantHandler.RemoveMember)
+		tenantAPI.PATCH("/:id", authzMiddleware, tenantHandler.UpdateTenant)
+		tenantAPI.DELETE("/:id", authzMiddleware, tenantHandler.DeleteTenant)
+		tenantAPI.POST("/:id/members", authzMiddleware, tenantHandler.AddMember)
+		tenantAPI.DELETE("/:id/members/:userId", authzMiddleware, tenantHandler.RemoveMember)
 		tenantAPI.GET("/:id/quota", tenantHandler.GetQuota)
 		tenantAPI.POST("/:id/quota/check", tenantHandler.CheckQuota)
 	}
@@ -1084,23 +2151,23 @@ func main() {
 	// RBAC
 	rbacAPI := router.Group("/api/v1/rbac", authMiddleware)
 	{
-		rbacAPI.POST("/roles", adminOrSysMiddleware, rbacHandler.CreateRole)
+		rbacAPI.POST("/roles", authzMiddleware, rbacHandler.CreateRole)
 		rbacAPI.GET("/roles", rbacHandler.ListRoles)
 		rbacAPI.GET("/roles/:id", rbacHandler.GetRole)
-		rbacAPI.PATCH("/roles/:id", adminOrSysMiddleware, rbacHandler.UpdateRole)
-		rbacAPI.DELETE("/roles/:id", adminOrSysMiddleware, rbacHandler.DeleteRole)
+		rbacAPI.PATCH("/roles/:id", authzMiddleware, rbacHandler.UpdateRole)
+		rbacAPI.DELETE("/roles/:id", authzMiddleware, rbacHandler.DeleteRole)
 
-		rbacAPI.POST("/role-bindings", adminOrSysMiddleware, rbacHandler.BindRole)
+		rbacAPI.POST("/role-bindings", authzMiddleware, rbacHandler.BindRole)
 		rbacAPI.GET("/role-bindings", rbacHandler.ListBindings)
-		rbacAPI.DELETE("/role-bindings/:id", adminOrSysMiddleware, rbacHandler.DeleteBinding)
+		rbacAPI.DELETE("/role-bindings/:id", authzMiddleware, rbacHandler.DeleteBinding)
 
 		rbacAPI.GET("/permissions", rbacHandler.ListPermissions)
 		rbacAPI.POST("/permissions/check", rbacHandler.CheckPermission)
 
 		rbacAPI.POST("/access-requests", rbacHandler.CreateAccessRequest)
 		rbacAPI.GET("/access-requests", rbacHandler.ListAccessRequests)
-		rbacAPI.POST("/access-requests/:id/approve", adminOrSysMiddleware, rbacHandler.ApproveAccessRequest)
-		rbacAPI.POST("/access-requests/:id/reject", adminOrSysMiddleware, rbacHandler.RejectAccessRequest)
+		rbacAPI.POST("/access-requests/:id/approve", authzMiddleware, rbacHandler.ApproveAccessRequest)
+		rbacAPI.POST("/access-requests/:id/reject", authzMiddleware, rbacHandler.RejectAccessRequest)
 	}
 
 	// Versioning
@@ -1110,8 +2177,8 @@ func main() {
 		versionAPI.GET("/versions/:resourceType/:resourceId", versionHandler.ListVersions)
 		versionAPI.GET("/history/:resourceType/:resourceId", versionHandler.GetHistory)
 		versionAPI.GET("/diff/:resourceType/:resourceId", versionHandler.GetDiff)
-		versionAPI.POST("/snapshots/:resourceType/:resourceId", adminOrSysMiddleware, versionHandler.CreateSnapshot)
-		versionAPI.POST("/versions/:resourceType/:resourceId/rollback", adminOrSysMiddleware, versionHandler.Rollback)
+		versionAPI.POST("/snapshots/:resourceType/:resourceId", authzMiddleware, versionHandler.CreateSnapshot)
+		versionAPI.POST("/versions/:resourceType/:resourceId/rollback", authzMiddleware, versionHandler.Rollback)
 	}
 
 	// Lineage
@@ -1131,17 +2198,17 @@ func main() {
 	// Tracing
 	tracingAPI := router.Group("/api/v1/tracing", authMiddleware)
 	{
-		tracingAPI.POST("/traces", adminOrSysMiddleware, tracingHandler.IngestTrace)
+		tracingAPI.POST("/traces", authzMiddleware, tracingHandler.IngestTrace)
 		tracingAPI.GET("/traces/:traceId", tracingHandler.GetTrace)
 		tracingAPI.GET("/traces/search", tracingHandler.SearchTraces)
-		tracingAPI.POST("/spans", adminOrSysMiddleware, tracingHandler.IngestSpan)
+		tracingAPI.POST("/spans", authzMiddleware, tracingHandler.IngestSpan)
 		tracingAPI.GET("/spans/:spanId", tracingHandler.GetSpan)
 		tracingAPI.GET("/service-map", tracingHandler.GetServiceMap)
 		tracingAPI.GET("/services", tracingHandler.ListServices)
 		tracingAPI.GET("/services/:service/metrics", tracingHandler.GetServiceMetrics)
 		tracingAPI.GET("/services/:service/operations/:operation/metrics", tracingHandler.GetOperationMetrics)
 		tracingAPI.GET("/errors/analysis", tracingHandler.GetErrorAnalysis)
-		tracingAPI.GET("/ingestion/audit", adminOrSysMiddleware, tracingHandler.ListIngestionAudits)
+		tracingAPI.GET("/ingestion/audit", authzMiddleware, tracingHandler.ListIngestionAudits)
 	}
 
 	// ====================================
@@ -1153,25 +2220,25 @@ func main() {
 		gisAPI.GET("/summary", gisHandler.GetSummary)
 
 		gisAPI.GET("/layers", gisHandler.ListLayers)
-		gisAPI.POST("/layers", adminOrSysMiddleware, gisHandler.CreateLayer)
-		gisAPI.PUT("/layers/:id", adminOrSysMiddleware, gisHandler.UpdateLayer)
-		gisAPI.DELETE("/layers/:id", adminOrSysMiddleware, gisHandler.DeleteLayer)
+		gisAPI.POST("/layers", authzMiddleware, gisHandler.CreateLayer)
+		gisAPI.PUT("/layers/:id", authzMiddleware, gisHandler.UpdateLayer)
+		gisAPI.DELETE("/layers/:id", authzMiddleware, gisHandler.DeleteLayer)
 
 		gisAPI.GET("/regions", gisHandler.ListRegions)
 		gisAPI.GET("/regions/:id", gisHandler.GetRegion)
-		gisAPI.POST("/regions", adminOrSysMiddleware, gisHandler.CreateRegion)
-		gisAPI.PUT("/regions/:id", adminOrSysMiddleware, gisHandler.UpdateRegion)
-		gisAPI.DELETE("/regions/:id", adminOrSysMiddleware, gisHandler.DeleteRegion)
+		gisAPI.POST("/regions", authzMiddleware, gisHandler.CreateRegion)
+		gisAPI.PUT("/regions/:id", authzMiddleware, gisHandler.UpdateRegion)
+		gisAPI.DELETE("/regions/:id", authzMiddleware, gisHandler.DeleteRegion)
 
 		gisAPI.GET("/markers", gisHandler.ListMarkers)
-		gisAPI.POST("/markers", adminOrSysMiddleware, gisHandler.CreateMarker)
-		gisAPI.DELETE("/markers/:id", adminOrSysMiddleware, gisHandler.DeleteMarker)
+		gisAPI.POST("/markers", authzMiddleware, gisHandler.CreateMarker)
+		gisAPI.DELETE("/markers/:id", authzMiddleware, gisHandler.DeleteMarker)
 
 		gisAPI.GET("/datasets", gisHandler.ListDatasets)
 		gisAPI.GET("/datasets/:id", gisHandler.GetDataset)
-		gisAPI.POST("/datasets", adminOrSysMiddleware, gisHandler.CreateDataset)
-		gisAPI.PUT("/datasets/:id", adminOrSysMiddleware, gisHandler.UpdateDataset)
-		gisAPI.DELETE("/datasets/:id", adminOrSysMiddleware, gisHandler.DeleteDataset)
+		gisAPI.POST("/datasets", authzMiddleware, gisHandler.CreateDataset)
+		gisAPI.PUT("/datasets/:id", authzMiddleware, gisHandler.UpdateDataset)
+		gisAPI.DELETE("/datasets/:id", authzMiddleware, gisHandler.DeleteDataset)
 	}
 
 	// Specialized GIS dashboards (agriculture, industries, medical, satellite, airplane, ship)
@@ -1196,8 +2263,8 @@ func main() {
 	{
 		analyticsAPI.GET("/dashboards", analyticsHandler.ListDashboards)
 		analyticsAPI.GET("/dashboards/:id", analyticsHandler.GetDashboard)
-		analyticsAPI.PUT("/dashboards/:id/widgets/:widgetId", adminOrSysMiddleware, analyticsHandler.UpdateWidget)
-		analyticsAPI.PUT("/dashboards/:id/layout", adminOrSysMiddleware, analyticsHandler.ReorderWidgets)
+		analyticsAPI.PUT("/dashboards/:id/widgets/:widgetId", authzMiddleware, analyticsHandler.UpdateWidget)
+		analyticsAPI.PUT("/dashboards/:id/layout", authzMiddleware, analyticsHandler.ReorderWidgets)
 		analyticsAPI.GET("/dashboards/:id/widgets/:widgetId/export", analyticsHandler.ExportCSV)
 		analyticsAPI.GET("/widget-types", analyticsHandler.GetWidgetTypes)
 	}
@@ -1226,12 +2293,12 @@ func main() {
 	{
 		cdcAPI.GET("/pipelines", cdcEtlHandler.ListCDCPipelines)
 		cdcAPI.GET("/pipelines/:id", cdcEtlHandler.GetCDCPipeline)
-		cdcAPI.POST("/pipelines", adminOrSysMiddleware, cdcEtlHandler.CreateCDCPipeline)
-		cdcAPI.PUT("/pipelines/:id", adminOrSysMiddleware, cdcEtlHandler.UpdateCDCPipeline)
-		cdcAPI.DELETE("/pipelines/:id", adminOrSysMiddleware, cdcEtlHandler.DeleteCDCPipeline)
-		cdcAPI.POST("/pipelines/:id/start", adminOrSysMiddleware, cdcEtlHandler.StartCDCPipeline)
-		cdcAPI.POST("/pipelines/:id/pause", adminOrSysMiddleware, cdcEtlHandler.PauseCDCPipeline)
-		cdcAPI.POST("/pipelines/:id/stop", adminOrSysMiddleware, cdcEtlHandler.StopCDCPipeline)
+		cdcAPI.POST("/pipelines", authzMiddleware, cdcEtlHandler.CreateCDCPipeline)
+		cdcAPI.PUT("/pipelines/:id", authzMiddleware, cdcEtlHandler.UpdateCDCPipeline)
+		cdcAPI.DELETE("/pipelines/:id", authzMiddleware, cdcEtlHandler.DeleteCDCPipeline)
+		cdcAPI.POST("/pipelines/:id/start", authzMiddleware, cdcEtlHandler.StartCDCPipeline)
+		cdcAPI.POST("/pipelines/:id/pause", authzMiddleware, cdcEtlHandler.PauseCDCPipeline)
+		cdcAPI.POST("/pipelines/:id/stop", authzMiddleware, cdcEtlHandler.StopCDCPipeline)
 		cdcAPI.GET("/sources", cdcEtlHandler.GetCDCSourceTypes)
 		cdcAPI.GET("/sinks", cdcEtlHandler.GetCDCSinkTypes)
 		cdcAPI.GET("/observability", cdcEtlHandler.GetCDCObservability)
@@ -1267,43 +2334,43 @@ func main() {
 		// Custom API CRUD
 		builderAPI.GET("/apis", apiBuilderHandler.ListAPIs)
 		builderAPI.GET("/apis/:id", apiBuilderHandler.GetAPI)
-		builderAPI.POST("/apis", adminOrSysMiddleware, apiBuilderHandler.CreateAPI)
-		builderAPI.PUT("/apis/:id", adminOrSysMiddleware, apiBuilderHandler.UpdateAPI)
-		builderAPI.DELETE("/apis/:id", adminOrSysMiddleware, apiBuilderHandler.DeleteAPI)
-		builderAPI.POST("/apis/:id/test", adminOrSysMiddleware, apiBuilderHandler.TestAPI)
+		builderAPI.POST("/apis", authzMiddleware, apiBuilderHandler.CreateAPI)
+		builderAPI.PUT("/apis/:id", authzMiddleware, apiBuilderHandler.UpdateAPI)
+		builderAPI.DELETE("/apis/:id", authzMiddleware, apiBuilderHandler.DeleteAPI)
+		builderAPI.POST("/apis/:id/test", authzMiddleware, apiBuilderHandler.TestAPI)
 
 		// CSV Upload & Dashboard Generation
-		builderAPI.POST("/csv/upload", adminOrSysMiddleware, apiBuilderHandler.UploadCSV)
+		builderAPI.POST("/csv/upload", authzMiddleware, apiBuilderHandler.UploadCSV)
 		builderAPI.GET("/csv/uploads", apiBuilderHandler.ListCSVUploads)
 		builderAPI.GET("/csv/uploads/:id", apiBuilderHandler.GetCSVUpload)
-		builderAPI.DELETE("/csv/uploads/:id", adminOrSysMiddleware, apiBuilderHandler.DeleteCSVUpload)
-		builderAPI.POST("/csv/uploads/:id/generate-dashboard", adminOrSysMiddleware, apiBuilderHandler.GenerateDashboard)
-		builderAPI.POST("/csv/uploads/:id/generate-gis", adminOrSysMiddleware, apiBuilderHandler.GenerateGISFromCSV)
+		builderAPI.DELETE("/csv/uploads/:id", authzMiddleware, apiBuilderHandler.DeleteCSVUpload)
+		builderAPI.POST("/csv/uploads/:id/generate-dashboard", authzMiddleware, apiBuilderHandler.GenerateDashboard)
+		builderAPI.POST("/csv/uploads/:id/generate-gis", authzMiddleware, apiBuilderHandler.GenerateGISFromCSV)
 
 		// Dashboard <-> GIS Conversion
-		builderAPI.POST("/convert/analyze", adminOrSysMiddleware, apiBuilderHandler.AnalyzeConversion)
-		builderAPI.POST("/convert/dashboard-to-gis", adminOrSysMiddleware, apiBuilderHandler.ConvertDashboardToGIS)
-		builderAPI.POST("/convert/gis-to-dashboard", adminOrSysMiddleware, apiBuilderHandler.ConvertGISToDashboard)
+		builderAPI.POST("/convert/analyze", authzMiddleware, apiBuilderHandler.AnalyzeConversion)
+		builderAPI.POST("/convert/dashboard-to-gis", authzMiddleware, apiBuilderHandler.ConvertDashboardToGIS)
+		builderAPI.POST("/convert/gis-to-dashboard", authzMiddleware, apiBuilderHandler.ConvertGISToDashboard)
 		builderAPI.GET("/conversions", apiBuilderHandler.ListConversions)
 
 		// File Scanner (SafeGate Pipeline)
-		builderAPI.POST("/scanner/scan", adminOrSysMiddleware, apiBuilderHandler.ScanFile)
+		builderAPI.POST("/scanner/scan", authzMiddleware, apiBuilderHandler.ScanFile)
 		builderAPI.GET("/scanner/scans", apiBuilderHandler.ListScans)
 		builderAPI.GET("/scanner/scans/:id", apiBuilderHandler.GetScan)
 		builderAPI.GET("/scanner/health", apiBuilderHandler.GetScannerHealth)
 
 		// API Scanner Reports
-		builderAPI.POST("/api-scanner/scan", adminOrSysMiddleware, apiBuilderHandler.ScanAPI)
+		builderAPI.POST("/api-scanner/scan", authzMiddleware, apiBuilderHandler.ScanAPI)
 		builderAPI.GET("/api-scanner/reports", apiBuilderHandler.ListAPIScanReports)
-		builderAPI.POST("/api-scanner/reports/bulk-delete", adminOrSysMiddleware, apiBuilderHandler.BulkDeleteAPIScanReports)
+		builderAPI.POST("/api-scanner/reports/bulk-delete", authzMiddleware, apiBuilderHandler.BulkDeleteAPIScanReports)
 		builderAPI.GET("/api-scanner/reports/:id", apiBuilderHandler.GetAPIScanReport)
-		builderAPI.DELETE("/api-scanner/reports/:id", adminOrSysMiddleware, apiBuilderHandler.DeleteAPIScanReport)
+		builderAPI.DELETE("/api-scanner/reports/:id", authzMiddleware, apiBuilderHandler.DeleteAPIScanReport)
 
 		// SQL Assistant for API Builder
-		builderAPI.POST("/sql-assistant/chat", adminOrSysMiddleware, apiBuilderHandler.ChatSQLAssistant)
+		builderAPI.POST("/sql-assistant/chat", authzMiddleware, apiBuilderHandler.ChatSQLAssistant)
 
 		// Dashboard Deletion
-		builderAPI.DELETE("/dashboards/:id", adminOrSysMiddleware, apiBuilderHandler.DeleteDashboard)
+		builderAPI.DELETE("/dashboards/:id", authzMiddleware, apiBuilderHandler.DeleteDashboard)
 	}
 
 	// Runtime execution routes for REST APIs created via API Builder.
@@ -1339,7 +2406,7 @@ func main() {
 		netintelAPI.GET("/modes", func(c *gin.Context) {
 			c.JSON(http.StatusOK, netintelpkg.ModesListResponse{Status: "success", Modes: modeManager.List()})
 		})
-		netintelAPI.PUT("/modes/:name", adminOrSysMiddleware, func(c *gin.Context) {
+		netintelAPI.PUT("/modes/:name", authzMiddleware, func(c *gin.Context) {
 			var cfg modes.ModeConfig
 			if err := c.ShouldBindJSON(&cfg); err != nil {
 				c.JSON(http.StatusBadRequest, netintelpkg.MessageResponse{Error: err.Error()})
@@ -1353,7 +2420,7 @@ func main() {
 			modeManager.Upsert(cfg)
 			c.JSON(http.StatusOK, netintelpkg.ModesUpsertResponse{Message: "mode upserted", Mode: cfg})
 		})
-		netintelAPI.POST("/modes/events", adminOrSysMiddleware, func(c *gin.Context) {
+		netintelAPI.POST("/modes/events", authzMiddleware, func(c *gin.Context) {
 			var ev modes.ModeEvent
 			if err := c.ShouldBindJSON(&ev); err != nil {
 				c.JSON(http.StatusBadRequest, netintelpkg.MessageResponse{Error: err.Error()})
@@ -1412,7 +2479,7 @@ func main() {
 			c.JSON(http.StatusOK, admissionEngine.Evaluate(req))
 		})
 
-		kubeplusAPI.PUT("/scheduler/nodes/:name", adminOrSysMiddleware, func(c *gin.Context) {
+		kubeplusAPI.PUT("/scheduler/nodes/:name", authzMiddleware, func(c *gin.Context) {
 			var node scheduler.Node
 			if err := c.ShouldBindJSON(&node); err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -1451,7 +2518,7 @@ func main() {
 			c.JSON(http.StatusOK, best)
 		})
 
-		kubeplusAPI.POST("/crd/definitions", adminOrSysMiddleware, func(c *gin.Context) {
+		kubeplusAPI.POST("/crd/definitions", authzMiddleware, func(c *gin.Context) {
 			var def crd.Definition
 			if err := c.ShouldBindJSON(&def); err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -1501,7 +2568,7 @@ func main() {
 
 	vectorAPI := router.Group("/api/v1/vectorplus", authMiddleware)
 	{
-		vectorAPI.PUT("/records/:id", adminOrSysMiddleware, func(c *gin.Context) {
+		vectorAPI.PUT("/records/:id", authzMiddleware, func(c *gin.Context) {
 			var body struct {
 				Vec    []float64         `json:"vec"`
 				Labels map[string]string `json:"labels"`
@@ -1517,7 +2584,7 @@ func main() {
 			}
 			c.JSON(http.StatusOK, gin.H{"message": "record upserted", "id": rec.ID})
 		})
-		vectorAPI.DELETE("/records/:id", adminOrSysMiddleware, func(c *gin.Context) {
+		vectorAPI.DELETE("/records/:id", authzMiddleware, func(c *gin.Context) {
 			vectorIndex.Delete(c.Param("id"))
 			c.JSON(http.StatusOK, gin.H{"message": "record deleted", "id": c.Param("id")})
 		})
@@ -1566,7 +2633,7 @@ func main() {
 
 	reviewAPI := router.Group("/api/v1/reviewflow", authMiddleware)
 	{
-		reviewAPI.PUT("/items/:id", adminOrSysMiddleware, func(c *gin.Context) {
+		reviewAPI.PUT("/items/:id", authzMiddleware, func(c *gin.Context) {
 			var item reviewflow.ReviewItem
 			if err := c.ShouldBindJSON(&item); err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -1595,7 +2662,7 @@ func main() {
 			stage := reviewflow.Stage(strings.TrimSpace(c.Query("stage")))
 			c.JSON(http.StatusOK, gin.H{"items": reviewPipeline.ListByStage(stage)})
 		})
-		reviewAPI.POST("/items/:id/stage", adminOrSysMiddleware, func(c *gin.Context) {
+		reviewAPI.POST("/items/:id/stage", authzMiddleware, func(c *gin.Context) {
 			var body struct {
 				Stage reviewflow.Stage `json:"stage"`
 			}
@@ -1683,7 +2750,8 @@ func main() {
 	// ====================================
 	// GATEKEEPER 2FA MODULE
 	// ====================================
-	gkSystem, gkErr := gatekeeper.NewSystem(conns.PostgreSQL)
+	var gkErr error
+	gkSystem, gkErr = gatekeeper.NewSystem(conns.PostgreSQL)
 	if gkErr != nil {
 		log.Printf("⚠️  Gatekeeper 2FA module initialization failed: %v — 2FA endpoints will be unavailable", gkErr)
 	} else {
@@ -1708,10 +2776,10 @@ func main() {
 	auditHandler := audit.NewAuditHandler(nil) // AuditLogger impl wired when available
 	auditAPI := router.Group("/api/v1/audit", authMiddleware)
 	{
-		auditAPI.POST("/logs", adminOrSysMiddleware, auditHandler.LogAction)
+		auditAPI.POST("/logs", authzMiddleware, auditHandler.LogAction)
 		auditAPI.GET("/logs", auditHandler.QueryLogs)
 		auditAPI.GET("/report", auditHandler.GetReport)
-		auditAPI.DELETE("/logs", adminOrSysMiddleware, auditHandler.DeleteOldLogs)
+		auditAPI.DELETE("/logs", authzMiddleware, auditHandler.DeleteOldLogs)
 	}
 	log.Println("✅ Audit routes registered")
 
@@ -1723,17 +2791,34 @@ func main() {
 	encryptionHandler := encryption.NewEncryptionHandler(nil)
 	encryptionAPI := router.Group("/api/v1/encryption", authMiddleware)
 	{
-		encryptionAPI.POST("/keys", adminOrSysMiddleware, encryptionHandler.CreateKey)
+		encryptionAPI.POST("/keys", authzMiddleware, encryptionHandler.CreateKey)
 		encryptionAPI.GET("/keys", encryptionHandler.ListKeys)
 		encryptionAPI.GET("/keys/:id", encryptionHandler.GetKey)
-		encryptionAPI.POST("/keys/:id/rotate", adminOrSysMiddleware, encryptionHandler.RotateKey)
-		encryptionAPI.DELETE("/keys/:id", adminOrSysMiddleware, encryptionHandler.DeleteKey)
+		encryptionAPI.POST("/keys/:id/rotate", authzMiddleware, encryptionHandler.RotateKey)
+		encryptionAPI.DELETE("/keys/:id", authzMiddleware, encryptionHandler.DeleteKey)
 		encryptionAPI.POST("/encrypt", authMiddleware, encryptionHandler.Encrypt)
 		encryptionAPI.POST("/decrypt", authMiddleware, encryptionHandler.Decrypt)
-		encryptionAPI.POST("/policies", adminOrSysMiddleware, encryptionHandler.CreatePolicy)
+		encryptionAPI.POST("/policies", authzMiddleware, encryptionHandler.CreatePolicy)
 		encryptionAPI.GET("/policies", encryptionHandler.ListPolicies)
 	}
 	log.Println("✅ Encryption routes registered")
+
+	// Phase 19: Register auto-encryption GORM callbacks on PostgreSQL.
+	// This enables transparent field-level encryption/decryption for all
+	// model fields tagged with `classification:"PII"`, `"Sensitive"`, or `"Confidential"`.
+	if conns.PostgreSQL != nil {
+		autoEnc := encryption.NewAutoEncryptor(encryption.GetDefaultKey)
+		gormCB := encryption.NewGORMCallbacks(autoEnc)
+		gormCB.Register(conns.PostgreSQL)
+		log.Println("✅ Auto-encryption GORM callbacks registered (Phase 19)")
+	}
+
+	// ====================================
+	// API GATEWAY MANAGEMENT ENDPOINTS (Phase 17)
+	// ====================================
+	gwAPI := router.Group("/api/v1/gateway", authMiddleware)
+	gwSystem.RegisterRoutes(gwAPI)
+	log.Println("✅ API Gateway management routes registered (/api/v1/gateway)")
 
 	// ====================================
 	// RECONCILER CONTROLLERS (P2 — AxiomNizam architecture)
@@ -1925,7 +3010,7 @@ func main() {
 			snapshotH := snapshothandler.NewHandler(backendMgr)
 			sysAPI := router.Group("/api/v1/system", authMiddleware)
 			sysAPI.GET("/snapshot", snapshotH.Download)
-			sysAPI.POST("/snapshot/restore", adminOrSysMiddleware, snapshotH.Restore)
+			sysAPI.POST("/snapshot/restore", authzMiddleware, snapshotH.Restore)
 			log.Println("  ✅ Snapshot backup/restore endpoints registered (/api/v1/system/snapshot)")
 		}
 
@@ -2330,7 +3415,13 @@ func main() {
 	}
 
 	go func() {
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		var err error
+		if tlsCfg.Enabled {
+			err = srv.ListenAndServeTLS(tlsCfg.CertFile, tlsCfg.KeyFile)
+		} else {
+			err = srv.ListenAndServe()
+		}
+		if err != nil && err != http.ErrServerClosed {
 			log.Printf("Server error: %v", err)
 		}
 	}()

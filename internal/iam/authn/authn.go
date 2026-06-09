@@ -19,6 +19,7 @@ type Session struct {
 	IPAddress    string    `json:"ip_address"`
 	UserAgent    string    `json:"user_agent"`
 	CreatedAt    time.Time `json:"created_at"`
+	LastAccessAt time.Time `json:"last_access_at"` // Phase 11: updated on each authenticated request
 	ExpiresAt    time.Time `json:"expires_at"`
 	Active       bool      `json:"active"`
 }
@@ -107,13 +108,14 @@ func (a *Authenticator) CreateSession(userID, ip, userAgent string, ttl time.Dur
 	}
 	now := time.Now().UTC()
 	s := &Session{
-		ID:        sid,
-		UserID:    userID,
-		IPAddress: ip,
-		UserAgent: userAgent,
-		CreatedAt: now,
-		ExpiresAt: now.Add(ttl),
-		Active:    true,
+		ID:           sid,
+		UserID:       userID,
+		IPAddress:    ip,
+		UserAgent:    userAgent,
+		CreatedAt:    now,
+		LastAccessAt: now,
+		ExpiresAt:    now.Add(ttl),
+		Active:       true,
 	}
 	if err := a.sessionRepo.Create(s); err != nil {
 		return nil, err

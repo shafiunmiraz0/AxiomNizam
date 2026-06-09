@@ -102,10 +102,12 @@ func (e *Engine) Evaluate(ctx context.Context, req *EvaluationRequest) (*Evaluat
 
 // EvaluatePolicy determines if MFA is required for a user.
 // Implements contracts.PolicyService.
+// NOTE: This method uses zero values for risk/context — prefer EvaluateHTTPRequest
+// when request context is available.
 func (e *Engine) EvaluatePolicy(ctx context.Context, userID models.UserID) (bool, []models.FactorType, error) {
 	req := &EvaluationRequest{
 		UserID:    userID.String(),
-		LastMFAAt: 0, // Would be fetched from user profile
+		LastMFAAt: 0,
 		RiskScore: 0,
 	}
 	result, err := e.Evaluate(ctx, req)
@@ -113,6 +115,13 @@ func (e *Engine) EvaluatePolicy(ctx context.Context, userID models.UserID) (bool
 		return false, nil, err
 	}
 	return result.RequiresMFA, result.AllowedFactors, nil
+}
+
+// EvaluateHTTPRequest evaluates policy with actual request context.
+// This is the Zero Trust–aware entry point that passes real risk scores,
+// IP address, resource path, and device signals into the policy engine.
+func (e *Engine) EvaluateHTTPRequest(ctx context.Context, req *EvaluationRequest) (*EvaluationResult, error) {
+	return e.Evaluate(ctx, req)
 }
 
 // GetPolicy retrieves a policy by ID.

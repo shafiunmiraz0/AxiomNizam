@@ -1,0 +1,290 @@
+# network-policies.yaml — Phase 15: Kubernetes NetworkPolicies for micro-segmentation
+#
+# Enforces the same tier-based network segmentation as docker-compose.yml
+# but for Kubernetes deployments.
+#
+# Network topology:
+#   frontend → backend (port 8000 only)
+#   backend  → postgres (5432), etcd (2379), rabbitmq (5672), kafka (9092)
+#   databases → no ingress except from backend
+#   all      → DNS (kube-dns)
+#
+# Apply: kubectl apply -f k8s/network-policies.yaml
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: backend-ingress-policy
+  namespace: axiomnizam
+spec:
+  podSelector:
+    matchLabels:
+      app: axiomnizam
+      tier: backend
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow traffic from frontend on port 8000
+    - from:
+        - podSelector:
+            matchLabels:
+              app: axiomnizam-frontend
+              tier: frontend
+      ports:
+        - protocol: TCP
+          port: 8000
+    # Allow health check probes from ingress controller
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 8000
+  egress:
+    # Allow DNS resolution
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # Allow connection to PostgreSQL
+    - to:
+        - podSelector:
+            matchLabels:
+              app: postgres
+              tier: database
+      ports:
+        - protocol: TCP
+          port: 5432
+    # Allow connection to etcd
+    - to:
+        - podSelector:
+            matchLabels:
+              app: etcd
+              tier: database
+      ports:
+        - protocol: TCP
+          port: 2379
+    # Allow connection to RabbitMQ
+    - to:
+        - podSelector:
+            matchLabels:
+              app: rabbitmq
+              tier: messagequeue
+      ports:
+        - protocol: TCP
+          port: 5672
+    # Allow connection to Kafka
+    - to:
+        - podSelector:
+            matchLabels:
+              app: kafka
+              tier: messagequeue
+      ports:
+        - protocol: TCP
+          port: 9092
+    # Allow outbound HTTPS for webhooks, SIEM, JWKS, etc.
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+      ports:
+        - protocol: TCP
+          port: 443
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: frontend-ingress-policy
+  namespace: axiomnizam
+spec:
+  podSelector:
+    matchLabels:
+      app: axiomnizam-frontend
+      tier: frontend
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow traffic from ingress controller
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 7000
+  egress:
+    # Allow DNS
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # Allow connection to backend
+    - to:
+        - podSelector:
+            matchLabels:
+              app: axiomnizam
+              tier: backend
+      ports:
+        - protocol: TCP
+          port: 8000
+    # Allow outbound HTTPS for OAuth callbacks
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+      ports:
+        - protocol: TCP
+          port: 443
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: postgres-policy
+  namespace: axiomnizam
+spec:
+  podSelector:
+    matchLabels:
+      app: postgres
+      tier: database
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow connections ONLY from backend
+    - from:
+        - podSelector:
+            matchLabels:
+              app: axiomnizam
+              tier: backend
+      ports:
+        - protocol: TCP
+          port: 5432
+  egress:
+    # Allow DNS only
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: etcd-policy
+  namespace: axiomnizam
+spec:
+  podSelector:
+    matchLabels:
+      app: etcd
+      tier: database
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow connections ONLY from backend
+    - from:
+        - podSelector:
+            matchLabels:
+              app: axiomnizam
+              tier: backend
+      ports:
+        - protocol: TCP
+          port: 2379
+        - protocol: TCP
+          port: 2380
+  egress:
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: rabbitmq-policy
+  namespace: axiomnizam
+spec:
+  podSelector:
+    matchLabels:
+      app: rabbitmq
+      tier: messagequeue
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow connections from backend only
+    - from:
+        - podSelector:
+            matchLabels:
+              app: axiomnizam
+              tier: backend
+      ports:
+        - protocol: TCP
+          port: 5672
+  egress:
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: kafka-policy
+  namespace: axiomnizam
+spec:
+  podSelector:
+    matchLabels:
+      app: kafka
+      tier: messagequeue
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow connections from backend only
+    - from:
+        - podSelector:
+            matchLabels:
+              app: axiomnizam
+              tier: backend
+      ports:
+        - protocol: TCP
+          port: 9092
+  egress:
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+---
+# Default deny all ingress in the namespace
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: axiomnizam
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress

@@ -1,0 +1,25 @@
+AxiomNizam has been deployed.
+
+1. Get the application URL:
+{{- if .Values.ingress.enabled }}
+{{- range $host := .Values.ingress.hosts }}
+  http{{ if $.Values.ingress.tls }}s{{ end }}://{{ $host.host }}
+{{- end }}
+{{- else if contains "NodePort" .Values.service.type }}
+  export NODE_PORT=$(kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ include "axiomnizam.fullname" . }})
+  export NODE_IP=$(kubectl get nodes --namespace {{ .Release.Namespace }} -o jsonpath="{.items[0].status.addresses[0].address}")
+  echo https://$NODE_IP:$NODE_PORT
+{{- else if contains "LoadBalancer" .Values.service.type }}
+  NOTE: It may take a few minutes for the LoadBalancer IP to be available.
+  kubectl get --namespace {{ .Release.Namespace }} svc {{ include "axiomnizam.fullname" . }} -w
+{{- else }}
+  kubectl --namespace {{ .Release.Namespace }} port-forward svc/{{ include "axiomnizam.fullname" . }} 8000:{{ .Values.service.port }}
+  Then open: https://localhost:8000
+{{- end }}
+
+2. Default sysadmin login:
+   Email:    {{ .Values.iam.sysadminEmail }}
+   Password: <set via iam.sysadminPassword in values.yaml>
+
+3. Check health:
+   curl -sk https://<HOST>:8000/health

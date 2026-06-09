@@ -1,0 +1,151 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "axiomnizam.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "axiomnizam.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "axiomnizam.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "axiomnizam.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.image.pullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      initContainers:
+        - name: wait-for-postgres
+          image: postgres:latest
+          command:
+            - sh
+            - -c
+            - |
+              until pg_isready -h {{ include "axiomnizam.postgres.fullname" . }} -p {{ .Values.postgresql.port }} -U {{ .Values.postgresql.user }}; do
+                echo "Waiting for PostgreSQL..."
+                sleep 2
+              done
+          envFrom:
+            - configMapRef:
+                name: {{ include "axiomnizam.fullname" . }}-config
+            - secretRef:
+                name: {{ include "axiomnizam.fullname" . }}
+      containers:
+        - name: axiomnizam
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: https
+              containerPort: {{ .Values.config.apiPort | int }}
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: {{ include "axiomnizam.fullname" . }}-config
+            - secretRef:
+                name: {{ include "axiomnizam.fullname" . }}
+          {{- with .Values.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: https
+              scheme: HTTPS
+            initialDelaySeconds: 15
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: https
+              scheme: HTTPS
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          env:
+            {{- if .Values.iam.rsaPrivateKey }}
+            - name: IAM_RSA_PRIVATE_KEY_FILE
+              value: /secrets/iam/rsa_private_key.pem
+            {{- end }}
+          volumeMounts:
+            - name: raft-data
+              mountPath: /data/raft
+            - name: storage-data
+              mountPath: /data/storage
+            - name: certs-data
+              mountPath: /data/certs
+            - name: query-logs
+              mountPath: /data/query_logs
+            {{- if .Values.iam.rsaPrivateKey }}
+            - name: rsa-key
+              mountPath: /secrets/iam
+              readOnly: true
+            {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      volumes:
+        - name: raft-data
+          {{- if .Values.persistence.raft.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "axiomnizam.fullname" . }}-raft
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        - name: storage-data
+          {{- if .Values.persistence.storage.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "axiomnizam.fullname" . }}-storage
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        - name: certs-data
+          {{- if .Values.persistence.certs.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "axiomnizam.fullname" . }}-certs
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        - name: query-logs
+          {{- if .Values.persistence.queryLogs.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "axiomnizam.fullname" . }}-query-logs
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        {{- if .Values.iam.rsaPrivateKey }}
+        - name: rsa-key
+          secret:
+            secretName: {{ include "axiomnizam.fullname" . }}-rsa
+        {{- end }}

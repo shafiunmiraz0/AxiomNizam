@@ -4,6 +4,7 @@ import (
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
+	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -81,11 +82,17 @@ func NewAuthHandler() *AuthHandler {
 	}
 	iamBaseURL = normalizeIAMBaseURL(iamBaseURL)
 
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	if strings.EqualFold(strings.TrimSpace(os.Getenv("TLS_ENABLED")), "true") {
+		transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	}
+
 	return &AuthHandler{
 		iamBaseURL:  iamBaseURL,
 		rateLimiter: nil, // Will be set via SetRateLimiter
 		httpClient: &http.Client{
-			Timeout: iamAuthProxyTimeout(),
+			Timeout:   iamAuthProxyTimeout(),
+			Transport: transport,
 		},
 	}
 }
@@ -124,13 +131,20 @@ func getEnv(key, fallback string) string {
 	return fallback
 }
 
+func iamScheme() string {
+	if strings.EqualFold(strings.TrimSpace(os.Getenv("TLS_ENABLED")), "true") {
+		return "https"
+	}
+	return "http"
+}
+
 func defaultIAMInternalBaseURL() string {
 	host := strings.TrimSpace(getEnv("API_HOST", "localhost"))
 	port := apiPortOrDefault()
 	if host == "" || host == "0.0.0.0" || host == "::" {
 		host = "localhost"
 	}
-	return fmt.Sprintf("http://%s:%s", host, port)
+	return fmt.Sprintf("%s://%s:%s", iamScheme(), host, port)
 }
 
 func apiPortOrDefault() string {
@@ -142,7 +156,7 @@ func apiPortOrDefault() string {
 }
 
 func defaultIAMLoopbackBaseURL() string {
-	return fmt.Sprintf("http://127.0.0.1:%s", apiPortOrDefault())
+	return fmt.Sprintf("%s://127.0.0.1:%s", iamScheme(), apiPortOrDefault())
 }
 
 func defaultIAMServiceBaseURL() string {
@@ -150,7 +164,7 @@ func defaultIAMServiceBaseURL() string {
 	if host == "" {
 		host = "axiomnizam"
 	}
-	return fmt.Sprintf("http://%s:%s", host, apiPortOrDefault())
+	return fmt.Sprintf("%s://%s:%s", iamScheme(), host, apiPortOrDefault())
 }
 
 func iamAuthProxyTimeout() time.Duration {

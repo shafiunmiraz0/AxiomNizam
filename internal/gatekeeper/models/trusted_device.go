@@ -13,9 +13,9 @@ type TrustedDevice struct {
 	ID          uuid.UUID  `db:"id"           json:"id"`
 	UserID      UserID     `db:"user_id"      json:"user_id"`
 	TokenHash   []byte     `db:"token_hash"   json:"-"`           // bcrypt/argon2id
-	Fingerprint string     `db:"fingerprint"  json:"fingerprint"` // Browser fingerprint
-	UserAgent   string     `db:"user_agent"   json:"user_agent"`
-	IPAddress   string     `db:"ip_address"   json:"ip_address"`
+	Fingerprint string     `db:"fingerprint"  json:"fingerprint" classification:"PII"` // Browser fingerprint
+	UserAgent   string     `db:"user_agent"   json:"user_agent" classification:"Sensitive"`
+	IPAddress   string     `db:"ip_address"   json:"ip_address" classification:"PII"`
 	ExpiresAt   time.Time  `db:"expires_at"   json:"expires_at"`
 	RevokedAt   *time.Time `db:"revoked_at"   json:"revoked_at,omitempty"`
 	CreatedAt   time.Time  `db:"created_at"   json:"created_at"`

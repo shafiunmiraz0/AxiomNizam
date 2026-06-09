@@ -8,10 +8,26 @@ package rbac
 import (
 	"context"
 	"fmt"
+	"net"
 	"strings"
 	"sync"
 	"time"
 )
+
+// contextKey is an unexported type for context keys in this package.
+type contextKey string
+
+// RequestMetadataKey is the context key for passing HTTP request metadata
+// into the RBAC engine for condition evaluation (IP restrictions, time windows).
+const RequestMetadataKey contextKey = "rbac_request_metadata"
+
+// RequestMetadata carries HTTP request context into the RBAC engine
+// so that EngineRuleCondition types can be evaluated.
+type RequestMetadata struct {
+	IPAddress   string
+	RequestTime time.Time
+	UserAgent   string
+}
 
 // Engine provides Kubernetes-style RBAC (Role-Based Access Control)
 // Supports resource-level permissions with verb-based actions
@@ -199,7 +215,7 @@ func (re *Engine) CanPerform(ctx context.Context, userID string, resourceKind st
 	}
 
 	// Check cluster-wide roles first
-	allowed, rules := re.checkClusterRoles(subject, verb, resourceKind)
+	allowed, rules := re.checkClusterRoles(ctx, subject, verb, resourceKind)
 	if allowed {
 		decision.Allowed = true
 		decision.MatchedRules = append(decision.MatchedRules, rules...)
@@ -207,7 +223,7 @@ func (re *Engine) CanPerform(ctx context.Context, userID string, resourceKind st
 
 	// Check namespaced roles
 	if !allowed && namespace != "" {
-		allowed, rules := re.checkNamespacedRoles(subject, verb, resourceKind, namespace)
+		allowed, rules := re.checkNamespacedRoles(ctx, subject, verb, resourceKind, namespace)
 		if allowed {
 			decision.Allowed = true
 			decision.MatchedRules = append(decision.MatchedRules, rules...)
@@ -237,7 +253,7 @@ func (re *Engine) CanPerform(ctx context.Context, userID string, resourceKind st
 }
 
 // checkClusterRoles checks if subject has permission via cluster roles
-func (re *Engine) checkClusterRoles(subject *EngineSubject, verb string, resourceKind string) (bool, []*EnginePolicyRule) {
+func (re *Engine) checkClusterRoles(ctx context.Context, subject *EngineSubject, verb string, resourceKind string) (bool, []*EnginePolicyRule) {
 	matchedRules := make([]*EnginePolicyRule, 0)
 
 	// Find bindings for this subject
@@ -247,7 +263,7 @@ func (re *Engine) checkClusterRoles(subject *EngineSubject, verb string, resourc
 				// Get the cluster role
 				if role, exists := re.clusterRoles[binding.Role]; exists {
 					// Check if role has the required permission
-					if rules := re.checkRuleMatch(role.Rules, verb, resourceKind); len(rules) > 0 {
+					if rules := re.checkRuleMatch(ctx, role.Rules, verb, resourceKind); len(rules) > 0 {
 						matchedRules = append(matchedRules, rules...)
 						return true, matchedRules
 					}
@@ -260,7 +276,7 @@ func (re *Engine) checkClusterRoles(subject *EngineSubject, verb string, resourc
 }
 
 // checkNamespacedRoles checks if subject has permission via namespaced roles
-func (re *Engine) checkNamespacedRoles(subject *EngineSubject, verb string, resourceKind string, namespace string) (bool, []*EnginePolicyRule) {
+func (re *Engine) checkNamespacedRoles(ctx context.Context, subject *EngineSubject, verb string, resourceKind string, namespace string) (bool, []*EnginePolicyRule) {
 	matchedRules := make([]*EnginePolicyRule, 0)
 
 	// Find bindings in the namespace
@@ -276,7 +292,7 @@ func (re *Engine) checkNamespacedRoles(subject *EngineSubject, verb string, reso
 				roleKey := fmt.Sprintf("%s/%s", binding.Namespace, binding.Role)
 				if role, exists := re.roles[roleKey]; exists {
 					// Check if role has the required permission
-					if rules := re.checkRuleMatch(role.Rules, verb, resourceKind); len(rules) > 0 {
+					if rules := re.checkRuleMatch(ctx, role.Rules, verb, resourceKind); len(rules) > 0 {
 						matchedRules = append(matchedRules, rules...)
 						return true, matchedRules
 					}
@@ -288,17 +304,134 @@ func (re *Engine) checkNamespacedRoles(subject *EngineSubject, verb string, reso
 	return len(matchedRules) > 0, matchedRules
 }
 
-// checkRuleMatch checks if any rule matches the verb and resource
-func (re *Engine) checkRuleMatch(rules []*EnginePolicyRule, verb string, resourceKind string) []*EnginePolicyRule {
+// checkRuleMatch checks if any rule matches the verb and resource.
+// Phase 3: conditions are now evaluated — a rule matches only if verb+resource
+// match AND all conditions pass.
+func (re *Engine) checkRuleMatch(ctx context.Context, rules []*EnginePolicyRule, verb string, resourceKind string) []*EnginePolicyRule {
 	matched := make([]*EnginePolicyRule, 0)
 
 	for _, rule := range rules {
 		if re.verbMatches(rule.Verbs, verb) && re.resourceMatches(rule.Resources, resourceKind) {
-			matched = append(matched, rule)
+			if re.evaluateConditions(ctx, rule.Conditions) {
+				matched = append(matched, rule)
+			}
 		}
 	}
 
 	return matched
+}
+
+// evaluateConditions checks all conditions on a rule against the request metadata
+// carried in context. Returns true if all conditions pass (AND logic).
+// If no conditions are defined, returns true (unconditional match).
+func (re *Engine) evaluateConditions(ctx context.Context, conditions []*EngineRuleCondition) bool {
+	if len(conditions) == 0 {
+		return true
+	}
+
+	meta, _ := ctx.Value(RequestMetadataKey).(*RequestMetadata)
+	if meta == nil {
+		// No metadata available — deny if conditions exist (secure default)
+		return false
+	}
+
+	for _, cond := range conditions {
+		if !re.evaluateOneCondition(meta, cond) {
+			return false
+		}
+	}
+	return true
+}
+
+// evaluateOneCondition evaluates a single EngineRuleCondition.
+func (re *Engine) evaluateOneCondition(meta *RequestMetadata, cond *EngineRuleCondition) bool {
+	switch cond.Type {
+	case "IPRestriction":
+		return re.evaluateIPRestriction(meta.IPAddress, cond.Value)
+	case "TimeWindow":
+		return re.evaluateTimeWindow(meta.RequestTime, cond.Value)
+	default:
+		// Unknown condition type — pass (don't block on unrecognized conditions)
+		return true
+	}
+}
+
+// evaluateIPRestriction checks if the client IP is within allowed CIDR ranges.
+// Value should be []string of CIDR notation (e.g., ["10.0.0.0/8", "192.168.0.0/16"]).
+func (re *Engine) evaluateIPRestriction(clientIP string, value interface{}) bool {
+	if clientIP == "" {
+		return false
+	}
+
+	cidrs, ok := value.([]string)
+	if !ok {
+		// Try []interface{} (JSON deserialization produces this)
+		if ifaceSlice, ok := value.([]interface{}); ok {
+			cidrs = make([]string, 0, len(ifaceSlice))
+			for _, v := range ifaceSlice {
+				if s, ok := v.(string); ok {
+					cidrs = append(cidrs, s)
+				}
+			}
+		} else {
+			return false
+		}
+	}
+
+	ip := net.ParseIP(clientIP)
+	if ip == nil {
+		return false
+	}
+
+	for _, cidr := range cidrs {
+		_, network, err := net.ParseCIDR(strings.TrimSpace(cidr))
+		if err != nil {
+			continue
+		}
+		if network.Contains(ip) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// evaluateTimeWindow checks if the request time falls within an allowed window.
+// Value should be a map with "start" and "end" as "HH:MM" strings (24h format).
+func (re *Engine) evaluateTimeWindow(requestTime time.Time, value interface{}) bool {
+	windowMap, ok := value.(map[string]interface{})
+	if !ok {
+		return false
+	}
+
+	startStr, _ := windowMap["start"].(string)
+	endStr, _ := windowMap["end"].(string)
+	if startStr == "" || endStr == "" {
+		return false
+	}
+
+	startParts := strings.SplitN(startStr, ":", 2)
+	endParts := strings.SplitN(endStr, ":", 2)
+	if len(startParts) != 2 || len(endParts) != 2 {
+		return false
+	}
+
+	var startH, startM, endH, endM int
+	fmt.Sscanf(startParts[0], "%d", &startH)
+	fmt.Sscanf(startParts[1], "%d", &startM)
+	fmt.Sscanf(endParts[0], "%d", &endH)
+	fmt.Sscanf(endParts[1], "%d", &endM)
+
+	currentMinutes := requestTime.Hour()*60 + requestTime.Minute()
+	startMinutes := startH*60 + startM
+	endMinutes := endH*60 + endM
+
+	if startMinutes <= endMinutes {
+		// Same-day window (e.g., 09:00-17:00)
+		return currentMinutes >= startMinutes && currentMinutes <= endMinutes
+	}
+	// Overnight window (e.g., 22:00-06:00)
+	return currentMinutes >= startMinutes || currentMinutes <= endMinutes
 }
 
 // verbMatches checks if verb is in the allowed verbs (supports wildcards)

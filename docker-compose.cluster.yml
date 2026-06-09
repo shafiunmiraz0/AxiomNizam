@@ -67,7 +67,10 @@ services:
       - storage-data-2:/data/storage
       - raft-data-2:/data/raft
     networks:
-      - app-network
+      - frontend-net
+      - backend-net
+      - data-net
+      - mq-net
 
 volumes:
   raft-data-1:

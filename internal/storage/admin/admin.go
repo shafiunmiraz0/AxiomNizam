@@ -1089,6 +1089,128 @@ func (h *Handler) PutObject(c *gin.Context) {
 		opts.Encryption = true
 	}
 
+	// ── Phase 6: Pre-commit scanning ────────────────────────────────────
+	// Buffer the upload to memory, scan with SafeGate, and only commit to
+	// storage if the scan passes. This prevents malicious objects from ever
+	// being written to storage.
+	if h.scanOrch != nil && h.scanOrch.ScannerCount() > 0 {
+		// Buffer upload to memory (limit to 100MB to prevent OOM).
+		const maxBufferSize = 100 * 1024 * 1024
+		if c.Request.ContentLength > maxBufferSize {
+			c.JSON(http.StatusRequestEntityTooLarge, gin.H{
+				"error": fmt.Sprintf("file too large for pre-commit scan (%d bytes, max %d bytes)", c.Request.ContentLength, maxBufferSize),
+			})
+			return
+		}
+
+		content, readErr := io.ReadAll(io.LimitReader(c.Request.Body, maxBufferSize+1))
+		if readErr != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to read upload body"})
+			return
+		}
+		if int64(len(content)) > maxBufferSize {
+			c.JSON(http.StatusRequestEntityTooLarge, gin.H{
+				"error": fmt.Sprintf("file too large for pre-commit scan (%d bytes, max %d bytes)", len(content), maxBufferSize),
+			})
+			return
+		}
+
+		// Build file info for scanning.
+		ext := strings.ToLower(filepath.Ext(key))
+		mimeType := detectMIMEType(ext)
+		filename := key
+		if idx := strings.LastIndex(key, "/"); idx >= 0 {
+			filename = key[idx+1:]
+		}
+		fileHash := sha256.Sum256(content)
+		hashHex := hex.EncodeToString(fileHash[:])
+
+		fileInfo := &scanner.FileInfo{
+			Filename:  filename,
+			Extension: ext,
+			MIMEType:  mimeType,
+			Size:      int64(len(content)),
+			SHA256:    hashHex,
+			Content:   content,
+		}
+
+		// Scan with SafeGate orchestrator.
+		scanCtx, scanCancel := context.WithTimeout(c.Request.Context(), 2*time.Minute)
+		scanResult := h.scanOrch.ScanWithContext(scanCtx, fileInfo)
+		scanCancel()
+
+		if !scanResult.Safe {
+			// Threat detected — reject upload, record audit event.
+			var threatDescs []string
+			for _, f := range scanResult.ThreatFindings() {
+				threatDescs = append(threatDescs, fmt.Sprintf("%s:%s", f.Scanner, f.Description))
+			}
+			threatStr := strings.Join(threatDescs, "; ")
+
+			h.audit.Record(models.StorageEvent{
+				Type:     audit.EventObjectThreatDetected,
+				TenantID: tenantID,
+				UserID:   userID,
+				Bucket:   bucket,
+				Key:      key,
+				Size:     int64(len(content)),
+				SourceIP: c.ClientIP(),
+				Details:  fmt.Sprintf("UPLOAD BLOCKED: %s (sha256=%s, %dms)", threatStr, hashHex, scanResult.DurationMs),
+			})
+
+			logging.Z().Info(fmt.Sprintf("🚨 safegate: BLOCKED upload %s/%s — %s [%dms]",
+				backendBucket, key, threatStr, scanResult.DurationMs))
+
+			h.metrics.RecordRequest(tenantID, bucket, "PUT", 0, time.Since(start), true)
+			c.JSON(http.StatusForbidden, gin.H{
+				"error":      "upload blocked — threat detected",
+				"threats":    threatDescs,
+				"sha256":     hashHex,
+				"scan_ms":    scanResult.DurationMs,
+				"scanners":   scanResult.Scanners,
+			})
+			return
+		}
+
+		// Scan passed — commit buffered content to storage.
+		bodyReader := io.NopCloser(io.LimitReader(strings.NewReader(string(content)), int64(len(content))))
+		err := h.client.PutObjectWithOptions(context.Background(), backendBucket, key, bodyReader, int64(len(content)), opts)
+		latency := time.Since(start)
+		if err != nil {
+			h.metrics.RecordRequest(tenantID, bucket, "PUT", 0, latency, true)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		h.metrics.RecordRequest(tenantID, bucket, "PUT", int64(len(content)), latency, false)
+
+		h.audit.Record(models.StorageEvent{
+			Type:     audit.EventObjectScanClean,
+			TenantID: tenantID,
+			UserID:   userID,
+			Bucket:   bucket,
+			Key:      key,
+			Size:     int64(len(content)),
+			SourceIP: c.ClientIP(),
+			Details:  fmt.Sprintf("clean (sha256=%s, %dms, scanners=%d)", hashHex, scanResult.DurationMs, len(scanResult.Scanners)),
+		})
+
+		go func() {
+			_ = h.controller.ReconcileOne(context.Background(), tenantID, bucket)
+		}()
+
+		c.JSON(http.StatusOK, gin.H{
+			"bucket":   bucket,
+			"key":      key,
+			"size":     int64(len(content)),
+			"sha256":   hashHex,
+			"scan_ms":  scanResult.DurationMs,
+			"scanners": scanResult.Scanners,
+		})
+		return
+	}
+
+	// ── Fallback: no scanner configured, direct upload (original behavior) ──
 	err := h.client.PutObjectWithOptions(context.Background(), backendBucket, key, c.Request.Body, c.Request.ContentLength, opts)
 	latency := time.Since(start)
 	if err != nil {
@@ -1099,7 +1221,6 @@ func (h *Handler) PutObject(c *gin.Context) {
 
 	h.metrics.RecordRequest(tenantID, bucket, "PUT", c.Request.ContentLength, latency, false)
 
-	// Record audit event for upload and trigger immediate stats update.
 	h.audit.Record(models.StorageEvent{
 		Type:     audit.EventObjectUploaded,
 		TenantID: tenantID,
@@ -1108,7 +1229,7 @@ func (h *Handler) PutObject(c *gin.Context) {
 		Key:      key,
 		Size:     c.Request.ContentLength,
 		SourceIP: c.ClientIP(),
-		Details:  fmt.Sprintf("uploaded %d bytes", c.Request.ContentLength),
+		Details:  fmt.Sprintf("uploaded %d bytes (no scanner)", c.Request.ContentLength),
 	})
 
 	go func() {
@@ -1120,11 +1241,6 @@ func (h *Handler) PutObject(c *gin.Context) {
 		"key":    key,
 		"size":   c.Request.ContentLength,
 	})
-
-	// ── Async antivirus scan ─────────────────────────────────────────
-	if h.avEngine != nil && h.avEngine.IsRunning() {
-		go h.scanObjectAsync(backendBucket, key, tenantID, userID, c.Request.ContentLength)
-	}
 }
 
 func (h *Handler) GetObject(c *gin.Context) {
@@ -1997,6 +2113,49 @@ func (h *Handler) GetBucketLifecycle(c *gin.Context) {
 //     MIME, SVG, macro, archive, native AV). Metrics are accumulated
 //     automatically and exposed via /api/v1/storage/scanner/health.
 //  3. Records an audit event with the result.
+// detectMIMEType returns a MIME type for the given file extension.
+// Used by the pre-commit scanner to build FileInfo.
+func detectMIMEType(ext string) string {
+	switch ext {
+	case ".pdf":
+		return "application/pdf"
+	case ".svg":
+		return "image/svg+xml"
+	case ".zip":
+		return "application/zip"
+	case ".gz", ".tar.gz":
+		return "application/gzip"
+	case ".jpg", ".jpeg":
+		return "image/jpeg"
+	case ".png":
+		return "image/png"
+	case ".gif":
+		return "image/gif"
+	case ".html", ".htm":
+		return "text/html"
+	case ".js":
+		return "application/javascript"
+	case ".json":
+		return "application/json"
+	case ".xml":
+		return "application/xml"
+	case ".csv":
+		return "text/csv"
+	case ".txt":
+		return "text/plain"
+	case ".doc", ".docx":
+		return "application/msword"
+	case ".xls", ".xlsx":
+		return "application/vnd.ms-excel"
+	case ".ppt", ".pptx":
+		return "application/vnd.ms-powerpoint"
+	case ".exe":
+		return "application/x-msdownload"
+	default:
+		return "application/octet-stream"
+	}
+}
+
 func (h *Handler) scanObjectAsync(bucket, key, tenantID, userID string, size int64) {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()

@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"os"
 
 	"example.com/axiomnizam/internal/gatekeeper/audit"
 	"example.com/axiomnizam/internal/gatekeeper/backupcodes"
@@ -23,6 +24,7 @@ import (
 	"example.com/axiomnizam/internal/gatekeeper/risk"
 	"example.com/axiomnizam/internal/gatekeeper/totp"
 	"example.com/axiomnizam/internal/gatekeeper/trusteddevices"
+	"example.com/axiomnizam/internal/gatekeeper/webauthn"
 	platformstore "example.com/axiomnizam/internal/platform/store"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -51,6 +53,7 @@ type System struct {
 	DeviceService     *trusteddevices.Service
 	PolicyService     *policy.Engine
 	RiskService       *risk.Engine
+	WebAuthnService   *webauthn.Service
 
 	// Controllers/Reconcilers (K8s-style)
 	FactorController *gkcontroller.FactorReconciler
@@ -71,6 +74,17 @@ func NewSystem(gormDB *gorm.DB) (*System, error) {
 	cfg.LoadFromEnv()
 	if err := cfg.Validate(); err != nil {
 		return nil, fmt.Errorf("gatekeeper config validation: %w", err)
+	}
+
+	// Guard against nil DB — PostgreSQL may be unavailable (e.g., TLS mismatch, connection refused).
+	if gormDB == nil {
+		logging.Z().Warn("⚠️  Gatekeeper: PostgreSQL unavailable — running in degraded mode (no persistence)")
+		s := &System{cfg: cfg, db: nil}
+		if err := s.initialize(); err != nil {
+			return nil, err
+		}
+		logging.Z().Info("⚠️  Gatekeeper 2FA module initialized in degraded mode")
+		return s, nil
 	}
 
 	// Auto-migrate Gatekeeper tables (same pattern as IAM pgstore.New)
@@ -308,6 +322,18 @@ func (s *System) initialize() error {
 	// 10. Initialize risk engine
 	s.RiskService = risk.NewEngine(&risk.DefaultScorer{})
 
+	// 10b. Initialize WebAuthn service (FIDO2 / security keys)
+	rpID := os.Getenv("WEBAUTHN_RP_ID")
+	if rpID == "" {
+		rpID = "localhost"
+	}
+	rpOrigin := os.Getenv("WEBAUTHN_RP_ORIGIN")
+	if rpOrigin == "" {
+		rpOrigin = "http://localhost:8000"
+	}
+	credStore := pgstore.NewWebAuthnCredentialRepository(s.db)
+	s.WebAuthnService = webauthn.NewService(rpID, rpOrigin, credStore)
+
 	// 11. Initialize audit logging
 	var auditBackend audit.AuditBackend = audit.NewInMemoryBackend()
 	if s.db != nil {
@@ -334,6 +360,7 @@ func (s *System) initialize() error {
 		wrapRiskService(s.RiskService),
 		wrapTrustedDeviceService(s.DeviceService),
 		wrapBackupCodeService(s.BackupCodeService),
+		wrapWebAuthnService(s.WebAuthnService),
 	)
 
 	return nil
@@ -349,6 +376,10 @@ func (s *System) RegisterRoutes(api *gin.RouterGroup) error {
 
 // StartControllers starts the K8s-style reconciliation loops.
 func (s *System) StartControllers(ctx context.Context) {
+	if s.db == nil {
+		logging.Z().Info("⚠️  Gatekeeper: skipping controller manager (no PostgreSQL)")
+		return
+	}
 	if s.ctrlMgr != nil {
 		s.ctrlMgr.Start(ctx)
 		logging.Z().Info("✅ Gatekeeper: Controller manager started")

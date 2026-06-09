@@ -18,6 +18,7 @@ type HTTPHandler struct {
 	riskSvc       contracts.RiskService
 	deviceSvc     contracts.TrustedDeviceService
 	backupSvc     contracts.BackupCodeService
+	webauthnSvc   contracts.WebAuthnService
 }
 
 // NewHTTPHandler creates a new HTTP handler.
@@ -29,6 +30,7 @@ func NewHTTPHandler(
 	rs contracts.RiskService,
 	ds contracts.TrustedDeviceService,
 	bs contracts.BackupCodeService,
+	ws contracts.WebAuthnService,
 ) *HTTPHandler {
 	return &HTTPHandler{
 		enrollmentSvc: es,
@@ -38,6 +40,7 @@ func NewHTTPHandler(
 		riskSvc:       rs,
 		deviceSvc:     ds,
 		backupSvc:     bs,
+		webauthnSvc:   ws,
 	}
 }
 
@@ -72,6 +75,14 @@ func (h *HTTPHandler) RegisterRoutes(api *gin.RouterGroup) {
 	api.POST("/trust-device", h.TrustDevice)
 	api.GET("/trust-device/list/:userID", h.ListTrustedDevices)
 	api.DELETE("/trust-device/:deviceID", h.RevokeTrustedDevice)
+
+	// WebAuthn / FIDO2 endpoints (Phase 10)
+	api.POST("/webauthn/register/begin", h.BeginWebAuthnRegistration)
+	api.POST("/webauthn/register/finish", h.FinishWebAuthnRegistration)
+	api.POST("/webauthn/authenticate/begin", h.BeginWebAuthnAuthentication)
+	api.POST("/webauthn/authenticate/finish", h.FinishWebAuthnAuthentication)
+	api.GET("/webauthn/credentials/:userID", h.ListWebAuthnCredentials)
+	api.DELETE("/webauthn/credentials/:credentialID", h.DeleteWebAuthnCredential)
 }
 
 // EnrollFactor enrolls a new factor for a user.
@@ -307,4 +318,122 @@ func (h *HTTPHandler) RevokeTrustedDevice(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Device revoked"})
+}
+
+// ─── WebAuthn / FIDO2 Handlers (Phase 10) ─────────────────────────────────
+
+// BeginWebAuthnRegistration starts a WebAuthn registration ceremony.
+func (h *HTTPHandler) BeginWebAuthnRegistration(c *gin.Context) {
+	if h.webauthnSvc == nil {
+		c.JSON(http.StatusNotImplemented, gin.H{"error": "webauthn not available"})
+		return
+	}
+	var req WebAuthnBeginRegistrationRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	sessionID, options, err := h.webauthnSvc.BeginRegistration(c.Request.Context(), req.UserID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"session_id": sessionID,
+		"options":    options,
+	})
+}
+
+// FinishWebAuthnRegistration completes a WebAuthn registration ceremony.
+func (h *HTTPHandler) FinishWebAuthnRegistration(c *gin.Context) {
+	if h.webauthnSvc == nil {
+		c.JSON(http.StatusNotImplemented, gin.H{"error": "webauthn not available"})
+		return
+	}
+	var req WebAuthnFinishRegistrationRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if err := h.webauthnSvc.FinishRegistration(c.Request.Context(), req.UserID, req.SessionID, req.Response); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "WebAuthn credential registered successfully"})
+}
+
+// BeginWebAuthnAuthentication starts a WebAuthn authentication ceremony.
+func (h *HTTPHandler) BeginWebAuthnAuthentication(c *gin.Context) {
+	if h.webauthnSvc == nil {
+		c.JSON(http.StatusNotImplemented, gin.H{"error": "webauthn not available"})
+		return
+	}
+	var req WebAuthnBeginAuthenticationRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	sessionID, options, err := h.webauthnSvc.BeginAuthentication(c.Request.Context(), req.UserID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"session_id": sessionID,
+		"options":    options,
+	})
+}
+
+// FinishWebAuthnAuthentication completes a WebAuthn authentication ceremony.
+func (h *HTTPHandler) FinishWebAuthnAuthentication(c *gin.Context) {
+	if h.webauthnSvc == nil {
+		c.JSON(http.StatusNotImplemented, gin.H{"error": "webauthn not available"})
+		return
+	}
+	var req WebAuthnFinishAuthenticationRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	verified, err := h.webauthnSvc.FinishAuthentication(c.Request.Context(), req.UserID, req.SessionID, req.Response)
+	if err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"error": err.Error(), "verified": false})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"verified": verified})
+}
+
+// ListWebAuthnCredentials lists all WebAuthn credentials for a user.
+func (h *HTTPHandler) ListWebAuthnCredentials(c *gin.Context) {
+	if h.webauthnSvc == nil {
+		c.JSON(http.StatusNotImplemented, gin.H{"error": "webauthn not available"})
+		return
+	}
+	userID := uuid.MustParse(c.Param("userID"))
+	creds, err := h.webauthnSvc.ListCredentials(c.Request.Context(), userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"credentials": creds})
+}
+
+// DeleteWebAuthnCredential deletes a WebAuthn credential.
+func (h *HTTPHandler) DeleteWebAuthnCredential(c *gin.Context) {
+	if h.webauthnSvc == nil {
+		c.JSON(http.StatusNotImplemented, gin.H{"error": "webauthn not available"})
+		return
+	}
+	credIDParam := c.Param("credentialID")
+	credID, err := uuid.Parse(credIDParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid credential ID"})
+		return
+	}
+	userID := uuid.UUID{} // delete by credential ID alone
+	if err := h.webauthnSvc.DeleteCredential(c.Request.Context(), userID, credID[:]); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "WebAuthn credential deleted"})
 }

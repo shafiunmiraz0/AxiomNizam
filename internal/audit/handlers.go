@@ -2,6 +2,9 @@ package audit
 
 import (
 	"net/http"
+	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -106,8 +109,21 @@ func (h *AuditHandler) GetReport(c *gin.Context) {
 }
 
 // DeleteOldLogs handles DELETE /api/v1/audit/logs
+// Phase 7: Retention is configurable via AUDIT_RETENTION_DAYS env var (default 90).
 func (h *AuditHandler) DeleteOldLogs(c *gin.Context) {
-	var olderThanDays int = 90
+	olderThanDays := 90 // default
+	if v := strings.TrimSpace(os.Getenv("AUDIT_RETENTION_DAYS")); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			olderThanDays = n
+		}
+	}
+
+	// Allow query parameter override: DELETE /api/v1/audit/logs?days=30
+	if daysStr := c.Query("days"); daysStr != "" {
+		if n, err := strconv.Atoi(daysStr); err == nil && n > 0 {
+			olderThanDays = n
+		}
+	}
 
 	if err := h.logger.DeleteOldLogs(c.Request.Context(), olderThanDays); err != nil {
 		c.JSON(http.StatusInternalServerError, MessageResponse{Error: err.Error()})
@@ -117,7 +133,8 @@ func (h *AuditHandler) DeleteOldLogs(c *gin.Context) {
 	c.JSON(http.StatusOK, MessageResponse{Message: "old logs deleted"})
 }
 
-// RegisterAuditRoutes registers all audit routes
+// RegisterAuditRoutes registers all audit routes.
+// Phase 7: Added unified query endpoint and configurable retention.
 func RegisterAuditRoutes(router *gin.Engine, logger AuditLogger) {
 	handler := NewAuditHandler(logger)
 
@@ -127,5 +144,54 @@ func RegisterAuditRoutes(router *gin.Engine, logger AuditLogger) {
 		group.GET("/logs", handler.QueryLogs)
 		group.GET("/report", handler.GetReport)
 		group.DELETE("/logs", handler.DeleteOldLogs)
+
+		// Phase 7: Unified audit query — queries the central audit system.
+		// Supports filtering by resourceType, action, userId, tenantId, and time range.
+		group.GET("/unified", handler.QueryUnified)
 	}
+}
+
+// QueryUnified handles GET /api/v1/audit/unified
+// Phase 7: Unified query across all audit events stored in the central system.
+func (h *AuditHandler) QueryUnified(c *gin.Context) {
+	filter := &AuditFilter{
+		TenantID:     c.Query("tenantId"),
+		UserID:       c.Query("userId"),
+		Username:     c.Query("username"),
+		ResourceType: c.Query("resourceType"),
+		ResourceID:   c.Query("resourceId"),
+		Namespace:    c.Query("namespace"),
+		SourceIP:     c.Query("sourceIp"),
+		Limit:        100,
+	}
+
+	if action := c.Query("action"); action != "" {
+		filter.Action = AuditAction(action)
+	}
+	if result := c.Query("result"); result != "" {
+		filter.Result = AuditResult(result)
+	}
+
+	if limitStr := c.Query("limit"); limitStr != "" {
+		if n, err := strconv.Atoi(limitStr); err == nil && n > 0 {
+			filter.Limit = n
+		}
+	}
+	if offsetStr := c.Query("offset"); offsetStr != "" {
+		if n, err := strconv.Atoi(offsetStr); err == nil && n >= 0 {
+			filter.Offset = n
+		}
+	}
+
+	logs, err := h.logger.QueryLogs(c.Request.Context(), filter)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, MessageResponse{Error: err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"logs":   logs,
+		"count":  len(logs),
+		"filter": filter,
+	})
 }

@@ -48,13 +48,28 @@ func AuthMiddleware(validator TokenValidatorFunc) gin.HandlerFunc {
 }
 
 // CORSMiddleware handles Cross-Origin Resource Sharing.
-func CORSMiddleware() gin.HandlerFunc {
+// Pass a set of allowed origins; requests from origins not in the set receive no CORS headers.
+func CORSMiddleware(allowedOrigins map[string]struct{}) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		c.Header("Access-Control-Allow-Origin", "*")
+		origin := strings.TrimSpace(c.GetHeader("Origin"))
+		c.Header("Vary", "Origin")
 		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization")
 
+		if origin != "" {
+			if _, ok := allowedOrigins[origin]; ok {
+				c.Header("Access-Control-Allow-Origin", origin)
+				c.Header("Access-Control-Allow-Credentials", "true")
+			}
+		}
+
 		if c.Request.Method == "OPTIONS" {
+			if origin != "" {
+				if _, ok := allowedOrigins[origin]; !ok {
+					c.AbortWithStatus(http.StatusForbidden)
+					return
+				}
+			}
 			c.AbortWithStatus(http.StatusNoContent)
 			return
 		}

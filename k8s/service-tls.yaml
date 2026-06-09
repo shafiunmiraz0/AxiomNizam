@@ -1,0 +1,100 @@
+# service-tls.yaml — Phase 15: Service-to-service TLS configuration
+#
+# Configures TLS for connections between AxiomNizam and external services.
+# For Kubernetes, use cert-manager for automatic certificate provisioning.
+#
+# This file documents the required TLS settings for each service connection.
+---
+# PostgreSQL TLS
+# Set in .env or Kubernetes ConfigMap:
+#   POSTGRES_SSLMODE=require         (minimum — encrypt in transit)
+#   POSTGRES_SSLMODE=verify-full     (production — verify server cert)
+#   POSTGRES_SSLROOTCERT=/path/to/ca.crt  (CA cert for verify-full)
+#
+# etcd TLS
+# Set in etcd environment:
+#   ETCD_CLIENT_CERT_AUTH=true
+#   ETCD_CERT_FILE=/path/to/server.crt
+#   ETCD_KEY_FILE=/path/to/server.key
+#   ETCD_TRUSTED_CA_FILE=/path/to/ca.crt
+#
+# Set in AxiomNizam environment:
+#   ETCD_CERT_FILE=/path/to/client.crt
+#   ETCD_KEY_FILE=/path/to/client.key
+#   ETCD_CA_FILE=/path/to/ca.crt
+#
+# RabbitMQ TLS
+# Set in rabbitmq environment:
+#   RABBITMQ_SSL_CERTFILE=/path/to/server.crt
+#   RABBITMQ_SSL_KEYFILE=/path/to/server.key
+#   RABBITMQ_SSL_CACERTFILE=/path/to/ca.crt
+#
+# Set in AxiomNizam environment:
+#   RABBITMQ_URL=amqps://user:pass@rabbitmq:5671/axiom  (note: amqps, not amqp)
+#
+# Kafka TLS
+# Set in kafka environment:
+#   KAFKA_LISTENERS: SSL://0.0.0.0:9093,CONTROLLER://0.0.0.0:9094
+#   KAFKA_SSL_KEYSTORE_LOCATION: /path/to/kafka.keystore.jks
+#   KAFKA_SSL_TRUSTSTORE_LOCATION: /path/to/kafka.truststore.jks
+#
+# Set in AxiomNizam environment:
+#   KAFKA_BROKERS=kafka:9093
+#   KAFKA_TLS_ENABLED=true
+#   KAFKA_CA_FILE=/path/to/ca.crt
+---
+# For production with cert-manager, create Certificate resources:
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: axiomnizam-server-tls
+  namespace: axiomnizam
+spec:
+  secretName: axiomnizam-server-tls
+  issuerRef:
+    name: axiomnizam-ca-issuer
+    kind: Issuer
+  dnsNames:
+    - axiomnizam
+    - axiomnizam.axiomnizam.svc.cluster.local
+  duration: 2160h    # 90 days
+  renewBefore: 360h  # 15 days before expiry
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: postgres-tls
+  namespace: axiomnizam
+spec:
+  secretName: postgres-tls
+  issuerRef:
+    name: axiomnizam-ca-issuer
+    kind: Issuer
+  dnsNames:
+    - postgres
+    - postgres.axiomnizam.svc.cluster.local
+  duration: 2160h
+  renewBefore: 360h
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: etcd-tls
+  namespace: axiomnizam
+spec:
+  secretName: etcd-tls
+  issuerRef:
+    name: axiomnizam-ca-issuer
+    kind: Issuer
+  dnsNames:
+    - etcd
+    - etcd.axiomnizam.svc.cluster.local
+  duration: 2160h
+  renewBefore: 360h
+---
+# Egress proxy configuration (Phase 15)
+# All outbound HTTP/HTTPS traffic from backend should go through an egress proxy.
+# Set in .env:
+#   HTTPS_PROXY=http://egress-proxy:3128
+#   HTTP_PROXY=http://egress-proxy:3128
+#   NO_PROXY=localhost,127.0.0.1,postgres,etcd,rabbitmq,kafka,.svc.cluster.local

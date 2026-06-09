@@ -1,6 +1,10 @@
 package handlers
 
-import "github.com/google/uuid"
+import (
+	"encoding/json"
+
+	"github.com/google/uuid"
+)
 
 // EnrollRequest is the API request for starting factor enrollment.
 type EnrollRequest struct {
@@ -95,4 +99,30 @@ type ScoreRiskResponse struct {
 	Level     string `json:"level"`
 	IsHigh    bool   `json:"is_high_risk"`
 	IPAddress string `json:"ip_address"`
+}
+
+// WebAuthnBeginRegistrationRequest is the API request for starting WebAuthn registration.
+type WebAuthnBeginRegistrationRequest struct {
+	UserID      uuid.UUID `json:"user_id" binding:"required"`
+	UserName    string    `json:"user_name" binding:"required"`
+	DisplayName string    `json:"display_name"`
+}
+
+// WebAuthnFinishRegistrationRequest is the API request for completing WebAuthn registration.
+type WebAuthnFinishRegistrationRequest struct {
+	UserID    uuid.UUID       `json:"user_id" binding:"required"`
+	SessionID string          `json:"session_id" binding:"required"`
+	Response  json.RawMessage `json:"response" binding:"required"`
+}
+
+// WebAuthnBeginAuthenticationRequest is the API request for starting WebAuthn authentication.
+type WebAuthnBeginAuthenticationRequest struct {
+	UserID uuid.UUID `json:"user_id" binding:"required"`
+}
+
+// WebAuthnFinishAuthenticationRequest is the API request for completing WebAuthn authentication.
+type WebAuthnFinishAuthenticationRequest struct {
+	UserID    uuid.UUID       `json:"user_id" binding:"required"`
+	SessionID string          `json:"session_id" binding:"required"`
+	Response  json.RawMessage `json:"response" binding:"required"`
 }

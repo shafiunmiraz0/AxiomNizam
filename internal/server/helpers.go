@@ -237,15 +237,9 @@ func ApplySecurityGuardrails(cfg *config.Config) {
 	}
 
 	blocking := make([]string, 0)
-	warnings := make([]string, 0)
 	addBlocking := func(msg string) {
 		if strings.TrimSpace(msg) != "" {
 			blocking = append(blocking, msg)
-		}
-	}
-	addWarning := func(msg string) {
-		if strings.TrimSpace(msg) != "" {
-			warnings = append(warnings, msg)
 		}
 	}
 
@@ -269,18 +263,19 @@ func ApplySecurityGuardrails(cfg *config.Config) {
 		addBlocking("CORS_ALLOWED_ORIGINS is empty")
 	}
 
-	if isDefault(cfg.MySQL.Password, "root", "password") {
-		addWarning("MYSQL_PASSWORD appears to be a default credential")
-	}
-	if isDefault(cfg.PostgreSQL.Password, "postgres", "password") {
-		addWarning("POSTGRES_PASSWORD appears to be a default credential")
-	}
-	if isDefault(cfg.Oracle.Password, "oracle123", "password") {
-		addWarning("ORACLE_PASSWORD appears to be a default credential")
+	// TRUSTED_PROXIES=0.0.0.0/0 trusts all sources — defeats IP-based controls.
+	if tp := strings.TrimSpace(os.Getenv("TRUSTED_PROXIES")); tp == "0.0.0.0/0" {
+		addBlocking("TRUSTED_PROXIES=0.0.0.0/0 trusts all sources; restrict to actual proxy CIDRs")
 	}
 
-	for _, w := range warnings {
-		log.Printf("⚠️  Security guardrail warning: %s", w)
+	if isDefault(cfg.MySQL.Password, "root", "password") {
+		addBlocking("MYSQL_PASSWORD is a default credential")
+	}
+	if isDefault(cfg.PostgreSQL.Password, "postgres", "password") {
+		addBlocking("POSTGRES_PASSWORD is a default credential")
+	}
+	if isDefault(cfg.Oracle.Password, "oracle123", "password") {
+		addBlocking("ORACLE_PASSWORD is a default credential")
 	}
 
 	if len(blocking) == 0 {

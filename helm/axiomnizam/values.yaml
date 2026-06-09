@@ -1,0 +1,203 @@
+# -- Number of replicas
+replicaCount: 1
+
+image:
+  repository: ghcr.io/shafiunmiraz0/axiomnizam
+  tag: latest
+  pullPolicy: IfNotPresent
+  pullSecrets: []
+  # - name: ghcr-auth
+
+# -- Service configuration
+service:
+  type: ClusterIP
+  port: 8000
+
+# -- Ingress (optional)
+ingress:
+  enabled: false
+  className: nginx
+  annotations: {}
+  hosts:
+    - host: axiomnizam.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+# -- Resource limits
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    cpu: "2"
+    memory: 2Gi
+
+# -- Persistent volumes for the app
+persistence:
+  raft:
+    enabled: true
+    storageClass: ""
+    accessMode: ReadWriteOnce
+    size: 5Gi
+  storage:
+    enabled: true
+    storageClass: ""
+    accessMode: ReadWriteOnce
+    size: 10Gi
+  certs:
+    enabled: true
+    storageClass: ""
+    accessMode: ReadWriteOnce
+    size: 256Mi
+  queryLogs:
+    enabled: true
+    storageClass: ""
+    accessMode: ReadWriteOnce
+    size: 2Gi
+
+# -- PostgreSQL (bundled)
+postgresql:
+  enabled: true
+  image: postgres:latest
+  storage:
+    storageClass: ""
+    accessMode: ReadWriteOnce
+    size: 10Gi
+  user: axiomnizam
+  password: changeme
+  database: app_db
+  port: 5432
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+
+# -- AxiomNizam application config
+config:
+  apiPort: "8000"
+  apiHost: "0.0.0.0"
+  axiomnizamEnv: production
+  securityGuardrailsMode: enforce
+  storageBackend: raft
+  trustedProxies: "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
+
+# -- TLS
+tls:
+  enabled: true
+  autoGenerate: true
+  # certFile: /data/certs/tls.crt
+  # keyFile: /data/certs/tls.key
+
+# -- Public URLs (override per environment)
+public:
+  frontendHostname: axiomnizam.local
+  platformHostname: axiomnizam.local
+  frontendUrl: "https://axiomnizam.local"
+  platformUrl: "https://axiomnizam.local"
+  corsOrigins: "https://axiomnizam.local"
+
+# -- SafeGate / Antivirus
+antivirus:
+  enabled: true
+  workers: 4
+  maxFileSize: 104857600
+  cacheSize: 100000
+  quarantineAction: tag
+
+# -- Rate limiting
+rateLimit:
+  maxCalls: 500
+  validityMinutes: 5
+
+# -- SafeGate scanner
+safegate:
+  maxFileSize: 104857600
+
+# -- Gatekeeper 2FA
+gatekeeper:
+  totpIssuer: AxiomNizam
+  # Keys auto-generated if empty
+  encryptionKey: ""
+  hmacKey: ""
+
+# -- IAM sysadmin bootstrap
+iam:
+  sysadminEmail: sysadmin@axiomnizam.local
+  sysadminPassword: changeme-on-first-login
+  # RSA private key for JWT signing (PEM format). Mounted as file at /secrets/iam/rsa_private_key.pem
+  rsaPrivateKey: ""
+  # Demo JWT secret (fallback, not for production)
+  demoJwtSecret: ""
+
+# -- Optional: OpenClaw SQL Assistant
+openclaw:
+  enabled: false
+  host: openclaw-gateway
+  port: "18789"
+  token: ""
+  model: "ollama/tinyllama"
+  timeoutSeconds: "90"
+
+# -- Optional: RabbitMQ
+rabbitmq:
+  enabled: false
+  url: ""
+  user: axiomnizam
+  password: ""
+  vhost: /axiom
+
+# -- Optional: Kafka
+kafka:
+  enabled: false
+  brokers: kafka:9092
+
+# -- Optional: Keycloak
+keycloak:
+  enabled: false
+  url: keycloak
+  host: keycloak
+  port: "8080"
+  realm: axiomnizam
+  clientId: axiomnizam-backend
+  clientSecret: ""
+  adminUsername: admin
+  adminPassword: admin
+
+# -- Optional: Discord webhook for notifications
+discord:
+  webhookUrl: ""
+
+# -- Network policies (Phase 15 micro-segmentation)
+networkPolicy:
+  enabled: false
+
+# -- cert-manager integration (optional)
+certManager:
+  enabled: false
+  issuerName: axiomnizam-ca-issuer
+  issuerKind: Issuer
+
+# -- Node selector, tolerations, affinity
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+# -- Pod annotations
+podAnnotations: {}
+
+# -- Pod security context
+podSecurityContext:
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+
+# -- Container security context
+securityContext:
+  runAsNonRoot: true
+  readOnlyRootFilesystem: false
+  allowPrivilegeEscalation: false

@@ -43,10 +43,10 @@ type Factor struct {
 type FactorSpec struct {
 	Type        FactorType `db:"type"         json:"type"`
 	Label       string     `db:"label"        json:"label,omitempty"`        // User-friendly name
-	PhoneNumber string     `db:"phone_number" json:"phone_number,omitempty"` // SMS only
-	Email       string     `db:"email"        json:"email,omitempty"`        // email only
+	PhoneNumber string     `db:"phone_number" json:"phone_number,omitempty" classification:"PII"` // SMS only
+	Email       string     `db:"email"        json:"email,omitempty" classification:"PII"`        // email only
 	// Secret is AES-GCM encrypted at rest; persisted in JSONB but excluded from API responses.
-	EncryptedSecret []byte `db:"encrypted_secret" json:"encrypted_secret,omitempty"`
+	EncryptedSecret []byte `db:"encrypted_secret" json:"encrypted_secret,omitempty" classification:"Confidential"`
 	// Issuer shown inside authenticator apps (e.g. "Acme Corp").
 	Issuer string `db:"issuer" json:"issuer"`
 }

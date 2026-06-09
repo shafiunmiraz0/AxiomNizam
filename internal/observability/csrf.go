@@ -45,7 +45,7 @@ type CSRFConfig struct {
 // DefaultCSRFConfig returns safe defaults for CSRF protection.
 func DefaultCSRFConfig() CSRFConfig {
 	return CSRFConfig{
-		Secure:        false, // set true behind TLS
+		Secure:        false,
 		SameSite:      "Lax",
 		ExemptMethods: []string{http.MethodGet, http.MethodHead, http.MethodOptions},
 		ExemptPaths: []string{
@@ -68,6 +68,19 @@ func DefaultCSRFConfig() CSRFConfig {
 			"/api/v1/stream",
 		},
 	}
+}
+
+// CSRFConfigWithTLS returns a CSRFConfig with the Secure flag set based on
+// whether TLS is enabled. When TLS is active, SameSite is upgraded to Strict
+// for maximum CSRF protection. Use this instead of DefaultCSRFConfig when TLS
+// configuration is available.
+func CSRFConfigWithTLS(tlsEnabled bool) CSRFConfig {
+	cfg := DefaultCSRFConfig()
+	cfg.Secure = tlsEnabled
+	if tlsEnabled {
+		cfg.SameSite = "Strict"
+	}
+	return cfg
 }
 
 // CSRFMiddleware implements double-submit cookie CSRF protection.

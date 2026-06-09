@@ -140,6 +140,7 @@ func (m *Module) initialize() error {
 		wrapRiskService(m.riskSvc),
 		wrapTrustedDeviceService(m.deviceSvc),
 		wrapBackupCodeService(m.backupCodeSvc),
+		nil, // WebAuthn service (initialized in main gatekeeper system)
 	)
 
 	return nil

@@ -4,17 +4,42 @@ import (
 	"net/http"
 	"time"
 
+	"example.com/axiomnizam/internal/audit"
+
 	"github.com/gin-gonic/gin"
 )
 
 type EncryptionHandler struct {
 	manager            SecretsManager
 	keyDualWriteStore  EncryptionKeyDualWriteStore
+	auditMgr           *audit.AuditComplianceManager
 }
 
 // NewEncryptionHandler creates handler
 func NewEncryptionHandler(manager SecretsManager) *EncryptionHandler {
 	return &EncryptionHandler{manager: manager}
+}
+
+// SetAuditManager wires the central audit system for encryption key audit events (Phase 7).
+func (h *EncryptionHandler) SetAuditManager(am *audit.AuditComplianceManager) {
+	h.auditMgr = am
+}
+
+// logAuditEvent forwards an encryption event to the central audit system.
+func (h *EncryptionHandler) logAuditEvent(action audit.AuditAction, resourceID, userID, sourceIP string) {
+	if h.auditMgr == nil {
+		return
+	}
+	_ = h.auditMgr.LogAuditEvent(&audit.AuditLog{
+		TenantID:     "system",
+		UserID:       userID,
+		Action:       action,
+		Result:       audit.ResultSuccess,
+		ResourceType: "EncryptionKey",
+		ResourceID:   resourceID,
+		SourceIP:     sourceIP,
+		Timestamp:    time.Now(),
+	})
 }
 
 // CreateKey handles POST /api/v1/encryption/keys
@@ -45,6 +70,9 @@ func (h *EncryptionHandler) CreateKey(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, MessageResponse{Error: err.Error()})
 		return
 	}
+
+	// Phase 7: Forward encryption key creation to central audit system.
+	h.logAuditEvent(audit.ActionCreate, key.ID, key.TenantID, c.ClientIP())
 
 	c.JSON(http.StatusCreated, key)
 }
@@ -89,6 +117,9 @@ func (h *EncryptionHandler) RotateKey(c *gin.Context) {
 		return
 	}
 
+	// Phase 7: Forward encryption key rotation to central audit system.
+	h.logAuditEvent(audit.ActionUpdate, id, "system", c.ClientIP())
+
 	c.JSON(http.StatusOK, rotated)
 }
 
@@ -99,6 +130,9 @@ func (h *EncryptionHandler) DeleteKey(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, MessageResponse{Error: err.Error()})
 		return
 	}
+
+	// Phase 7: Forward encryption key deletion to central audit system.
+	h.logAuditEvent(audit.ActionDelete, id, "system", c.ClientIP())
 
 	c.JSON(http.StatusOK, MessageResponse{Message: "key revoked"})
 }

@@ -26,6 +26,24 @@ type Config struct {
 	IAM           IAMConfig
 	Discord       DiscordConfig
 	RateLimiting  RateLimitingConfig
+	TLS           TLSConfig
+}
+
+// TLSConfig holds TLS/HTTPS configuration.
+type TLSConfig struct {
+	// Enabled is true when TLS_CERT_FILE and TLS_KEY_FILE are both set,
+	// or when TLS_AUTO_GENERATE=true for dev self-signed certs.
+	Enabled bool
+
+	// CertFile is the path to the TLS certificate file.
+	CertFile string
+
+	// KeyFile is the path to the TLS private key file.
+	KeyFile string
+
+	// AutoGenerate triggers self-signed cert generation for development.
+	// Ignored when CertFile and KeyFile are both provided.
+	AutoGenerate bool
 }
 
 type APIConfig struct {
@@ -182,7 +200,34 @@ func LoadConfig() *Config {
 			MaxCallsPerToken:     getEnvInt("RATE_LIMIT_MAX_CALLS", 500),
 			TokenValidityMinutes: int(getEnvInt("RATE_LIMIT_VALIDITY_MINUTES", 15)),
 		},
+		TLS: loadTLSConfig(),
 	}
+}
+
+// loadTLSConfig reads TLS settings from environment variables.
+// Priority: explicit cert+key > auto-generate > disabled.
+func loadTLSConfig() TLSConfig {
+	certFile := strings.TrimSpace(os.Getenv("TLS_CERT_FILE"))
+	keyFile := strings.TrimSpace(os.Getenv("TLS_KEY_FILE"))
+	autoGen := strings.EqualFold(strings.TrimSpace(os.Getenv("TLS_AUTO_GENERATE")), "true")
+
+	if certFile != "" && keyFile != "" {
+		return TLSConfig{
+			Enabled:      true,
+			CertFile:     certFile,
+			KeyFile:      keyFile,
+			AutoGenerate: false,
+		}
+	}
+
+	if autoGen {
+		return TLSConfig{
+			Enabled:      true,
+			AutoGenerate: true,
+		}
+	}
+
+	return TLSConfig{Enabled: false}
 }
 
 // Helper function to get environment variables with defaults

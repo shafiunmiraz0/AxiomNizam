@@ -9,14 +9,14 @@ import (
 // EncryptedField represents an encrypted data field
 type EncryptedField struct {
 	FieldName      string            `json:"fieldName"`
-	EncryptedValue string            `json:"encryptedValue"` // Base64 encoded
+	EncryptedValue string            `json:"encryptedValue" classification:"Confidential"` // Base64 encoded
 	KeyID          string            `json:"keyId"`
 	KeyVersion     int               `json:"keyVersion"`
 	Algorithm      string            `json:"algorithm"`         // AES-256-GCM, ChaCha20-Poly1305
-	IV             string            `json:"iv,omitempty"`      // Base64 encoded initialization vector
-	Salt           string            `json:"salt,omitempty"`    // Base64 encoded salt
-	Nonce          string            `json:"nonce,omitempty"`   // Base64 encoded nonce
-	AuthTag        string            `json:"authTag,omitempty"` // Authentication tag for AEAD
+	IV             string            `json:"iv,omitempty" classification:"Confidential"`      // Base64 encoded initialization vector
+	Salt           string            `json:"salt,omitempty" classification:"Confidential"`    // Base64 encoded salt
+	Nonce          string            `json:"nonce,omitempty" classification:"Confidential"`   // Base64 encoded nonce
+	AuthTag        string            `json:"authTag,omitempty" classification:"Confidential"` // Authentication tag for AEAD
 	IsEncrypted    bool              `json:"isEncrypted"`
 	EncryptedAt    time.Time         `json:"encryptedAt"`
 	EncryptedBy    string            `json:"encryptedBy"`    // User ID
@@ -35,8 +35,8 @@ type EncryptionKey struct {
 	Description    string            `json:"description"`
 	KeyType        KeyType           `json:"keyType"`               // DEK, KEK, Master
 	Algorithm      string            `json:"algorithm"`             // AES-256, ChaCha20
-	KeyMaterial    string            `json:"keyMaterial,omitempty"` // Base64, not exposed
-	PublicKey      string            `json:"publicKey,omitempty"`   // For asymmetric
+	KeyMaterial    string            `json:"keyMaterial,omitempty" classification:"Confidential"` // Base64, not exposed
+	PublicKey      string            `json:"publicKey,omitempty" classification:"Sensitive"`   // For asymmetric
 	KeyLength      int               `json:"keyLength"`             // Bits: 128, 256, 512
 	Status         KeyStatus         `json:"status"`
 	CreatedAt      time.Time         `json:"createdAt"`
@@ -93,16 +93,16 @@ type KeyProvider struct {
 // ProviderCredentials for key provider
 type ProviderCredentials struct {
 	Type        string            `json:"type"` // "api-key", "oauth2", "certificate"
-	ApiKey      string            `json:"apiKey,omitempty"`
-	ApiSecret   string            `json:"apiSecret,omitempty"`
-	Certificate string            `json:"certificate,omitempty"`
+	ApiKey      string            `json:"apiKey,omitempty" classification:"Confidential"`
+	ApiSecret   string            `json:"apiSecret,omitempty" classification:"Confidential"`
+	Certificate string            `json:"certificate,omitempty" classification:"Confidential"`
 	OAuth2      OAuth2Credentials `json:"oauth2,omitempty"`
 }
 
 // OAuth2Credentials for OAuth2 auth
 type OAuth2Credentials struct {
-	ClientID     string   `json:"clientId"`
-	ClientSecret string   `json:"clientSecret"`
+	ClientID     string   `json:"clientId" classification:"Sensitive"`
+	ClientSecret string   `json:"clientSecret" classification:"Confidential"`
 	TokenURL     string   `json:"tokenUrl"`
 	Scopes       []string `json:"scopes"`
 }

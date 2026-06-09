@@ -226,8 +226,8 @@ type TenantPolicy struct {
 // AccessKey is a storage-specific credential bound to a user and scope.
 // Follows MinIO's service account pattern for application integration.
 type AccessKey struct {
-	AccessKeyID     string      `json:"accessKeyId"`
-	SecretAccessKey string      `json:"secretAccessKey,omitempty"` // only returned on creation
+	AccessKeyID     string      `json:"accessKeyId" classification:"Sensitive"`
+	SecretAccessKey string      `json:"secretAccessKey,omitempty" classification:"Confidential"` // only returned on creation
 	Name            string      `json:"name"`
 	Description     string      `json:"description,omitempty"`
 	UserID          string      `json:"userId"` // owning IAM user

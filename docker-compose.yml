@@ -1,11 +1,21 @@
+# docker-compose.yml — Single Service (API + Frontend merged)
+#
+# Network topology:
+#   frontend-net  — public-facing
+#   backend-net   — backend ↔ message queues
+#   data-net      — backend ↔ databases (internal only, no host exposure)
+#   mq-net        — message queues internal
+#
+# Default: NO host ports exposed on data/mq tiers.
+# For development access: docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+#
 services:
-  # Go application
+  # ── AxiomNizam (API + Frontend merged) ───────────────────────────────────
   axiomnizam:
     build: .
     container_name: axiomnizam
-    # image: shafiunmiraz/axiomnizam-axiomnizam:latest
     ports:
-      - "8000:8000"
+      - "8000:8000"   # API (frontend-net boundary)
     env_file:
       - .env
     environment:
@@ -18,398 +28,168 @@ services:
       DEMO_JWT_SECRET: ${DEMO_JWT_SECRET:-}
       IAM_RSA_PRIVATE_KEY: ${IAM_RSA_PRIVATE_KEY:-}
       IAM_RSA_PRIVATE_KEY_FILE: ${IAM_RSA_PRIVATE_KEY_FILE:-}
-      IAM_INTERNAL_BASE_URL: ${IAM_INTERNAL_BASE_URL:-http://axiomnizam:8000}
+      IAM_INTERNAL_BASE_URL: ${IAM_INTERNAL_BASE_URL:-https://axiomnizam:8000}
       IAM_ISSUER_URL: ${IAM_ISSUER_URL:-https://axiomnizam-platform.bitbd.net}
       PUBLIC_FRONTEND_URL: ${PUBLIC_FRONTEND_URL:-https://axiomnizam.bitbd.net}
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-https://axiomnizam.bitbd.net}
-      RABBITMQ_URL: ${RABBITMQ_URL:-amqp://axiom:axiom@rabbitmq:5672/axiom}
+      RABBITMQ_URL: ${RABBITMQ_URL:-amqp://axiomnizam:${RABBITMQ_PASSWORD}@rabbitmq:5672/axiom}
       KAFKA_BROKERS: ${KAFKA_BROKERS:-kafka:9092}
       AXIOMNIZAM_RAFT_DATA_DIR: /data/raft
       STORAGE_DATA_DIR: /data/storage
+      # Phase 15: DB connections use internal network hostnames
+      POSTGRES_HOST: postgres
+      MONGODB_HOST: mongodb
     depends_on:
-      # - valkey
-      # - etcd  # Not required when STORAGE_BACKEND=raft
-      # - mysql
-      # - mariadb
       - postgres
-      # - mongodb
-      # - percona
-      # - firebase
-      # - oracle
-      # - elasticsearch
     volumes:
       - query_logs:/data/query_logs
       - storage-data:/data/storage
       - raft-data:/data/raft
+      - certs-data:/data/certs
     networks:
-      - app-network
+      - frontend-net
+      - backend-net
+      - data-net
+      - mq-net
 
-  # Frontend Dashboard
-  axiomnizam-frontend:
-    build:
-      context: ./frontend
-    # image: shafiunmiraz/axiomnizam-axiomnizam-frontend:latest
-    ports:
-      - "7000:7000"
-    environment:
-      BACKEND_URL: ${PUBLIC_PLATFORM_URL:-https://axiomnizam-platform.bitbd.net}
-      BACKEND_PROXY_URL: ${BACKEND_PROXY_URL:-https://axiomnizam-platform.bitbd.net}
-      FRONTEND_PORT: ${FRONTEND_PORT:-7000}
-      IAM_ISSUER_URL: ${IAM_ISSUER_URL:-https://axiomnizam-platform.bitbd.net}
-    depends_on:
-      - axiomnizam
-    networks:
-      - app-network
-
-  # OpenClaw Gateway (optional) for SQL assistant chat provider
-  # Start with: docker compose --profile openclaw up -d openclaw-gateway
-  # openclaw-gateway:
-  #   image: ghcr.io/openclaw/openclaw:latest
-  #   container_name: openclaw-gateway
-  #   # profiles:
-  #   #   - openclaw
-  #   restart: unless-stopped
-  #   user: "0:0"
-  #   depends_on:
-  #     ollama-init:
-  #       condition: service_completed_successfully
-  #   environment:
-  #     HOME: /home/node
-  #     NODE_ENV: production
-  #     OPENCLAW_GATEWAY_BIND: lan
-  #     OPENCLAW_GATEWAY_PORT: 18789
-  #     OPENCLAW_GATEWAY_TOKEN: ${OPENCLAW_GATEWAY_TOKEN:-dev-openclaw-token}
-  #     OPENCLAW_SKIP_CANVAS_HOST: "1"
-  #     OPENCLAW_SKIP_CRON: "1"
-  #   command:
-  #     - sh
-  #     - -lc
-  #     - |
-  #       node dist/index.js config set gateway.mode local
-  #       node dist/index.js config set gateway.bind lan
-  #       node dist/index.js config set gateway.controlUi.allowedOrigins '["http://localhost:18789","http://127.0.0.1:18789"]' --strict-json
-  #       node dist/index.js config set gateway.http.endpoints.chatCompletions.enabled true
-  #       node dist/index.js config set models.providers.ollama.baseUrl ${OPENCLAW_OLLAMA_BASE_URL:-http://ollama:11434}
-  #       node dist/index.js config set models.providers.ollama.api ollama
-  #       node dist/index.js config set models.providers.ollama.apiKey ${OLLAMA_API_KEY:-ollama-local}
-  #       node dist/index.js config set models.providers.ollama.models '[{"id":"tinyllama","name":"TinyLlama","reasoning":false,"input":["text"],"cost":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0},"contextWindow":16000,"maxTokens":16000,"compat":{"supportsTools":false}}]' --strict-json
-  #       node dist/index.js config set agents.defaults.model.primary ${OPENCLAW_OLLAMA_MODEL_REF:-ollama/tinyllama}
-  #       node dist/index.js gateway --bind lan --port 18789 --allow-unconfigured
-  #   ports:
-  #     - "18789:18789"
-  #   networks:
-  #     - app-network
-  #   volumes:
-  #     - openclaw-config:/home/node/.openclaw
-
-  # Ollama model runtime for local OpenClaw provider
-  # ollama:
-  #   image: ollama/ollama:latest
-  #   container_name: ollama
-  #   # profiles:
-  #   #   - openclaw
-  #   restart: unless-stopped
-  #   ports:
-  #     - "11434:11434"
-  #   networks:
-  #     - app-network
-  #   volumes:
-  #     - ollama-data:/root/.ollama
-  #   command: ["serve"]
-
-  # One-time model bootstrap for OpenClaw default model
-  # ollama-init:
-  #   image: ollama/ollama:latest
-  #   container_name: ollama-init
-  #   # profiles:
-  #   #   - openclaw
-  #   depends_on:
-  #     - ollama
-  #   environment:
-  #     OLLAMA_HOST: ${OPENCLAW_OLLAMA_BASE_URL:-http://ollama:11434}
-  #     OLLAMA_MODEL: ${OPENCLAW_OLLAMA_MODEL_ID:-tinyllama}
-  #   networks:
-  #     - app-network
-  #   restart: "no"
-  #   entrypoint: ["/bin/sh", "-lc"]
-  #   command:
-  #     - |
-  #       until ollama list >/dev/null 2>&1; do
-  #         sleep 2
-  #       done
-  #       ollama pull "$${OLLAMA_MODEL}"
-
-  # Valkey (Redis alternative)
-  # valkey:
-  #   image: valkey/valkey:latest
-  #   profiles:
-  #     - openclaw
-  #   container_name: valkey
-  #   ports:
-  #     - "6379:6379"
-  #   networks:
-  #     - app-network
-  #   volumes:
-  #     - valkey-data:/data
-  #   command: valkey-server --appendonly yes --dir /data
-
-  # etcd — required for STORAGE_BACKEND=etcd (default).
-  # When using STORAGE_BACKEND=raft, etcd is not needed.
-  # To run without etcd: docker compose up -d --no-deps etcd
-  etcd:
-    image: quay.io/coreos/etcd:v3.5.9
-    container_name: etcd
-    profiles:
-      - etcd
-      - default
-    ports:
-      - "2379:2379"
-      - "2380:2380"
-    environment:
-      ETCD_LISTEN_CLIENT_URLS: http://0.0.0.0:2379
-      ETCD_ADVERTISE_CLIENT_URLS: http://etcd:2379
-      ETCD_UNSUPPORTED_ARCH: arm64
-      ETCD_DATA_DIR: /etcd-data
-    networks:
-      - app-network
-    volumes:
-      - etcd-data:/etcd-data
-
-  # Test CLI for Distributed State Store
-  # axiomnizamctl:
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile.axiomnizamctl
-  #   profiles:
-  #     - openclaw
-  #   container_name: axiomnizamctl
-  #   networks:
-  #     - app-network
-  #   depends_on:
-  #     - etcd
-  #   environment:
-  #     ETCD_ENDPOINT: etcd:2379
-  #   stdin_open: true
-  #   tty: true
-  #   restart: unless-stopped
-
-  # MySQL
-  # mysql:
-  #   image: mysql:8.0
-  #   profiles:
-  #     - openclaw
-  #   container_name: mysql8
-  #   ports:
-  #     - "3306:3306"
-  #   environment:
-  #     MYSQL_ROOT_PASSWORD: root
-  #     MYSQL_DATABASE: app_db
-  #   networks:
-  #     - app-network
-  #   volumes:
-  #     - mysql-data:/var/lib/mysql
-
-  # MariaDB
-  # mariadb:
-  #   image: mariadb:latest
-  #   profiles:
-  #     - openclaw
-  #   container_name: mariadb
-  #   ports:
-  #     - "3307:3306"
-  #   environment:
-  #     MARIADB_ROOT_PASSWORD: root
-  #     MARIADB_DATABASE: app_db
-  #   networks:
-  #     - app-network
-  #   volumes:
-  #     - mariadb-data:/var/lib/mysql
-
-  # PostgreSQL
+  # ── Data Tier (internal only — no host port exposure) ────────────────────
   postgres:
     image: postgres:latest
     container_name: postgres
-    ports:
-      - "5432:5432"
+    # Phase 15: NO host port — only accessible via data-net
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: app_db
+      POSTGRES_USER: ${POSTGRES_USER:-axiomnizam}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
+      POSTGRES_DB: ${POSTGRES_DATABASE:-app_db}
       POSTGRES_INITDB_ARGS: "-c shared_buffers=256MB -c max_connections=200"
-    networks:
-      - app-network
     volumes:
       - postgres-data:/var/lib/postgresql
       - ./init-postgres.sql:/docker-entrypoint-initdb.d/01-init.sql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-axiomnizam}"]
       interval: 5s
       timeout: 5s
       retries: 10
-
-  # MongoDB
-  mongodb:
-    image: mongo:latest
-    container_name: mongodb
-    ports:
-      - "27017:27017"
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: root
-      MONGO_INITDB_ROOT_PASSWORD: root
     networks:
-      - app-network
-    volumes:
-      - mongodb-data:/data/db
+      - data-net
 
-  # Percona MySQL
-  percona:
-    image: percona:latest
-    container_name: percona
-    ports:
-      - "3308:3306"
-    environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: app_db
-    networks:
-      - app-network
-    volumes:
-      - percona-data:/var/lib/mysql
-
-  # Elasticsearch
-  # elasticsearch:
-  #   image: docker.elastic.co/elasticsearch/elasticsearch:8.10.0
-  #   profiles:
-  #     - openclaw
-  #   container_name: elasticsearch
-  #   ports:
-  #     - "9200:9200"
-  #     - "9300:9300"
+  # mongodb:
+  #   image: mongo:latest
+  #   container_name: mongodb
+  #   # Phase 15: NO host port — only accessible via data-net
   #   environment:
-  #     discovery.type: single-node
-  #     xpack.security.enabled: "false"
-  #     ES_JAVA_OPTS: "-Xms512m -Xmx512m"
-  #   networks:
-  #     - app-network
+  #     MONGO_INITDB_ROOT_USERNAME: ${MONGODB_USER:-axiomnizam}
+  #     MONGO_INITDB_ROOT_PASSWORD: ${MONGODB_PASSWORD:?MONGODB_PASSWORD must be set}
   #   volumes:
-  #     - elasticsearch-data:/usr/share/elasticsearch/data
+  #     - mongodb-data:/data/db
+  #   networks:
+  #     - data-net
 
-  # Firebase Emulator Suite
-  # firebase:
-  #   image: node:18
-  #   profiles:
-  #     - openclaw
-  #   container_name: firebase
-  #   ports:
-  #     - "4000:4000"
-  #     - "5000:5000"
-  #     - "8085:8085"
-  #     - "9099:9099"
-  #     - "9150:9150"
+  # percona:
+  #   image: percona:latest
+  #   container_name: percona
+  #   # Phase 15: NO host port — only accessible via data-net
   #   environment:
-  #     FIREBASE_DATABASE_EMULATOR_HOST: "firebase:9000"
-  #     FIRESTORE_EMULATOR_HOST: "firebase:8080"
-  #     PUBSUB_EMULATOR_HOST: "firebase:8085"
-  #   networks:
-  #     - app-network
-  #   working_dir: /firebase
+  #     MYSQL_ROOT_PASSWORD: ${PERCONA_PASSWORD:?PERCONA_PASSWORD must be set}
+  #     MYSQL_DATABASE: ${PERCONA_DATABASE:-app_db}
   #   volumes:
-  #     - firebase-data:/firebase
-  #   command: >
-  #     sh -c "
-  #     apt-get update &&
-  #     apt-get install -y default-jre &&
-  #     npm install -g firebase-tools &&
-  #     mkdir -p /firebase &&
-  #     cd /firebase &&
-  #     echo '{
-  #       \"projectId\": \"test-project\",
-  #       \"emulators\": {
-  #         \"auth\": {\"port\": 9099},
-  #         \"database\": {\"port\": 9000},
-  #         \"firestore\": {\"port\": 8080},
-  #         \"pubsub\": {\"port\": 8085},
-  #         \"hub\": {\"port\": 4400},
-  #         \"ui\": {\"enabled\": true, \"port\": 4000}
-  #       }
-  #     }' > firebase.json &&
-  #     mkdir -p public &&
-  #     echo '<html><body><h1>Firebase Emulator Running</h1><p>Firestore: 8080</p><p>Database: 9000</p><p>Auth: 9099</p><p>Pub/Sub: 8085</p><p>UI: 4000</p></body></html>' > public/index.html &&
-  #     firebase emulators:start --project=test-project
-  #     "
+  #     - percona-data:/var/lib/mysql
+  #   networks:
+  #     - data-net
 
-  # Oracle Database
-  # oracle:
-  #   image: container-registry.oracle.com/database/express:latest
+  # etcd:
+  #   image: quay.io/coreos/etcd:v3.5.9
+  #   container_name: etcd
   #   profiles:
-  #     - openclaw
-  #   container_name: oracle
-  #   ports:
-  #     - "1521:1521"
+  #     - etcd
+  #     - default
+  #   # Phase 15: NO host port — only accessible via data-net
   #   environment:
-  #     ORACLE_PASSWORD: oracle123
-  #     ORACLE_ALLOW_REMOTE: true
-  #   networks:
-  #     - app-network
+  #     ETCD_LISTEN_CLIENT_URLS: http://0.0.0.0:2379
+  #     ETCD_ADVERTISE_CLIENT_URLS: http://etcd:2379
+  #     ETCD_UNSUPPORTED_ARCH: arm64
+  #     ETCD_DATA_DIR: /etcd-data
   #   volumes:
-  #     - oracle-data:/opt/oracle/oradata
+  #     - etcd-data:/etcd-data
+  #   networks:
+  #     - data-net
+
+  # ── Message Queue Tier ──────────────────────────────────────────────────
+  # rabbitmq:
+  #   image: rabbitmq:3-management
+  #   container_name: rabbitmq
+  #   # Management UI on mq-net only; AMQP accessible via backend-net
+  #   ports:
+  #     - "15672:15672"  # Management UI (optional, for ops)
+  #   environment:
+  #     RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-axiomnizam}
+  #     RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD must be set}
+  #     RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_VHOST:-/axiom}
+  #   volumes:
+  #     - rabbitmq-data:/var/lib/rabbitmq
   #   healthcheck:
-  #     test: ["CMD", "healthcheck.sh"]
+  #     test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
   #     interval: 10s
   #     timeout: 5s
-  #     retries: 3
+  #     retries: 10
+  #   networks:
+  #     - mq-net
+  #     - backend-net
 
-  # RabbitMQ with Management UI
-  rabbitmq:
-    image: rabbitmq:3-management
-    container_name: rabbitmq
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-    environment:
-      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-axiom}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-axiom}
-      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_VHOST:-/}
-    networks:
-      - app-network
-    volumes:
-      - rabbitmq-data:/var/lib/rabbitmq
-    healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
+  # kafka:
+  #   image: apache/kafka:latest
+  #   container_name: kafka
+  #   # Phase 15: NO host port — only accessible via mq-net
+  #   environment:
+  #     KAFKA_NODE_ID: 1
+  #     KAFKA_PROCESS_ROLES: broker,controller
+  #     KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+  #     KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+  #     KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+  #     KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+  #     KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+  #     KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+  #     KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+  #     KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+  #     KAFKA_LOG_DIRS: /tmp/kraft-combined-logs
+  #     CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 > /dev/null 2>&1"]
+  #     interval: 15s
+  #     timeout: 10s
+  #     retries: 10
+  #   networks:
+  #     - mq-net
 
-  # Apache Kafka with KRaft (no ZooKeeper)
-  kafka:
-    image: apache/kafka:latest
-    container_name: kafka
-    ports:
-      - "9092:9092"
-      - "9093:9093"
-    environment:
-      KAFKA_NODE_ID: 1
-      KAFKA_PROCESS_ROLES: broker,controller
-      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
-      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
-      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-      KAFKA_LOG_DIRS: /tmp/kraft-combined-logs
-      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
-    networks:
-      - app-network
-    healthcheck:
-      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 > /dev/null 2>&1"]
-      interval: 15s
-      timeout: 10s
-      retries: 10
-
+# ── Networks (Phase 15: Micro-segmentation) ─────────────────────────────────
 networks:
-  app-network:
+  # Frontend tier — public-facing, connects frontend ↔ backend
+  frontend-net:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.32.1.0/24
+  # Backend tier — backend ↔ message queues
+  backend-net:
+    driver: bridge
+    internal: false   # needs outbound for webhooks, SIEM, etc.
+    ipam:
+      config:
+        - subnet: 172.32.2.0/24
+  # Data tier — internal only (databases, etcd)
+  data-net:
+    driver: bridge
+    internal: true    # Phase 15: no outbound internet access
+    ipam:
+      config:
+        - subnet: 172.32.3.0/24
+  # Message queue tier — internal only
+  mq-net:
+    driver: bridge
+    internal: true    # Phase 15: no outbound internet access
+    ipam:
+      config:
+        - subnet: 172.32.4.0/24
 
 volumes:
   mysql-data:
@@ -426,5 +206,6 @@ volumes:
   query_logs:
   storage-data:
   raft-data:
+  certs-data:
   openclaw-config:
   ollama-data:

@@ -101,6 +101,22 @@ type BackupCodeService interface {
 	RegenerateBackupCodes(ctx context.Context, factorID models.FactorID) ([]string, error)
 }
 
+// WebAuthnService defines the contract for WebAuthn/FIDO2 operations.
+type WebAuthnService interface {
+	// BeginRegistration starts a registration ceremony (returns session ID + options JSON)
+	BeginRegistration(ctx context.Context, userID uuid.UUID) (sessionID string, options map[string]interface{}, err error)
+	// FinishRegistration verifies attestation and stores the credential
+	FinishRegistration(ctx context.Context, userID uuid.UUID, sessionID string, response []byte) error
+	// BeginAuthentication starts an authentication ceremony
+	BeginAuthentication(ctx context.Context, userID uuid.UUID) (sessionID string, options map[string]interface{}, err error)
+	// FinishAuthentication verifies assertion
+	FinishAuthentication(ctx context.Context, userID uuid.UUID, sessionID string, response []byte) (bool, error)
+	// ListCredentials returns registered WebAuthn credentials for a user
+	ListCredentials(ctx context.Context, userID uuid.UUID) ([]map[string]interface{}, error)
+	// DeleteCredential removes a WebAuthn credential
+	DeleteCredential(ctx context.Context, userID uuid.UUID, credentialID []byte) error
+}
+
 // Provider aggregates all Gatekeeper services for dependency injection.
 type Provider interface {
 	EnrollmentService() EnrollmentService

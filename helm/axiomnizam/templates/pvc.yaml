@@ -1,0 +1,75 @@
+{{- if .Values.persistence.raft.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "axiomnizam.fullname" . }}-raft
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "axiomnizam.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - {{ .Values.persistence.raft.accessMode }}
+  {{- if .Values.persistence.raft.storageClass }}
+  storageClassName: {{ .Values.persistence.raft.storageClass }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.raft.size }}
+---
+{{- end }}
+{{- if .Values.persistence.storage.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "axiomnizam.fullname" . }}-storage
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "axiomnizam.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - {{ .Values.persistence.storage.accessMode }}
+  {{- if .Values.persistence.storage.storageClass }}
+  storageClassName: {{ .Values.persistence.storage.storageClass }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.storage.size }}
+---
+{{- end }}
+{{- if .Values.persistence.certs.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "axiomnizam.fullname" . }}-certs
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "axiomnizam.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - {{ .Values.persistence.certs.accessMode }}
+  {{- if .Values.persistence.certs.storageClass }}
+  storageClassName: {{ .Values.persistence.certs.storageClass }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.certs.size }}
+---
+{{- end }}
+{{- if .Values.persistence.queryLogs.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "axiomnizam.fullname" . }}-query-logs
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "axiomnizam.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - {{ .Values.persistence.queryLogs.accessMode }}
+  {{- if .Values.persistence.queryLogs.storageClass }}
+  storageClassName: {{ .Values.persistence.queryLogs.storageClass }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.queryLogs.size }}
+{{- end }}

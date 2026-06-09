@@ -2,6 +2,8 @@ package gatekeeper
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -11,6 +13,7 @@ import (
 	"example.com/axiomnizam/internal/gatekeeper/models"
 	"example.com/axiomnizam/internal/gatekeeper/repositories"
 	"example.com/axiomnizam/internal/gatekeeper/trusteddevices"
+	gkwebauthn "example.com/axiomnizam/internal/gatekeeper/webauthn"
 )
 
 // enrollmentServiceWrapper wraps enrollment.Service to match contracts.EnrollmentService.
@@ -276,4 +279,92 @@ func (w *backupCodeServiceWrapper) GetRemainingBackupCodes(ctx context.Context, 
 
 func (w *backupCodeServiceWrapper) RegenerateBackupCodes(ctx context.Context, factorID models.FactorID) ([]string, error) {
 	return w.svc.RegenerateCodes(ctx, factorID, 10)
+}
+
+// webauthnServiceWrapper wraps gkwebauthn.Service to match contracts.WebAuthnService.
+type webauthnServiceWrapper struct {
+	svc *gkwebauthn.Service
+}
+
+func wrapWebAuthnService(svc *gkwebauthn.Service) contracts.WebAuthnService {
+	return &webauthnServiceWrapper{svc: svc}
+}
+
+func (w *webauthnServiceWrapper) BeginRegistration(ctx context.Context, userID uuid.UUID) (string, map[string]interface{}, error) {
+	sessionID, options, err := w.svc.BeginRegistration(ctx, userID.String(), userID.String(), userID.String())
+	if err != nil {
+		return "", nil, err
+	}
+	optMap := map[string]interface{}{
+		"challenge":        options.Challenge,
+		"rp":               options.RP,
+		"user":             options.User,
+		"pubKeyCredParams": options.PubKeyCredParams,
+		"timeout":          options.Timeout,
+		"attestation":      options.Attestation,
+	}
+	if len(options.ExcludeCredentials) > 0 {
+		optMap["excludeCredentials"] = options.ExcludeCredentials
+	}
+	if options.AuthenticatorSelection.UserVerification != "" {
+		optMap["authenticatorSelection"] = options.AuthenticatorSelection
+	}
+	return sessionID, optMap, nil
+}
+
+func (w *webauthnServiceWrapper) FinishRegistration(ctx context.Context, userID uuid.UUID, sessionID string, response []byte) error {
+	var resp gkwebauthn.AttestationResponse
+	if err := json.Unmarshal(response, &resp); err != nil {
+		return fmt.Errorf("parse attestation response: %w", err)
+	}
+	_, err := w.svc.FinishRegistration(ctx, sessionID, &resp)
+	return err
+}
+
+func (w *webauthnServiceWrapper) BeginAuthentication(ctx context.Context, userID uuid.UUID) (string, map[string]interface{}, error) {
+	sessionID, options, err := w.svc.BeginAuthentication(ctx, userID.String())
+	if err != nil {
+		return "", nil, err
+	}
+	optMap := map[string]interface{}{
+		"challenge":        options.Challenge,
+		"rpId":             options.RPID,
+		"timeout":          options.Timeout,
+		"userVerification": options.UserVerification,
+	}
+	if len(options.AllowCredentials) > 0 {
+		optMap["allowCredentials"] = options.AllowCredentials
+	}
+	return sessionID, optMap, nil
+}
+
+func (w *webauthnServiceWrapper) FinishAuthentication(ctx context.Context, userID uuid.UUID, sessionID string, response []byte) (bool, error) {
+	var resp gkwebauthn.AssertionResponse
+	if err := json.Unmarshal(response, &resp); err != nil {
+		return false, fmt.Errorf("parse assertion response: %w", err)
+	}
+	return w.svc.FinishAuthentication(ctx, sessionID, &resp)
+}
+
+func (w *webauthnServiceWrapper) ListCredentials(ctx context.Context, userID uuid.UUID) ([]map[string]interface{}, error) {
+	creds, err := w.svc.ListCredentials(ctx, userID.String())
+	if err != nil {
+		return nil, err
+	}
+	var result []map[string]interface{}
+	for _, c := range creds {
+		result = append(result, map[string]interface{}{
+			"id":               c.ID,
+			"user_id":          c.UserID,
+			"attestation_type": c.AttestationType,
+			"sign_count":       c.SignCount,
+			"clone_warning":    c.CloneWarning,
+			"created_at":       c.CreatedAt,
+		})
+	}
+	return result, nil
+}
+
+func (w *webauthnServiceWrapper) DeleteCredential(ctx context.Context, userID uuid.UUID, credentialID []byte) error {
+	return w.svc.DeleteCredential(ctx, credentialID)
 }

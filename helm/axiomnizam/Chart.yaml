@@ -1,0 +1,14 @@
+apiVersion: v2
+name: axiomnizam
+description: AxiomNizam — Enterprise Data Control Plane
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - data-control-plane
+  - iam
+  - storage
+  - zero-trust
+home: https://github.com/AxiomNizam/AxiomNizam
+maintainers:
+  - name: AxiomNizam

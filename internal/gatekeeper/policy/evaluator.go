@@ -21,18 +21,20 @@ func (a *AdaptiveEvaluator) Evaluate(ctx context.Context, req *EvaluationRequest
 		TrustDeviceAllowed: true,
 	}
 
-	// High risk: require MFA, block trust device
+	// High risk: require MFA, prefer WebAuthn, block trust device
 	if req.RiskScore > 75 {
 		result.RequiresMFA = true
+		result.AllowedFactors = []models.FactorType{models.FactorTypeWebAuthn, models.FactorTypeTOTP}
 		result.RiskAction = "block"
 		result.Reason = "Critical risk score"
 		result.TrustDeviceAllowed = false
 		return result, nil
 	}
 
-	// Elevated risk: require MFA challenge
+	// Elevated risk: require MFA challenge, WebAuthn preferred
 	if req.RiskScore > 50 {
 		result.RequiresMFA = true
+		result.AllowedFactors = []models.FactorType{models.FactorTypeWebAuthn, models.FactorTypeTOTP}
 		result.RiskAction = "challenge"
 		result.Reason = "Elevated risk score"
 		return result, nil
@@ -57,9 +59,10 @@ func (a *AdaptiveEvaluator) Evaluate(ctx context.Context, req *EvaluationRequest
 		return result, nil
 	}
 
-	// Sensitive resource: always require MFA
+	// Sensitive resource: always require MFA, prefer WebAuthn
 	if req.ResourceType == "sensitive-operation" {
 		result.RequiresMFA = true
+		result.AllowedFactors = []models.FactorType{models.FactorTypeWebAuthn, models.FactorTypeTOTP}
 		result.RiskAction = "require"
 		result.Reason = "Sensitive operation requires MFA"
 		return result, nil

@@ -99,6 +99,10 @@ const (
 	AuditEventHighRiskDetected     AuditEventType = "HighRiskDetected"
 	AuditEventChallengeCreated     AuditEventType = "ChallengeCreated"
 	AuditEventChallengeExpired     AuditEventType = "ChallengeExpired"
+	AuditEventWebAuthnRegistered   AuditEventType = "WebAuthnRegistered"
+	AuditEventWebAuthnVerified     AuditEventType = "WebAuthnVerified"
+	AuditEventWebAuthnFailed       AuditEventType = "WebAuthnFailed"
+	AuditEventWebAuthnCredDeleted  AuditEventType = "WebAuthnCredentialDeleted"
 )
 
 // RaftCommandType represents the type of Raft command for MFA state.

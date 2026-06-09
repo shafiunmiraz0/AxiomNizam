@@ -79,8 +79,9 @@ func (r *AuditRepositoryImpl) ListByResource(tenantID, resourceType, resourceID 
 	return logs, err
 }
 
-// DeleteOldLogs deletes logs older than specified days
+// DeleteOldLogs deletes logs older than specified days.
+// Phase 7: Fixed MySQL syntax to PostgreSQL INTERVAL syntax.
 func (r *AuditRepositoryImpl) DeleteOldLogs(tenantID string, daysOld int) error {
-	return r.db.Where("tenant_id = ? AND created_at < DATE_SUB(NOW(), INTERVAL ? DAY)", tenantID, daysOld).
+	return r.db.Where("tenant_id = ? AND created_at < NOW() - INTERVAL '? days'", tenantID, daysOld).
 		Delete(&models.AuditLogModel{}).Error
 }

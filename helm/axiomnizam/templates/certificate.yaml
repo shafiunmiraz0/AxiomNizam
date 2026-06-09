@@ -1,0 +1,42 @@
+{{- if .Values.certManager.enabled }}
+# Server TLS certificate
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ include "axiomnizam.fullname" . }}-server-tls
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "axiomnizam.labels" . | nindent 4 }}
+spec:
+  secretName: {{ include "axiomnizam.fullname" . }}-server-tls
+  issuerRef:
+    name: {{ .Values.certManager.issuerName }}
+    kind: {{ .Values.certManager.issuerKind }}
+  dnsNames:
+    - {{ include "axiomnizam.fullname" . }}
+    - {{ include "axiomnizam.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local
+  duration: 2160h    # 90 days
+  renewBefore: 360h  # 15 days before expiry
+---
+{{- if .Values.postgresql.enabled }}
+# PostgreSQL TLS certificate
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ include "axiomnizam.postgres.fullname" . }}-tls
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "axiomnizam.labels" . | nindent 4 }}
+    app.kubernetes.io/component: postgres
+spec:
+  secretName: {{ include "axiomnizam.postgres.fullname" . }}-tls
+  issuerRef:
+    name: {{ .Values.certManager.issuerName }}
+    kind: {{ .Values.certManager.issuerKind }}
+  dnsNames:
+    - {{ include "axiomnizam.postgres.fullname" . }}
+    - {{ include "axiomnizam.postgres.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local
+  duration: 2160h
+  renewBefore: 360h
+{{- end }}
+{{- end }}

@@ -1,0 +1,794 @@
+{{ define "layout.html" }}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: https:; connect-src 'self' ws: wss: https: http:;">
+    
+    <!-- Fonts (self-hosted) -->
+    <link rel="stylesheet" href="/static/lib/fonts.css">
+    <title>{{ .title }}</title>
+    <link rel="icon" href="/static/axiomnizam-logo-minimal.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="/static/style.css?v=20260412-1">
+    <link rel="stylesheet" href="/static/responsive.css?v=20260410-3">
+    <link rel="stylesheet" href="/static/gis-dashboard.css?v=20260412-10">
+    <link rel="stylesheet" href="/static/analytics-dashboard.css?v=20260410">
+    <link rel="stylesheet" href="/static/cdc-etl-dashboard.css?v=20260411-3">
+    <link rel="stylesheet" href="/static/netintel-dashboard.css?v=20260410">
+    <link rel="stylesheet" href="/static/conductor-dashboard.css?v=20260410-2">
+    <link rel="stylesheet" href="/static/platform-console.css?v=20260410">
+    <!-- GIS maps + Charts (self-hosted) -->
+    <link rel="stylesheet" href="/static/lib/gis-core.css" />
+    <link rel="stylesheet" href="/static/lib/gis-cluster.css" />
+    <link rel="stylesheet" href="/static/lib/gis-cluster-default.css" />
+    <link rel="stylesheet" href="/static/lib/gis-draw.css" />
+    <script src="/static/lib/gis-core.js"></script>
+    <script src="/static/lib/gis-cluster.js"></script>
+    <script src="/static/lib/gis-draw.js"></script>
+    <script src="/static/lib/platform-charts.js"></script>
+    <script>
+        (function() {
+            var configuredBackendURL = '{{ .backendURL }}'.trim();
+            if (configuredBackendURL.length > 1 && configuredBackendURL.endsWith('/')) {
+                configuredBackendURL = configuredBackendURL.slice(0, -1);
+            }
+
+            function normalizeURL(raw) {
+                var value = String(raw || '').trim();
+                if (!value) {
+                    return '';
+                }
+                if (!/^https?:\/\//i.test(value) && /^[a-z0-9.-]+(?::\d+)?$/i.test(value)) {
+                    value = (window.location.protocol || 'http:') + '//' + value;
+                }
+                if (value.length > 1 && value.endsWith('/')) {
+                    value = value.slice(0, -1);
+                }
+                return value;
+            }
+
+            function parseHostname(rawURL) {
+                try {
+                    return new URL(rawURL).hostname.toLowerCase();
+                } catch (_) {
+                    return '';
+                }
+            }
+
+            function isLocalOrInternalHost(hostname) {
+                if (!hostname) return true;
+                if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '0.0.0.0' || hostname === '::1') return true;
+                if (hostname === 'axiomnizam') return true;
+                if (hostname.endsWith('.local')) return true;
+                return hostname.indexOf('.') === -1;
+            }
+
+            function inferPublicBackendURL() {
+                var browserHost = String(window.location.hostname || '').toLowerCase();
+                if (!browserHost || browserHost === 'localhost' || browserHost === '127.0.0.1' || browserHost === '0.0.0.0') {
+                    return '';
+                }
+
+                var protocol = window.location.protocol || 'https:';
+                if (browserHost.indexOf('axiomnizam.') === 0) {
+                    return protocol + '//axiomnizam-platform.' + browserHost.substring('axiomnizam.'.length);
+                }
+                return protocol + '//' + browserHost;
+            }
+
+            window.BACKEND_URL = normalizeURL(configuredBackendURL);
+            window.__backendURL = window.BACKEND_URL;
+            window.resolveBackendURL = function() {
+                var value = normalizeURL(window.BACKEND_URL || '');
+                if (!value) {
+                    return inferPublicBackendURL() || 'http://localhost:8000';
+                }
+
+                var backendHost = parseHostname(value);
+                var browserHost = String(window.location.hostname || '').toLowerCase();
+                var browserIsPublic = browserHost && browserHost !== 'localhost' && browserHost !== '127.0.0.1' && browserHost !== '0.0.0.0';
+
+                if (browserIsPublic && isLocalOrInternalHost(backendHost)) {
+                    return inferPublicBackendURL() || value;
+                }
+
+                return value;
+            };
+
+            window.BACKEND_URL = window.resolveBackendURL();
+            window.__backendURL = window.BACKEND_URL;
+        })();
+    </script>
+    {{ if .embedded }}
+    <style>
+        .navbar, .footer { display: none !important; }
+        .main-content { max-width: 100%; margin: 0; padding: 0; }
+        .app-container { min-height: auto; }
+    </style>
+    {{ end }}
+</head>
+<body>
+    <div class="app-container">
+        <!-- Navigation Bar -->
+        {{ if and (not .embedded) (not .hideChrome) }}
+        <nav class="navbar">
+            <div class="nav-container">
+                <div class="nav-logo">
+                    <span class="logo-icon">
+                        <img src="/static/axiomnizam-logo-minimal.svg?v=20260318-11" alt="AxiomNizam logo">
+                    </span>
+                    <span class="logo-text">AxiomNizam</span>
+                </div>
+
+                <button
+                    type="button"
+                    class="mobile-nav-toggle"
+                    id="mobileNavToggle"
+                    aria-label="Toggle navigation"
+                    aria-expanded="false"
+                    aria-controls="primary-navigation"
+                    onclick="toggleMobileNav(event)">
+                    <span class="mobile-nav-toggle-line"></span>
+                    <span class="mobile-nav-toggle-line"></span>
+                    <span class="mobile-nav-toggle-line"></span>
+                </button>
+                
+                <div class="nav-center" id="primary-navigation">
+                    <a href="/" class="nav-link {{ if eq .page "public-dashboard" }}active{{ end }}">
+                        <span class="nav-icon"><svg viewBox="0 0 24 24"><rect x="18" y="3" width="4" height="18" rx="1"/><rect x="10" y="8" width="4" height="13" rx="1"/><rect x="2" y="13" width="4" height="8" rx="1"/></svg></span>
+                        <span>Dashboard</span>
+                    </a>
+                    <a href="/gis" class="nav-link {{ if eq .page "gis-dashboard" }}active{{ end }}">
+                        <span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/></svg></span>
+                        <span>GIS</span>
+                    </a>
+                    <a href="/analytics" class="nav-link {{ if eq .page "analytics-dashboard" }}active{{ end }}">
+                        <span class="nav-icon"><svg viewBox="0 0 24 24"><rect x="18" y="3" width="4" height="18" rx="1"/><rect x="10" y="8" width="4" height="13" rx="1"/><rect x="2" y="13" width="4" height="8" rx="1"/></svg></span>
+                        <span>Analytics</span>
+                    </a>
+                    <a href="/cdc-etl" class="nav-link {{ if eq .page "cdc-etl-dashboard" }}active{{ end }}">
+                        <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></span>
+                        <span>CDC/ETL</span>
+                    </a>
+                    <a href="/netintel" class="nav-link {{ if eq .page "netintel-dashboard" }}active{{ end }}">
+                        <span class="nav-icon"><svg viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></span>
+                        <span>NetIntel</span>
+                    </a>
+                    <a href="/conductor" class="nav-link {{ if eq .page "conductor-dashboard" }}active{{ end }}">
+                        <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></span>
+                        <span>Conductor</span>
+                    </a>
+
+                    <div class="nav-dropdown" id="nav-more-wrap">
+                        <button
+                            class="nav-more-btn {{ if or (eq .page "governance-dashboard") (eq .page "operations-center") (eq .page "version-lineage-dashboard") (eq .page "admin") (eq .page "system-manager") (eq .page "manager") (eq .page "iam-admin") (eq .page "object-storage") (eq .page "two-factor") }}active{{ end }}"
+                            id="navMoreBtn"
+                            onclick="toggleNavMoreMenu(event)">
+                            <span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
+                            <span class="nav-more-label">More</span>
+                            <span class="nav-more-caret">▾</span>
+                        </button>
+
+                        <div class="nav-dropdown-menu" id="navMoreMenu">
+                            <a href="/governance" class="nav-dropdown-link {{ if eq .page "governance-dashboard" }}active{{ end }}" id="nav-governance" style="display:none">
+                                <span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
+                                <span>Governance</span>
+                            </a>
+                            <a href="/operations-center" class="nav-dropdown-link {{ if eq .page "operations-center" }}active{{ end }}" id="nav-ops" style="display:none">
+                                <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></span>
+                                <span>Operations</span>
+                            </a>
+                            <a href="/lineage-version" class="nav-dropdown-link {{ if eq .page "version-lineage-dashboard" }}active{{ end }}" id="nav-lineage" style="display:none">
+                                <span class="nav-icon"><svg viewBox="0 0 24 24"><rect x="18" y="3" width="4" height="18" rx="1"/><rect x="10" y="8" width="4" height="13" rx="1"/><rect x="2" y="13" width="4" height="8" rx="1"/></svg></span>
+                                <span>Lineage</span>
+                            </a>
+                            {{ if .isAuth }}
+                            <a href="/admin" class="nav-dropdown-link {{ if eq .page "admin" }}active{{ end }}" id="nav-admin" style="display:none">
+                                <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></span>
+                                <span>Admin</span>
+                            </a>
+                            <a href="/system-manager" class="nav-dropdown-link {{ if eq .page "system-manager" }}active{{ end }}" id="nav-sysmanager" style="display:none">
+                                <span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/></svg></span>
+                                <span>System Manager</span>
+                            </a>
+                            <a href="/manager" class="nav-dropdown-link {{ if eq .page "manager" }}active{{ end }}" id="nav-manager" style="display:none">
+                                <span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/></svg></span>
+                                <span>Manager</span>
+                            </a>
+                            <a href="/iam-admin" class="nav-dropdown-link {{ if eq .page "iam-admin" }}active{{ end }}" id="nav-iam-admin" style="display:none">
+                                <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span>
+                                <span>IAM Console</span>
+                            </a>
+                            <a href="/object-storage" class="nav-dropdown-link {{ if eq .page "object-storage" }}active{{ end }}" id="nav-object-storage" style="display:none">
+                                <span class="nav-icon"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg></span>
+                                <span>Object Storage</span>
+                            </a>
+                            <a href="/two-factor" class="nav-dropdown-link {{ if eq .page "two-factor" }}active{{ end }}" id="nav-two-factor" style="display:none">
+                                <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span>
+                                <span>Two-Factor Auth</span>
+                            </a>
+                            {{ end }}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="nav-right" id="primary-actions">
+                    {{ if .isAuth }}
+                    <div class="user-info">
+                        <span class="user-icon">
+                            <svg viewBox="0 0 24 24" width="22" height="22" fill="#757575" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                <circle cx="12" cy="7" r="4"></circle>
+                            </svg>
+                        </span>
+                        <span class="user-name">{{ .userName }}</span>
+                    </div>
+                    <button class="btn-logout" onclick="logout()">Logout</button>
+                    {{ else }}
+                    <button class="btn-login" onclick="window.location.href='/login'">Login</button>
+                    {{ end }}
+                </div>
+            </div>
+        </nav>
+        {{ end }}
+
+        <!-- Main Content -->
+        <main class="main-content{{ if .hideChrome }} login-main-content{{ end }}{{ if eq .pageName "public-dashboard" }} landing-main-content{{ end }}{{ if eq .pageName "gis-dashboard" }} gis-main-content{{ end }}">
+            {{ if eq .pageName "login" }}
+                {{ template "login" . }}
+            {{ else if eq .pageName "signup" }}
+                {{ template "signup" . }}
+            {{ else if eq .pageName "public-dashboard" }}
+                {{ template "public-dashboard" . }}
+            {{ else if eq .pageName "admin" }}
+                {{ template "admin" . }}
+            {{ else if eq .pageName "system-manager" }}
+                {{ template "system-manager" . }}
+            {{ else if eq .pageName "manager" }}
+                {{ template "manager" . }}
+            {{ else if eq .pageName "gis-dashboard" }}
+                {{ template "gis-dashboard" . }}
+            {{ else if eq .pageName "analytics-dashboard" }}
+                {{ template "analytics-dashboard" . }}
+            {{ else if eq .pageName "cdc-etl-dashboard" }}
+                {{ template "cdc-etl-dashboard" . }}
+            {{ else if eq .pageName "netintel-dashboard" }}
+                {{ template "netintel-dashboard" . }}
+            {{ else if eq .pageName "governance-dashboard" }}
+                {{ template "governance-dashboard" . }}
+            {{ else if eq .pageName "operations-center" }}
+                {{ template "operations-center" . }}
+            {{ else if eq .pageName "version-lineage-dashboard" }}
+                {{ template "version-lineage-dashboard" . }}
+            {{ else if eq .pageName "iam-admin" }}
+                {{ template "iam-admin" . }}
+            {{ else if eq .pageName "object-storage" }}
+                {{ template "object-storage" . }}
+            {{ else if eq .pageName "two-factor" }}
+                {{ template "two-factor" . }}
+            {{ else if eq .pageName "conductor-dashboard" }}
+                {{ template "conductor-dashboard" . }}
+            {{ end }}
+        </main>
+
+        <!-- Footer -->
+        {{ if and (not .embedded) (not .hideChrome) }}
+        <footer class="footer">
+            <div class="footer-content">
+                <p>&copy; 2026 AxiomNizam - All Rights Reserved</p>
+                <div class="footer-links">
+                    <a href="#">Documentation</a>
+                    <a href="#">Support</a>
+                    <a href="#">Status</a>
+                </div>
+            </div>
+        </footer>
+        {{ end }}
+    </div>
+
+    <!-- Response Modal -->
+    <div id="responseModal" class="modal">
+        <div class="modal-content response-modal">
+            <div class="modal-header">
+                <h2 id="modalTitle">Response</h2>
+                <button class="modal-close" onclick="closeResponseModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <!-- Response content here -->
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/auth.js?v=20260504-refresh"></script>
+    <script>
+
+        // Permanent dark theme
+        document.documentElement.setAttribute('data-theme', 'dark');
+
+        function isMobileNavViewport() {
+            return window.matchMedia('(max-width: 1200px)').matches;
+        }
+
+        function syncMobileNavState(shouldOpen) {
+            const navbar = document.querySelector('.navbar');
+            const toggle = document.getElementById('mobileNavToggle');
+            if (!navbar || !toggle) return;
+
+            const open = !!shouldOpen && isMobileNavViewport();
+            navbar.classList.toggle('mobile-open', open);
+            document.body.classList.toggle('mobile-nav-open', open);
+            toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+        }
+
+        function closeMobileNav() {
+            syncMobileNavState(false);
+        }
+
+        function toggleMobileNav(event) {
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            const navbar = document.querySelector('.navbar');
+            if (!navbar) return;
+            syncMobileNavState(!navbar.classList.contains('mobile-open'));
+        }
+
+        function initMobileNavInteractions() {
+            const toggle = document.getElementById('mobileNavToggle');
+            if (toggle) {
+                toggle.setAttribute('aria-expanded', 'false');
+            }
+
+            document.querySelectorAll('.nav-link, .nav-dropdown-link').forEach(function(link) {
+                if (link.dataset.mobileNavInit === '1') {
+                    return;
+                }
+                link.dataset.mobileNavInit = '1';
+                link.addEventListener('click', function() {
+                    closeMobileNav();
+                    closeNavMoreMenu();
+                });
+            });
+        }
+
+
+        function toggleNavMoreMenu(event) {
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            const wrap = document.getElementById('nav-more-wrap');
+            if (!wrap) return;
+            wrap.classList.toggle('open');
+        }
+
+        function closeNavMoreMenu() {
+            const wrap = document.getElementById('nav-more-wrap');
+            if (wrap) {
+                wrap.classList.remove('open');
+            }
+        }
+
+        function normalizeUserRole(rawRole) {
+            const role = String(rawRole || '').toLowerCase().trim();
+            if (!role) return 'user';
+            if (role === 'administrator' || role === 'superadmin' || role === 'super-admin') return 'admin';
+            if (role === 'system-manager' || role === 'system_admin' || role === 'system_manager' || role === 'system manager' || role === 'system administrator' || role === 'system-administrator' || role === 'sysadmin' || role === 'sys-admin') return 'system-manager';
+            if (role === 'mgr') return 'manager';
+            if (role.indexOf('system') !== -1 && role.indexOf('admin') !== -1) return 'system-manager';
+            if (role.indexOf('admin') !== -1 && role.indexOf('account') === -1) return 'admin';
+            return role;
+        }
+
+        function roleFromAlias(rawValue) {
+            const value = String(rawValue || '').toLowerCase().trim();
+            if (!value) return '';
+            const localPart = value.indexOf('@') !== -1 ? value.split('@')[0] : value;
+            const compact = localPart.replace(/[^a-z0-9]/g, '');
+            if (compact === 'sysadmin' || compact === 'systemadmin' || compact === 'systemadministrator' || compact === 'systemmanager') return 'system-manager';
+            if (compact === 'admin' || compact === 'administrator' || compact === 'superadmin') return 'admin';
+            if (compact === 'manager' || compact === 'apimanager' || compact === 'mgr') return 'manager';
+            return '';
+        }
+
+        function readCookieValue(name) {
+            const cookieName = name + '=';
+            const chunks = document.cookie.split(';');
+            for (let i = 0; i < chunks.length; i++) {
+                const item = chunks[i].trim();
+                if (item.indexOf(cookieName) === 0) {
+                    return decodeURIComponent(item.substring(cookieName.length));
+                }
+            }
+            return '';
+        }
+
+        function applyRoleNavVisibility() {
+            const storedRole = localStorage.getItem('userRole') || localStorage.getItem('role') || readCookieValue('userRole') || '';
+            const storedName = (localStorage.getItem('userName') || readCookieValue('userName') || '').toLowerCase().trim();
+            const hasAuthToken = !!(localStorage.getItem('authToken') || readCookieValue('authToken'));
+
+            let role = normalizeUserRole(storedRole || 'user');
+            if (role === 'user' && storedName) {
+                role = roleFromAlias(storedName) || role;
+            }
+
+            const navAdmin = document.getElementById('nav-admin');
+            const navSysManager = document.getElementById('nav-sysmanager');
+            const navManager = document.getElementById('nav-manager');
+            const navGovernance = document.getElementById('nav-governance');
+            const navOps = document.getElementById('nav-ops');
+            const navLineage = document.getElementById('nav-lineage');
+            const navIAM = document.getElementById('nav-iam-admin');
+            const navObjectStorage = document.getElementById('nav-object-storage');
+
+            const isAdmin = role === 'admin';
+            const isSystemManager = role === 'system-manager';
+            const isManager = role === 'manager';
+
+            if (navAdmin) navAdmin.style.display = (isAdmin || isSystemManager) ? '' : 'none';
+            if (navSysManager) navSysManager.style.display = isSystemManager ? '' : 'none';
+            if (navManager) navManager.style.display = isManager ? '' : 'none';
+            if (navGovernance) navGovernance.style.display = (isAdmin || isSystemManager) ? '' : 'none';
+            if (navOps) navOps.style.display = (isAdmin || isSystemManager || isManager) ? '' : 'none';
+            if (navLineage) navLineage.style.display = (isAdmin || isSystemManager) ? '' : 'none';
+            if (navIAM) navIAM.style.display = isSystemManager ? '' : 'none';
+            if (navObjectStorage) navObjectStorage.style.display = isSystemManager ? '' : 'none';
+
+            var navTwoFactor = document.getElementById('nav-two-factor');
+            if (navTwoFactor) navTwoFactor.style.display = hasAuthToken ? '' : 'none';
+
+            const navMoreWrap = document.getElementById('nav-more-wrap');
+            const navMoreMenu = document.getElementById('navMoreMenu');
+            if (navMoreWrap && navMoreMenu) {
+                let hasVisibleMoreItems = Array.from(navMoreMenu.querySelectorAll('.nav-dropdown-link'))
+                    .some((link) => link.style.display !== 'none');
+
+                // Keep More menu useful if auth is present but role propagation is delayed.
+                if (!hasVisibleMoreItems && hasAuthToken && navOps) {
+                    navOps.style.display = '';
+                    hasVisibleMoreItems = true;
+                }
+
+                navMoreWrap.style.display = hasVisibleMoreItems ? '' : 'none';
+                if (!hasVisibleMoreItems) {
+                    navMoreWrap.classList.remove('open');
+                }
+            }
+        }
+
+        function initTabNavigationScrollUX() {
+            const tabBars = document.querySelectorAll('.tab-navigation');
+            tabBars.forEach(function(tabBar) {
+                if (tabBar.dataset.scrollUxInit === '1') {
+                    return;
+                }
+                tabBar.dataset.scrollUxInit = '1';
+
+                // Make mouse-wheel scroll horizontally on desktop.
+                tabBar.addEventListener('wheel', function(event) {
+                    if (Math.abs(event.deltaY) <= Math.abs(event.deltaX)) {
+                        return;
+                    }
+                    tabBar.scrollLeft += event.deltaY;
+                    event.preventDefault();
+                }, { passive: false });
+
+                let dragging = false;
+                let dragStarted = false;
+                let startX = 0;
+                let startLeft = 0;
+                let suppressClick = false;
+                let activePointerId = null;
+
+                tabBar.addEventListener('pointerdown', function(event) {
+                    if (event.pointerType !== 'mouse' && event.pointerType !== 'pen') {
+                        return;
+                    }
+                    if (event.button !== 0) {
+                        return;
+                    }
+                    dragging = true;
+                    dragStarted = false;
+                    suppressClick = false;
+                    activePointerId = event.pointerId;
+                    startX = event.clientX;
+                    startLeft = tabBar.scrollLeft;
+                });
+
+                tabBar.addEventListener('pointermove', function(event) {
+                    if (!dragging) {
+                        return;
+                    }
+                    const deltaX = event.clientX - startX;
+                    if (!dragStarted && Math.abs(deltaX) > 6) {
+                        dragStarted = true;
+                        tabBar.classList.add('is-dragging');
+                        if (tabBar.setPointerCapture) {
+                            tabBar.setPointerCapture(event.pointerId);
+                        }
+                    }
+                    if (!dragStarted) {
+                        return;
+                    }
+                    tabBar.scrollLeft = startLeft - deltaX;
+                    suppressClick = true;
+                    event.preventDefault();
+                });
+
+                const stopDragging = function() {
+                    if (!dragging) {
+                        return;
+                    }
+                    dragging = false;
+                    if (dragStarted) {
+                        tabBar.classList.remove('is-dragging');
+                        dragStarted = false;
+                    }
+                    if (tabBar.releasePointerCapture && activePointerId !== null && tabBar.hasPointerCapture && tabBar.hasPointerCapture(activePointerId)) {
+                        tabBar.releasePointerCapture(activePointerId);
+                    }
+                    activePointerId = null;
+
+                    // Keep suppression for the immediate synthetic click after drag.
+                    if (suppressClick) {
+                        window.setTimeout(function() {
+                            suppressClick = false;
+                        }, 0);
+                    }
+                };
+
+                tabBar.addEventListener('pointerup', stopDragging);
+                tabBar.addEventListener('pointercancel', stopDragging);
+                tabBar.addEventListener('pointerleave', stopDragging);
+
+                tabBar.querySelectorAll('.tab-btn').forEach(function(tabBtn) {
+                    tabBtn.addEventListener('click', function(event) {
+                        if (suppressClick) {
+                            event.preventDefault();
+                            event.stopPropagation();
+                        }
+                    });
+                });
+            });
+        }
+
+        // Check authentication on page load
+        window.addEventListener('DOMContentLoaded', function() {
+            const token = localStorage.getItem('authToken');
+            const currentPath = window.location.pathname;
+            // Public pages: /, /signup, /login — don't redirect to login
+            const isPublicPage = currentPath === '/' || currentPath === '/signup' || currentPath === '/login';
+            if (!token && !isPublicPage) {
+                window.location.href = '/login';
+            }
+
+            // Role can be populated asynchronously after auth bootstrap.
+            applyRoleNavVisibility();
+            setTimeout(applyRoleNavVisibility, 350);
+            setTimeout(applyRoleNavVisibility, 1200);
+            window.addEventListener('focus', applyRoleNavVisibility);
+            window.addEventListener('resize', function() {
+                if (!isMobileNavViewport()) {
+                    closeMobileNav();
+                }
+            });
+
+            initMobileNavInteractions();
+            initTabNavigationScrollUX();
+
+            if (document.getElementById('idpButtonsContainer')) {
+                loadIdentityProviderButtons();
+            }
+        });
+
+        window.addEventListener('storage', function(event) {
+            if (!event || !event.key) {
+                applyRoleNavVisibility();
+                return;
+            }
+            if (event.key === 'userRole' || event.key === 'role' || event.key === 'authToken' || event.key === 'userName') {
+                applyRoleNavVisibility();
+            }
+        });
+
+        function closeResponseModal() {
+            document.getElementById('responseModal').style.display = 'none';
+        }
+
+        var IDP_ICONS = {
+            google: '<svg viewBox="0 0 24 24" width="20" height="20"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>',
+            github: '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>',
+            gitlab: '<svg viewBox="0 0 24 24" width="20" height="20"><path d="m12 22.172-4.383-13.49h8.766z" fill="#E24329"/><path d="m12 22.172-4.383-13.49H1.77z" fill="#FC6D26"/><path d="M1.77 8.682 0.452 12.74a.9.9 0 0 0 .327 1.006L12 22.172z" fill="#FCA326"/><path d="M1.77 8.682h5.847L5.137 1.33a.45.45 0 0 0-.856 0z" fill="#E24329"/><path d="m12 22.172 4.383-13.49h5.847z" fill="#FC6D26"/><path d="m22.23 8.682 1.318 4.058a.9.9 0 0 1-.327 1.006L12 22.172z" fill="#FCA326"/><path d="M22.23 8.682h-5.847l2.48-7.352a.45.45 0 0 1 .856 0z" fill="#E24329"/></svg>',
+            microsoft: '<svg viewBox="0 0 24 24" width="20" height="20"><rect x="1" y="1" width="10" height="10" fill="#F25022"/><rect x="13" y="1" width="10" height="10" fill="#7FBA00"/><rect x="1" y="13" width="10" height="10" fill="#00A4EF"/><rect x="13" y="13" width="10" height="10" fill="#FFB900"/></svg>',
+            facebook: '<svg viewBox="0 0 24 24" width="20" height="20" fill="#1877F2"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>',
+            oidc: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/></svg>',
+            saml: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>',
+            ldap: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>'
+        };
+
+        var IDP_LABELS = {
+            google: 'Google', github: 'GitHub', gitlab: 'GitLab',
+            microsoft: 'Microsoft', facebook: 'Facebook',
+            oidc: 'OpenID Connect', saml: 'SAML SSO', ldap: 'LDAP'
+        };
+
+        var IDP_CLASSES = {
+            google: 'idp-google', github: 'idp-github', gitlab: 'idp-gitlab',
+            microsoft: 'idp-microsoft', facebook: 'idp-facebook',
+            oidc: 'idp-oidc', saml: 'idp-saml', ldap: 'idp-ldap'
+        };
+
+        var IDP_FALLBACK_TYPES = ['google', 'github', 'gitlab', 'microsoft', 'facebook', 'oidc', 'saml', 'ldap'];
+        var IDP_BY_KEY = {};
+
+        function escapeSingleQuotedAttr(value) {
+            return String(value || '')
+                .replace(/\\/g, '\\\\')
+                .replace(/'/g, "\\'")
+                .replace(/\r/g, ' ')
+                .replace(/\n/g, ' ');
+        }
+
+        function escapeHTML(value) {
+            return String(value || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function normalizeIDPProviders(payload) {
+            var data = payload || {};
+            var list = Array.isArray(data) ? data : (Array.isArray(data.identity_providers) ? data.identity_providers : []);
+            var providers = [];
+
+            list.forEach(function(raw) {
+                if (!raw || raw.enabled === false) return;
+                var providerType = String(raw.provider_type || '').toLowerCase().trim();
+                if (!providerType) return;
+                providers.push({
+                    id: String(raw.id || '').trim(),
+                    alias: String(raw.alias || '').trim(),
+                    display_name: String(raw.display_name || '').trim(),
+                    provider_type: providerType,
+                    authorization_url: String(raw.authorization_url || '').trim(),
+                    fallback: false
+                });
+            });
+
+            if (providers.length > 0) {
+                return providers;
+            }
+
+            var supported = Array.isArray(data.supported_provider_types) ? data.supported_provider_types : IDP_FALLBACK_TYPES;
+            supported.forEach(function(rawType) {
+                var providerType = String(rawType || '').toLowerCase().trim();
+                if (!providerType) return;
+                providers.push({
+                    id: providerType,
+                    alias: providerType,
+                    display_name: IDP_LABELS[providerType] || providerType.toUpperCase(),
+                    provider_type: providerType,
+                    authorization_url: '',
+                    fallback: true
+                });
+            });
+
+            return providers;
+        }
+
+        function renderIdentityProviderButtons(providers) {
+            var container = document.getElementById('idpButtonsContainer');
+            if (!container) return;
+
+            var divider = document.querySelector('.idp-divider');
+            var list = Array.isArray(providers) ? providers : [];
+            IDP_BY_KEY = {};
+
+            if (list.length === 0) {
+                container.innerHTML = '';
+                if (divider) divider.style.display = 'none';
+                return;
+            }
+
+            if (divider) divider.style.display = '';
+
+            var html = '';
+            list.forEach(function(idp) {
+                var type = String(idp.provider_type || '').toLowerCase().trim();
+                if (!type) return;
+
+                var key = String(idp.id || idp.alias || type).trim();
+                if (!key) return;
+
+                IDP_BY_KEY[key] = idp;
+
+                var icon = IDP_ICONS[type] || IDP_ICONS.oidc;
+                var label = idp.display_name || IDP_LABELS[type] || idp.alias || type.toUpperCase();
+                var cls = IDP_CLASSES[type] || 'idp-oidc';
+                var disabledClass = idp.fallback ? ' idp-disabled' : '';
+
+                html += '<button type="button" class="idp-btn ' + cls + disabledClass + '" onclick="initiateIDPLogin(\'' + escapeSingleQuotedAttr(key) + '\')">' +
+                    '<span class="idp-icon">' + icon + '</span>' +
+                    '<span class="idp-label">' + escapeHTML(label) + '</span>' +
+                    '</button>';
+            });
+
+            container.innerHTML = html;
+        }
+
+        function loadIdentityProviderButtons() {
+            var container = document.getElementById('idpButtonsContainer');
+            if (!container) return;
+
+            var apiURL = (typeof window.resolveBackendURL === 'function') ? window.resolveBackendURL() : (window.BACKEND_URL || 'http://localhost:8000');
+            if (apiURL.length > 1 && apiURL.endsWith('/')) apiURL = apiURL.slice(0, -1);
+
+            fetch(apiURL + '/iam/auth/identity-providers', { headers: { 'Accept': 'application/json' } })
+            .then(function(resp) {
+                if (!resp.ok) {
+                    throw new Error('identity providers endpoint returned status ' + resp.status);
+                }
+                return resp.json();
+            })
+            .then(function(payload) {
+                renderIdentityProviderButtons(normalizeIDPProviders(payload));
+            })
+            .catch(function() {
+                renderIdentityProviderButtons(normalizeIDPProviders({ supported_provider_types: IDP_FALLBACK_TYPES }));
+            });
+        }
+
+        function initiateIDPLogin(providerKey) {
+            var idp = IDP_BY_KEY[String(providerKey || '')];
+            if (!idp) {
+                alert('Identity provider is not available right now.');
+                return;
+            }
+
+            if (idp.fallback) {
+                alert('This provider type is supported by the platform. Configure it in IAM Admin > Identity Providers to enable direct login.');
+                return;
+            }
+
+            var apiURL = (typeof window.resolveBackendURL === 'function') ? window.resolveBackendURL() : (window.BACKEND_URL || 'http://localhost:8000');
+            if (apiURL.length > 1 && apiURL.endsWith('/')) {
+                apiURL = apiURL.slice(0, -1);
+            }
+
+            var returnTo = (window.location.pathname || '/') + (window.location.search || '');
+            var startURL = apiURL + '/auth/oauth/start' +
+                '?provider=' + encodeURIComponent(String(providerKey || '')) +
+                '&return_to=' + encodeURIComponent(returnTo) +
+                '&frontend_origin=' + encodeURIComponent(window.location.origin || '');
+
+            window.location.href = startURL;
+        }
+
+        window.onclick = function(event) {
+            if (!event.target.closest('#nav-more-wrap')) {
+                closeNavMoreMenu();
+            }
+
+            if (isMobileNavViewport() && !event.target.closest('.navbar')) {
+                closeMobileNav();
+            }
+
+        };
+
+        window.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeNavMoreMenu();
+                closeMobileNav();
+            }
+        });
+    </script>
+</body>
+</html>
+{{ end }}

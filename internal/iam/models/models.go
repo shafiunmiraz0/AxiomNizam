@@ -49,7 +49,7 @@ func (Realm) TableName() string { return "iam_realms" }
 type Client struct {
 	ID                    string         `gorm:"primaryKey;type:varchar(128)" json:"id"`
 	RealmID               string         `gorm:"type:varchar(36);index;not null" json:"realm_id"`
-	Secret                string         `gorm:"type:varchar(255)" json:"secret,omitempty"`
+	Secret                string         `gorm:"type:varchar(255)" json:"secret,omitempty" classification:"Confidential"`
 	Name                  string         `gorm:"type:varchar(255);not null" json:"name"`
 	Description           string         `gorm:"type:text" json:"description,omitempty"`
 	Enabled               bool           `gorm:"default:true" json:"enabled"`
@@ -85,17 +85,17 @@ type User struct {
 	ID                     string     `gorm:"primaryKey;type:varchar(36)" json:"id"`
 	RealmID                string     `gorm:"type:varchar(36);index;not null" json:"realm_id"`
 	Username               string     `gorm:"type:varchar(255)" json:"username"`
-	Email                  string     `gorm:"type:varchar(255)" json:"email"`
-	PasswordHash           string     `gorm:"type:varchar(255);not null" json:"-"`
+	Email                  string     `gorm:"type:varchar(255)" json:"email" classification:"PII"`
+	PasswordHash           string     `gorm:"type:varchar(255);not null" json:"-" classification:"Confidential"`
 	FirstName              string     `gorm:"type:varchar(255)" json:"first_name,omitempty"`
 	LastName               string     `gorm:"type:varchar(255)" json:"last_name,omitempty"`
 	DisplayName            string     `gorm:"type:varchar(255)" json:"display_name"`
 	Active                 bool       `gorm:"default:true" json:"active"`
 	EmailVerified          bool       `gorm:"default:false" json:"email_verified"`
-	PhoneNumber            string     `gorm:"type:varchar(50)" json:"phone_number,omitempty"`
+	PhoneNumber            string     `gorm:"type:varchar(50)" json:"phone_number,omitempty" classification:"PII"`
 	PhoneVerified          bool       `gorm:"default:false" json:"phone_verified"`
 	TOTPEnabled            bool       `gorm:"default:false" json:"totp_enabled"`
-	TOTPSecret             string     `gorm:"type:varchar(64)" json:"-"`
+	TOTPSecret             string     `gorm:"type:varchar(64)" json:"-" classification:"Confidential"`
 	FederatedIdentity      string     `gorm:"type:varchar(255)" json:"federated_identity,omitempty"`
 	FederationLink         string     `gorm:"type:varchar(36)" json:"federation_link,omitempty"`
 	ServiceAccountClientID string     `gorm:"type:varchar(128)" json:"service_account_client_id,omitempty"`
@@ -225,7 +225,7 @@ type IdentityProvider struct {
 	TokenURL         string    `gorm:"type:varchar(512)" json:"token_url,omitempty"`
 	UserInfoURL      string    `gorm:"type:varchar(512)" json:"userinfo_url,omitempty"`
 	ClientID         string    `gorm:"type:varchar(255)" json:"client_id,omitempty"`
-	ClientSecret     string    `gorm:"type:varchar(512)" json:"client_secret,omitempty"`
+	ClientSecret     string    `gorm:"type:varchar(512)" json:"client_secret,omitempty" classification:"Confidential"`
 	Issuer           string    `gorm:"type:varchar(512)" json:"issuer,omitempty"`
 	DefaultScopes    string    `gorm:"type:text" json:"default_scopes,omitempty"`
 	SyncMode         string    `gorm:"type:varchar(20);default:'import'" json:"sync_mode"` // import, force, legacy
@@ -243,8 +243,8 @@ type SSOSession struct {
 	ID           string    `gorm:"primaryKey;type:varchar(128)" json:"id"`
 	RealmID      string    `gorm:"type:varchar(36);index;not null" json:"realm_id"`
 	UserID       string    `gorm:"type:varchar(36);index;not null" json:"user_id"`
-	IPAddress    string    `gorm:"type:varchar(45)" json:"ip_address"`
-	UserAgent    string    `gorm:"type:text" json:"user_agent,omitempty"`
+	IPAddress    string    `gorm:"type:varchar(45)" json:"ip_address" classification:"PII"`
+	UserAgent    string    `gorm:"type:text" json:"user_agent,omitempty" classification:"Sensitive"`
 	AuthMethod   string    `gorm:"type:varchar(50)" json:"auth_method,omitempty"` // password, otp, sso, federated
 	RememberMe   bool      `gorm:"default:false" json:"remember_me"`
 	State        string    `gorm:"type:varchar(20);default:'active'" json:"state"` // active, expired, revoked
@@ -285,7 +285,7 @@ type Event struct {
 	UserID    string    `gorm:"type:varchar(36);index" json:"user_id,omitempty"`
 	ClientID  string    `gorm:"type:varchar(128)" json:"client_id,omitempty"`
 	SessionID string    `gorm:"type:varchar(128)" json:"session_id,omitempty"`
-	IPAddress string    `gorm:"type:varchar(45)" json:"ip_address,omitempty"`
+	IPAddress string    `gorm:"type:varchar(45)" json:"ip_address,omitempty" classification:"PII"`
 	Details   string    `gorm:"type:text" json:"details,omitempty"` // JSON details
 	Error     string    `gorm:"type:text" json:"error,omitempty"`
 	CreatedAt time.Time `gorm:"autoCreateTime;index" json:"created_at"`
@@ -314,7 +314,7 @@ type Credential struct {
 	ID        string    `gorm:"primaryKey;type:varchar(36)" json:"id"`
 	UserID    string    `gorm:"type:varchar(36);index;not null" json:"user_id"`
 	Type      string    `gorm:"type:varchar(50);not null" json:"type"` // password, otp, webauthn
-	Value     string    `gorm:"type:text;not null" json:"-"`
+	Value     string    `gorm:"type:text;not null" json:"-" classification:"Confidential"`
 	Device    string    `gorm:"type:varchar(255)" json:"device,omitempty"`
 	Priority  int       `gorm:"default:0" json:"priority"`
 	CreatedAt time.Time `gorm:"autoCreateTime" json:"created_at"`

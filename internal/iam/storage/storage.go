@@ -617,6 +617,32 @@ func (r *EtcdSessionRepository) Revoke(sessionID string) error {
 	return r.store.del(prefixSessions + sessionID)
 }
 
+// Touch updates only the LastAccessAt timestamp of a session (Phase 11).
+// Returns nil if the session doesn't exist (idempotent).
+func (r *EtcdSessionRepository) Touch(sessionID string) error {
+	data, err := r.store.get(prefixSessions + sessionID)
+	if err != nil {
+		return err
+	}
+	if data == nil {
+		return nil
+	}
+	var s authn.Session
+	if err := json.Unmarshal(data, &s); err != nil {
+		return err
+	}
+	s.LastAccessAt = time.Now().UTC()
+	updated, err := json.Marshal(s)
+	if err != nil {
+		return err
+	}
+	ttl := time.Until(s.ExpiresAt)
+	if ttl <= 0 {
+		ttl = time.Hour
+	}
+	return r.store.put(prefixSessions+sessionID, updated, ttl)
+}
+
 func (r *EtcdSessionRepository) RevokeByUserID(userID string) error {
 	entries, err := r.store.list(prefixSessions)
 	if err != nil {

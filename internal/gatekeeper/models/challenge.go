@@ -21,7 +21,7 @@ type Challenge struct {
 	Phase ChallengePhase `db:"phase" json:"phase"`
 
 	// Nonce is the OTP value for TOTP; empty for WebAuthn (assertion handles it).
-	Nonce string `db:"nonce" json:"-"`
+	Nonce string `db:"nonce" json:"-" classification:"Confidential"`
 
 	// Attempts counts failed verification tries; enforced by policy.
 	Attempts int `db:"attempts" json:"attempts"`
@@ -33,8 +33,8 @@ type Challenge struct {
 	ResolvedAt *time.Time `db:"resolved_at" json:"resolved_at,omitempty"`
 
 	// IPAddress and UserAgent for risk scoring.
-	IPAddress string `db:"ip_address" json:"ip_address"`
-	UserAgent string `db:"user_agent" json:"user_agent"`
+	IPAddress string `db:"ip_address" json:"ip_address" classification:"PII"`
+	UserAgent string `db:"user_agent" json:"user_agent" classification:"Sensitive"`
 
 	CreatedAt       time.Time `db:"created_at"        json:"created_at"`
 	ResourceVersion int64     `db:"resource_version"  json:"resource_version"`
@@ -43,7 +43,7 @@ type Challenge struct {
 // IsTerminal returns true if no further state transitions are possible.
 func (c *Challenge) IsTerminal() bool {
 	switch c.Phase {
-	case ChallengePhaseVerified, ChallengePhaseExpired, ChallengePhaseFailed:
+	case ChallengePhaseVerified, ChallengePhaseExpired, ChallengePhaseFailed, ChallengePhaseRejected:
 		return true
 	}
 	return false

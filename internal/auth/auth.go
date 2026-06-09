@@ -34,6 +34,11 @@ type Claims struct {
 	Roles             []string               `json:"roles,omitempty"`
 	RealmAccess       RealmAccess            `json:"realm_access"`
 	ResourceAccess    map[string]interface{} `json:"resource_access"`
+	RiskScore       int    `json:"risk_score,omitempty"`       // 0-100
+	LastRiskScore   int    `json:"last_risk_score,omitempty"`  // Phase 9: previous risk for delta
+	LastVerifiedAt  int64  `json:"last_verified_at,omitempty"` // Phase 9: last MFA verification
+	LastIPAddress   string `json:"last_ip,omitempty"`          // Phase 9: IP change detection
+	LastDeviceFP    string `json:"last_fp,omitempty"`          // Phase 9: device change detection
 	jwt.RegisteredClaims
 }
 
@@ -352,7 +357,14 @@ func (tv *TokenValidator) ValidateDemoToken(tokenString string) (*Claims, error)
 	return claims, nil
 }
 
-// ValidateToken validates a JWT token (JWKS RSA first, demo HMAC fallback).
+// demoTokensAllowed returns true when HMAC demo tokens are explicitly enabled.
+// Demo tokens are disabled by default; set ALLOW_DEMO_TOKENS=true to enable them.
+func demoTokensAllowed() bool {
+	return strings.EqualFold(strings.TrimSpace(os.Getenv("ALLOW_DEMO_TOKENS")), "true")
+}
+
+// ValidateToken validates a JWT token (JWKS RSA only; demo HMAC fallback is gated
+// behind ALLOW_DEMO_TOKENS=true).
 func (tv *TokenValidator) ValidateToken(tokenString string) (*Claims, error) {
 	// Parse the token
 	token, err := jwt.ParseWithClaims(tokenString, &Claims{},
@@ -360,9 +372,11 @@ func (tv *TokenValidator) ValidateToken(tokenString string) (*Claims, error) {
 			// Get the key ID from the token header
 			kid, ok := token.Header["kid"].(string)
 			if !ok {
-				// No kid — try demo HMAC validation
-				if claims, demoErr := tv.ValidateDemoToken(tokenString); demoErr == nil {
-					return nil, fmt.Errorf("demo:ok:%s", claims.PreferredUsername)
+				// No kid — only try demo HMAC if explicitly enabled
+				if demoTokensAllowed() {
+					if claims, demoErr := tv.ValidateDemoToken(tokenString); demoErr == nil {
+						return nil, fmt.Errorf("demo:ok:%s", claims.PreferredUsername)
+					}
 				}
 				return nil, fmt.Errorf("kid not found in token header")
 			}
@@ -390,10 +404,12 @@ func (tv *TokenValidator) ValidateToken(tokenString string) (*Claims, error) {
 		})
 
 	if err != nil {
-		// Check if it's a demo token (no kid header)
-		if demoClaims, demoErr := tv.ValidateDemoToken(tokenString); demoErr == nil {
-			logging.Z().Info(fmt.Sprintf("✅ Demo token validated for user: %s (roles: %v)", demoClaims.PreferredUsername, demoClaims.RealmAccess.Roles))
-			return demoClaims, nil
+		// Only fall back to demo token validation when explicitly enabled
+		if demoTokensAllowed() {
+			if demoClaims, demoErr := tv.ValidateDemoToken(tokenString); demoErr == nil {
+				logging.Z().Warn(fmt.Sprintf("⚠️  Demo token accepted for user: %s — demo tokens are insecure, disable ALLOW_DEMO_TOKENS in production", demoClaims.PreferredUsername))
+				return demoClaims, nil
+			}
 		}
 		return nil, fmt.Errorf("failed to parse token: %w", err)
 	}

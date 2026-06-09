@@ -1,0 +1,103 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "axiomnizam.fullname" . }}-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "axiomnizam.labels" . | nindent 4 }}
+data:
+  API_PORT: {{ .Values.config.apiPort | quote }}
+  API_HOST: {{ .Values.config.apiHost | quote }}
+  AXIOMNIZAM_ENV: {{ .Values.config.axiomnizamEnv | quote }}
+  SECURITY_GUARDRAILS_MODE: {{ .Values.config.securityGuardrailsMode | quote }}
+  STORAGE_BACKEND: {{ .Values.config.storageBackend | quote }}
+  TRUSTED_PROXIES: {{ .Values.config.trustedProxies | quote }}
+
+  # TLS
+  TLS_ENABLED: {{ .Values.tls.enabled | quote }}
+  TLS_AUTO_GENERATE: {{ .Values.tls.autoGenerate | quote }}
+  {{- if .Values.tls.certFile }}
+  TLS_CERT_FILE: {{ .Values.tls.certFile | quote }}
+  {{- end }}
+  {{- if .Values.tls.keyFile }}
+  TLS_KEY_FILE: {{ .Values.tls.keyFile | quote }}
+  {{- end }}
+
+  # Public URLs
+  PUBLIC_FRONTEND_HOSTNAME: {{ .Values.public.frontendHostname | quote }}
+  PUBLIC_PLATFORM_HOSTNAME: {{ .Values.public.platformHostname | quote }}
+  PUBLIC_FRONTEND_URL: {{ .Values.public.frontendUrl | quote }}
+  PUBLIC_PLATFORM_URL: {{ .Values.public.platformUrl | quote }}
+  BACKEND_PROXY_URL: {{ .Values.public.frontendUrl | quote }}
+  CORS_ALLOWED_ORIGINS: {{ .Values.public.corsOrigins | quote }}
+
+  # PostgreSQL
+  POSTGRES_HOST: {{ include "axiomnizam.postgres.fullname" . }}
+  POSTGRES_PORT: {{ .Values.postgresql.port | quote }}
+  POSTGRES_USER: {{ .Values.postgresql.user | quote }}
+  POSTGRES_DATABASE: {{ .Values.postgresql.database | quote }}
+  POSTGRES_SSLMODE: disable
+
+  # Data dirs
+  AXIOMNIZAM_RAFT_DATA_DIR: /data/raft
+  STORAGE_DATA_DIR: /data/storage
+
+  # Antivirus
+  ANTIVIRUS_ENABLED: {{ .Values.antivirus.enabled | quote }}
+  ANTIVIRUS_WORKERS: {{ .Values.antivirus.workers | quote }}
+  ANTIVIRUS_MAX_FILE_SIZE: {{ .Values.antivirus.maxFileSize | quote }}
+  ANTIVIRUS_CACHE_SIZE: {{ .Values.antivirus.cacheSize | quote }}
+  ANTIVIRUS_QUARANTINE_ACTION: {{ .Values.antivirus.quarantineAction | quote }}
+
+  # Rate limiting
+  RATE_LIMIT_MAX_CALLS: {{ .Values.rateLimit.maxCalls | quote }}
+  RATE_LIMIT_VALIDITY_MINUTES: {{ .Values.rateLimit.validityMinutes | quote }}
+
+  # SafeGate
+  SAFEGATE_MAX_FILE_SIZE: {{ .Values.safegate.maxFileSize | quote }}
+
+  # Gatekeeper
+  GATEKEEPER_TOTP_ISSUER: {{ .Values.gatekeeper.totpIssuer | quote }}
+
+  # IAM
+  IAM_SYSADMIN_EMAIL: {{ .Values.iam.sysadminEmail | quote }}
+  {{- if .Values.iam.demoJwtSecret }}
+  DEMO_JWT_SECRET: {{ .Values.iam.demoJwtSecret | quote }}
+  {{- end }}
+
+  # Frontend
+  FRONTEND_PORT: {{ .Values.config.apiPort | quote }}
+
+  {{- if .Values.openclaw.enabled }}
+  OPENCLAW_SQL_ASSISTANT_URL: "http://{{ .Values.openclaw.host }}:{{ .Values.openclaw.port }}/v1/chat/completions"
+  OPENCLAW_SQL_ASSISTANT_TOKEN: {{ .Values.openclaw.token | quote }}
+  OPENCLAW_SQL_ASSISTANT_MODEL: {{ .Values.openclaw.model | quote }}
+  OPENCLAW_SQL_ASSISTANT_TIMEOUT_SECONDS: {{ .Values.openclaw.timeoutSeconds | quote }}
+  {{- end }}
+
+  {{- if .Values.rabbitmq.enabled }}
+  RABBITMQ_URL: {{ .Values.rabbitmq.url | quote }}
+  RABBITMQ_USER: {{ .Values.rabbitmq.user | quote }}
+  RABBITMQ_VHOST: {{ .Values.rabbitmq.vhost | quote }}
+  {{- end }}
+
+  {{- if .Values.kafka.enabled }}
+  KAFKA_BROKERS: {{ .Values.kafka.brokers | quote }}
+  {{- end }}
+
+  {{- if .Values.keycloak.enabled }}
+  KEYCLOAK_URL: {{ .Values.keycloak.url | quote }}
+  KEYCLOAK_HOST: {{ .Values.keycloak.host | quote }}
+  KEYCLOAK_PORT: {{ .Values.keycloak.port | quote }}
+  KEYCLOAK_REALM: {{ .Values.keycloak.realm | quote }}
+  KEYCLOAK_CLIENT_ID: {{ .Values.keycloak.clientId | quote }}
+  KEYCLOAK_ADMIN_REALM: master
+  KEYCLOAK_ADMIN_CLIENT_ID: admin-cli
+  KEYCLOAK_ADMIN_USERNAME: {{ .Values.keycloak.adminUsername | quote }}
+  KEYCLOAK_ONLY_AUTH: "false"
+  ENABLE_DEMO_ACCOUNTS: "false"
+  {{- end }}
+
+  {{- if .Values.discord.webhookUrl }}
+  DISCORD_WEBHOOK_URL: {{ .Values.discord.webhookUrl | quote }}
+  {{- end }}

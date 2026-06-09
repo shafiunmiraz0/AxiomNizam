@@ -2,8 +2,10 @@ package authn
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/json"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -27,9 +29,14 @@ func NewCLIAuthHandler() *CLIAuthHandler {
 	}
 	baseURL = normalizeIAMBaseURL(baseURL)
 
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	if strings.EqualFold(strings.TrimSpace(os.Getenv("TLS_ENABLED")), "true") {
+		transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	}
+
 	return &CLIAuthHandler{
 		iamBaseURL: baseURL,
-		httpClient: &http.Client{Timeout: 10 * time.Second},
+		httpClient: &http.Client{Timeout: 10 * time.Second, Transport: transport},
 	}
 }
 

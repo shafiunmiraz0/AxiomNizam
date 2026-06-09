@@ -88,6 +88,20 @@ type AuditLogRow struct {
 
 func (AuditLogRow) TableName() string { return "twofactor_audit_log" }
 
+// WebAuthnCredentialRow is the GORM representation of the twofactor_webauthn_credentials table.
+type WebAuthnCredentialRow struct {
+	ID              []byte    `gorm:"primaryKey;type:bytea;not null"`
+	UserID          string    `gorm:"type:varchar(36);not null;index"`
+	PublicKey        []byte    `gorm:"type:bytea;not null"`
+	AttestationType string    `gorm:"type:varchar(50);not null;default:none"`
+	AAGUID          []byte    `gorm:"type:bytea;not null;default:''"`
+	SignCount       uint32    `gorm:"not null;default:0"`
+	CloneWarning    bool      `gorm:"not null;default:false"`
+	CreatedAt       time.Time `gorm:"not null;autoCreateTime"`
+}
+
+func (WebAuthnCredentialRow) TableName() string { return "twofactor_webauthn_credentials" }
+
 // MigrateGatekeeperTables runs GORM AutoMigrate for all Gatekeeper 2FA tables.
 func MigrateGatekeeperTables(db *gorm.DB) error {
 	return db.AutoMigrate(
@@ -96,5 +110,6 @@ func MigrateGatekeeperTables(db *gorm.DB) error {
 		&BackupCodeRow{},
 		&TrustedDeviceRow{},
 		&AuditLogRow{},
+		&WebAuthnCredentialRow{},
 	)
 }
