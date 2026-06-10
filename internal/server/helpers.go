@@ -256,9 +256,6 @@ func ApplySecurityGuardrails(cfg *config.Config) {
 	if isDefault(cfg.IAM.SysadminPassword, "", "change-me", "changeme", "default", "password", "admin") {
 		addBlocking("IAM_SYSADMIN_PASSWORD is empty or default-like")
 	}
-	if strings.TrimSpace(os.Getenv("DEMO_JWT_SECRET")) == "" {
-		addBlocking("DEMO_JWT_SECRET is not set")
-	}
 	if strings.TrimSpace(os.Getenv("CORS_ALLOWED_ORIGINS")) == "" {
 		addBlocking("CORS_ALLOWED_ORIGINS is empty")
 	}
@@ -268,14 +265,9 @@ func ApplySecurityGuardrails(cfg *config.Config) {
 		addBlocking("TRUSTED_PROXIES=0.0.0.0/0 trusts all sources; restrict to actual proxy CIDRs")
 	}
 
-	if isDefault(cfg.MySQL.Password, "root", "password") {
-		addBlocking("MYSQL_PASSWORD is a default credential")
-	}
+	// Only check PostgreSQL — system database. MySQL/Oracle are configured dynamically from UI.
 	if isDefault(cfg.PostgreSQL.Password, "postgres", "password") {
 		addBlocking("POSTGRES_PASSWORD is a default credential")
-	}
-	if isDefault(cfg.Oracle.Password, "oracle123", "password") {
-		addBlocking("ORACLE_PASSWORD is a default credential")
 	}
 
 	if len(blocking) == 0 {

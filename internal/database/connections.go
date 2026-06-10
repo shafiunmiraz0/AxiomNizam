@@ -62,19 +62,6 @@ func InitConnections(cfg *config.Config) *Connections {
 		logging.Z().Info(fmt.Sprintf("❌ PostgreSQL connection failed: %v", err))
 	}
 
-	// Valkey — used by metrics tracker and query logger (nil-safe)
-	conns.Valkey = redis.NewClient(&redis.Options{
-		Addr:     cfg.GetValkeyAddr(),
-		Password: cfg.Valkey.Password,
-	})
-	pingCtx, pingCancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer pingCancel()
-	if _, err := conns.Valkey.Ping(pingCtx).Result(); err == nil {
-		logging.Z().Info("✅ Valkey connected")
-	} else {
-		logging.Z().Info(fmt.Sprintf("ℹ️  Valkey not available: %v (metrics will use local fallback)", err))
-	}
-
 	// etcd — skip when using embedded Raft storage backend
 	storageBackend := strings.ToLower(strings.TrimSpace(os.Getenv("STORAGE_BACKEND")))
 	if storageBackend == "raft" {
