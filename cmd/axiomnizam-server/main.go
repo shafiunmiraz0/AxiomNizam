@@ -25,10 +25,10 @@ var (
 func main() {
 	flag.Parse()
 
-	fmt.Printf("🚀 Starting AxiomNizam API Server (v1.0.0)\n")
+	fmt.Printf("🚀 Starting AxiomNizam Platform (v1.0.0)\n")
 	fmt.Printf("📍 Environment: %s\n", *environment)
 	fmt.Printf("🔌 Port: %d\n", *port)
-	fmt.Printf("🏗️  Using Kubernetes-style architecture\n\n")
+	fmt.Println()
 
 	// Create context for graceful shutdown
 	ctx, cancel := context.WithCancel(context.Background())

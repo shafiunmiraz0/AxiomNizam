@@ -442,7 +442,11 @@ func PrintStartupBanner(cfg *config.Config, iamOnlyAuth bool) {
 	apiPort := cfg.API.Port
 	apiHost := cfg.API.Host
 
-	fmt.Printf("📡 API Server running on http://%s:%s\n", apiHost, apiPort)
+	scheme := "https"
+	if os.Getenv("TLS_ENABLED") == "false" {
+		scheme = "http"
+	}
+	fmt.Printf("📡 AxiomNizam running on %s://%s:%s\n", scheme, apiHost, apiPort)
 	fmt.Println("\n🔐 RBAC Security Model:")
 	fmt.Println("  ✅ READ  operations (GET)     - Allowed for all authenticated users")
 	fmt.Println("  ❌ WRITE operations (POST/PUT/DELETE) - Allowed ONLY for users with 'admin' role")
@@ -480,7 +484,7 @@ func PrintStartupBanner(cfg *config.Config, iamOnlyAuth bool) {
 	fmt.Println("       Body: [{\"query\": \"SQL_QUERY\", \"params\": []}]")
 	fmt.Println("  GET  /api/{db}/schema           - Get table schema")
 	fmt.Println("       Example: /api/mysql/schema?table=users")
-	fmt.Println("  Available databases: mysql, mariadb, postgres, percona, oracle")
+	fmt.Println("  Available databases: postgres (others configured dynamically from UI)")
 	fmt.Println()
 	fmt.Println("Notification endpoints (authenticated users):")
 	fmt.Println("  POST /api/notifications/send    - Send custom notification to Discord")

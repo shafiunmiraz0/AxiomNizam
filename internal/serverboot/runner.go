@@ -18,10 +18,10 @@ import (
 
 // Run starts the API server runtime with graceful shutdown.
 func Run(port int, environment string) error {
-	fmt.Printf("🚀 Starting AxiomNizam API Server (v1.0.0)\n")
+	fmt.Printf("🚀 Starting AxiomNizam Platform (v1.0.0)\n")
 	fmt.Printf("📍 Environment: %s\n", environment)
 	fmt.Printf("🔌 Port: %d\n", port)
-	fmt.Printf("🏗️  Using Kubernetes-style architecture\n\n")
+	fmt.Println()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

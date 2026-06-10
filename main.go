@@ -244,7 +244,13 @@ func main() {
 	if err != nil {
 		log.Println("⚠️  No .env file found, using system environment variables")
 	}
-	fmt.Println("🚀 Starting AxiomNizam with Kubernetes-style Runtime...")
+
+	// Suppress Gin debug output unless explicitly set
+	if os.Getenv("GIN_MODE") == "" {
+		gin.SetMode(gin.ReleaseMode)
+	}
+
+	fmt.Println("🚀 Starting AxiomNizam Platform...")
 	fmt.Println()
 
 	// Create context with cancellation
@@ -256,7 +262,7 @@ func main() {
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 
 	// Initialize Runtime
-	log.Println("📦 Initializing Kubernetes-style runtime...")
+	log.Println("📦 Initializing platform runtime...")
 	rt := runtime.NewRuntime("1.0.0")
 
 	if err := rt.Initialize(ctx); err != nil {
