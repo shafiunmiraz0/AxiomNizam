@@ -93,7 +93,7 @@ async function iamFetch(path, opts) {
 
 async function tryIAMRefresh() {
     try {
-        const resp = await fetch(IAM_API + '/iam/auth/refresh', {
+        const resp = await fetch(IAM_API + '/auth/refresh', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ refresh_token: iamRefreshToken })
@@ -266,7 +266,7 @@ async function iamLogin() {
     if (!identifier || !password) { showIAMToast('Username/email and password required', true); return; }
 
     try {
-        const resp = await fetch(IAM_API + '/iam/auth/login', {
+        const resp = await fetch(IAM_API + '/auth/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email: identifier, password: password })
@@ -343,7 +343,7 @@ async function loadIAMDashboard() {
 
     // WhoAmI
     try {
-        const resp = await iamFetch('/iam/auth/whoami');
+        const resp = await iamFetch('/api/v1/auth/whoami');
         const whoami = document.getElementById('iamWhoAmI');
         if (resp.ok) {
             const data = await resp.json();

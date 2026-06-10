@@ -68,7 +68,7 @@ function loginWithIAM(username, password) {
         password: password
     };
 
-    fetch(IAM_API_BASE + '/iam/auth/login', {
+    fetch(IAM_API_BASE + '/auth/login', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',

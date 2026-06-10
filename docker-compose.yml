@@ -9,7 +9,8 @@ services:
     env_file:
       - .env
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     volumes:
       - query_logs:/data/query_logs
       - storage-data:/data/storage
