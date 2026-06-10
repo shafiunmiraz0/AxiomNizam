@@ -1,79 +1,129 @@
-# docker-compose.cluster.yml
+# docker-compose.cluster.yml — AxiomNizam Raft Cluster Mode
 #
-# Multi-node Raft cluster test overlay.
+# Usage: docker compose -f docker-compose.yml -f docker-compose.cluster.yml up
 #
-# Usage:
-#   docker compose -f docker-compose.yml -f docker-compose.cluster.yml up -d --build
+# Forms a Raft consensus cluster (like Nomad/Consul/Vault).
+# No load balancer — nodes elect a leader via Raft protocol.
 #
-# This starts 2 AxiomNizam nodes:
-#   - axiomnizam-1 (leader bootstrap, API on :8000)
-#   - axiomnizam-2 (follower, API on :8002)
-#
-# After both are up, add node-2 to the cluster:
+# After startup, add followers to the cluster via API:
 #   curl -X POST http://localhost:8000/api/v1/raft/peers \
-#     -H "Content-Type: application/json" \
-#     -H "Authorization: Bearer raft-cluster-token" \
+#     -H "Authorization: Bearer $ADMIN_TOKEN" \
 #     -d '{"id":"node-2","addr":"axiomnizam-2:9700"}'
 #
-# Verify Raft status:
-#   curl http://localhost:8000/distributed   # node-1 (should be leader)
-#   curl http://localhost:8002/distributed   # node-2 (should be follower)
+#   curl -X POST http://localhost:8000/api/v1/raft/peers \
+#     -H "Authorization: Bearer $ADMIN_TOKEN" \
+#     -d '{"id":"node-3","addr":"axiomnizam-3:9700"}'
 #
-# To stop:
-#   docker compose -f docker-compose.yml -f docker-compose.cluster.yml down -v
+# Check cluster status:
+#   curl http://localhost:8000/distributed
+#
 
 services:
-  # Override the original single-node service
   axiomnizam:
+    build: .
     container_name: axiomnizam-1
-    hostname: axiomnizam-1
     ports:
       - "8000:8000"
-      - "9700:9700"    # Raft transport (for debugging)
-    environment:
-      STORAGE_BACKEND: raft
-      AXIOMNIZAM_RAFT_NODE_ID: node-1
-      AXIOMNIZAM_RAFT_BIND_ADDR: "0.0.0.0:9700"
-      AXIOMNIZAM_RAFT_ADVERTISE_ADDR: "axiomnizam-1:9700"
-      AXIOMNIZAM_RAFT_BOOTSTRAP: "true"
-      AXIOMNIZAM_RAFT_DATA_DIR: /data/raft
-      ADMIN_TOKEN: raft-cluster-token
-    volumes:
-      - raft-data-1:/data/raft
-
-  # Second node — joins node-1's cluster
-  axiomnizam-2:
-    build: .
-    container_name: axiomnizam-2
-    hostname: axiomnizam-2
-    ports:
-      - "8002:8000"
-      - "9702:9700"    # Raft transport (for debugging)
     env_file:
       - .env
     environment:
-      STORAGE_BACKEND: raft
-      AXIOMNIZAM_RAFT_NODE_ID: node-2
-      AXIOMNIZAM_RAFT_BIND_ADDR: "0.0.0.0:9700"
-      AXIOMNIZAM_RAFT_ADVERTISE_ADDR: "axiomnizam-2:9700"
-      AXIOMNIZAM_RAFT_BOOTSTRAP: "false"
-      AXIOMNIZAM_RAFT_DATA_DIR: /data/raft
-      IAM_INTERNAL_BASE_URL: http://axiomnizam-1:8000
-      ADMIN_TOKEN: raft-cluster-token
+      AXIOMNIZAM_RAFT_NODE_ID: node-1
+      AXIOMNIZAM_RAFT_BIND_ADDR: 0.0.0.0:9700
+      AXIOMNIZAM_RAFT_ADVERTISE_ADDR: axiomnizam-1:9700
+      AXIOMNIZAM_RAFT_BOOTSTRAP: "true"
     depends_on:
       - postgres
     volumes:
-      - query_logs_2:/data/query_logs
-      - storage-data-2:/data/storage
-      - raft-data-2:/data/raft
+      - query_logs:/data/query_logs
+      - storage-data:/data/storage
+      - raft-data-1:/data/raft
+      - certs-data:/data/certs
     networks:
-      - frontend-net
-      - backend-net
+      - axiomnizam-net
       - data-net
-      - mq-net
+      - raft-net
+
+  axiomnizam-2:
+    build: .
+    container_name: axiomnizam-2
+    ports:
+      - "8001:8000"
+    env_file:
+      - .env
+    environment:
+      AXIOMNIZAM_RAFT_NODE_ID: node-2
+      AXIOMNIZAM_RAFT_BIND_ADDR: 0.0.0.0:9700
+      AXIOMNIZAM_RAFT_ADVERTISE_ADDR: axiomnizam-2:9700
+      AXIOMNIZAM_RAFT_BOOTSTRAP: "false"
+    depends_on:
+      - postgres
+    volumes:
+      - query_logs:/data/query_logs
+      - storage-data:/data/storage
+      - raft-data-2:/data/raft
+      - certs-data:/data/certs
+    networks:
+      - axiomnizam-net
+      - data-net
+      - raft-net
+
+  axiomnizam-3:
+    build: .
+    container_name: axiomnizam-3
+    ports:
+      - "8002:8000"
+    env_file:
+      - .env
+    environment:
+      AXIOMNIZAM_RAFT_NODE_ID: node-3
+      AXIOMNIZAM_RAFT_BIND_ADDR: 0.0.0.0:9700
+      AXIOMNIZAM_RAFT_ADVERTISE_ADDR: axiomnizam-3:9700
+      AXIOMNIZAM_RAFT_BOOTSTRAP: "false"
+    depends_on:
+      - postgres
+    volumes:
+      - query_logs:/data/query_logs
+      - storage-data:/data/storage
+      - raft-data-3:/data/raft
+      - certs-data:/data/certs
+    networks:
+      - axiomnizam-net
+      - data-net
+      - raft-net
+
+  postgres:
+    image: postgres:latest
+    container_name: postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-axiomnizam}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
+      POSTGRES_DB: ${POSTGRES_DATABASE:-app_db}
+    volumes:
+      - postgres-data:/var/lib/postgresql
+      - ./init-postgres.sql:/docker-entrypoint-initdb.d/01-init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-axiomnizam}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - data-net
+
+networks:
+  axiomnizam-net:
+    driver: bridge
+  data-net:
+    driver: bridge
+    internal: true
+  raft-net:
+    driver: bridge
+    internal: true
 
 volumes:
+  postgres-data:
+  query_logs:
+  storage-data:
   raft-data-1:
   raft-data-2:
-  query_logs_2:
-  storage-data-2:
+  raft-data-3:
+  certs-data:
