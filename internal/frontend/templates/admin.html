@@ -139,7 +139,7 @@
         </div>
 
         <!-- Toolbar -->
-        <div class="builder-toolbar">
+        <div class="builder-toolbar" style="background:var(--darker-bg);border:1px solid var(--border-color);border-radius:10px;padding:16px 20px;margin-bottom:20px;">
             <div class="toolbar-left">
                 <h3>Custom APIs</h3>
                 <select id="apiCategoryFilter" onchange="loadCustomAPIs()">
@@ -158,7 +158,7 @@
                     <option value="draft">Draft</option>
                 </select>
             </div>
-            <button class="btn-primary" onclick="openCreateAPIModal()">+ Create API</button>
+            <button class="btn-primary" onclick="openCreateAPIModal()" style="padding:12px 28px;font-size:15px;font-weight:600;background:linear-gradient(135deg,var(--primary-color),#00c853);box-shadow:0 4px 15px rgba(var(--primary-rgb),0.4);letter-spacing:0.3px;">+ Create API</button>
         </div>
 
         <!-- API List -->

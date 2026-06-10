@@ -41,8 +41,11 @@ func (s *System) Stop() error {
 	return nil
 }
 
-// SetKVStore wires the KVStore-backed persistence into the audit log.
+// SetKVStore wires the KVStore-backed persistence into the handler and audit log.
 func (s *System) SetKVStore(kv platformstore.KVStore) {
+	if s.handler != nil {
+		s.handler.SetKVStore(kv)
+	}
 	if s.auditLogger != nil {
 		s.auditLogger.ConfigureKVPersistence(kv)
 	}
