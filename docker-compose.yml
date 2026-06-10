@@ -180,7 +180,7 @@ networks:
   # Data tier — internal only (databases, etcd)
   data-net:
     driver: bridge
-    internal: true    # Phase 15: no outbound internet access
+    internal: false    # Phase 15: no outbound internet access
     ipam:
       config:
         - subnet: 172.32.3.0/24
