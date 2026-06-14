@@ -1,7 +1,7 @@
 package repositories
 
 import (
-	"example.com/axiomnizam/internal/iam/models"
+	"axiomnizam.bitbd.net/axiomnizam/internal/iam/models"
 )
 
 // ClientRepository defines CRUD operations for IAM clients (OAuth2/OIDC).

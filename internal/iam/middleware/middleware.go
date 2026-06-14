@@ -5,9 +5,9 @@ import (
 	"os"
 	"strings"
 
-	"example.com/axiomnizam/internal/iam/authz"
-	"example.com/axiomnizam/internal/iam/storage"
-	"example.com/axiomnizam/internal/iam/token"
+	"axiomnizam.bitbd.net/axiomnizam/internal/iam/authz"
+	"axiomnizam.bitbd.net/axiomnizam/internal/iam/storage"
+	"axiomnizam.bitbd.net/axiomnizam/internal/iam/token"
 	"github.com/gin-gonic/gin"
 )
 

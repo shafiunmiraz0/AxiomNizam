@@ -1,8 +1,8 @@
 package conductor
 
 import (
-	"example.com/axiomnizam/internal/conductor/config"
-	"example.com/axiomnizam/internal/logging"
+	"axiomnizam.bitbd.net/axiomnizam/internal/conductor/config"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
 	"context"
 	"encoding/json"
 	"fmt"

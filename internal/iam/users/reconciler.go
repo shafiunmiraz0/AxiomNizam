@@ -5,8 +5,8 @@ import (
 	"errors"
 	"time"
 
-	"example.com/axiomnizam/internal/platform/store"
-	"example.com/axiomnizam/internal/reconciler"
+	"axiomnizam.bitbd.net/axiomnizam/internal/platform/store"
+	"axiomnizam.bitbd.net/axiomnizam/internal/reconciler"
 )
 
 // UserReconciler brings observed state of a UserResource in line with

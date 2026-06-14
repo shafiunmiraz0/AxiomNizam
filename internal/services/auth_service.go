@@ -1,13 +1,13 @@
 package services
 
 import (
-	"example.com/axiomnizam/internal/logging"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
 	"context"
 	"fmt"
 
-	"example.com/axiomnizam/internal/models"
-	"example.com/axiomnizam/internal/repositories"
-	"example.com/axiomnizam/internal/utils"
+	"axiomnizam.bitbd.net/axiomnizam/internal/models"
+	"axiomnizam.bitbd.net/axiomnizam/internal/repositories"
+	"axiomnizam.bitbd.net/axiomnizam/internal/utils"
 )
 
 // AuthService defines the interface for authentication business logic

@@ -1,7 +1,7 @@
 package config
 
 import (
-	"example.com/axiomnizam/internal/logging"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
 	"fmt"
 	"os"
 	"strconv"

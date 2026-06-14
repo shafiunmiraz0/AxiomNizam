@@ -4,7 +4,7 @@ package export
 // so existing code referencing export.ExportJobResource etc. continues
 // to compile without changes.
 
-import "example.com/axiomnizam/internal/export/models"
+import "axiomnizam.bitbd.net/axiomnizam/internal/export/models"
 
 // Constants
 const (

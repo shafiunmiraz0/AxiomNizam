@@ -5,10 +5,10 @@ import (
 	"strings"
 	"time"
 
-	"example.com/axiomnizam/internal/export"
-	"example.com/axiomnizam/internal/lineage"
-	"example.com/axiomnizam/internal/rbac"
-	"example.com/axiomnizam/internal/tracing"
+	"axiomnizam.bitbd.net/axiomnizam/internal/export"
+	"axiomnizam.bitbd.net/axiomnizam/internal/lineage"
+	"axiomnizam.bitbd.net/axiomnizam/internal/rbac"
+	"axiomnizam.bitbd.net/axiomnizam/internal/tracing"
 )
 
 // exportManagerAdapter bridges handler interface to in-memory export manager.

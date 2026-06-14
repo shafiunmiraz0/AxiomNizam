@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	"example.com/axiomnizam/internal/logging"
-	"example.com/axiomnizam/internal/reconciler"
-	wmodels "example.com/axiomnizam/internal/waitx/models"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
+	"axiomnizam.bitbd.net/axiomnizam/internal/reconciler"
+	wmodels "axiomnizam.bitbd.net/axiomnizam/internal/waitx/models"
 )
 
 // WaitCheckReconciler reconciles WaitCheckResource objects.

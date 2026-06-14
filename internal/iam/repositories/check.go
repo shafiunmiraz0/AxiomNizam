@@ -4,7 +4,7 @@ package repositories
 // These ensure concrete types implement the repository interfaces.
 
 import (
-	"example.com/axiomnizam/internal/iam/pgstore"
+	"axiomnizam.bitbd.net/axiomnizam/internal/iam/pgstore"
 )
 
 var _ RealmRepository = (*pgstore.Store)(nil)

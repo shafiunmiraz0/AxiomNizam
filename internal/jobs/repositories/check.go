@@ -4,7 +4,7 @@ package repositories
 // These ensure concrete types implement the repository interfaces.
 
 import (
-	"example.com/axiomnizam/internal/jobs"
+	"axiomnizam.bitbd.net/axiomnizam/internal/jobs"
 )
 
 var _ JobRepository = (*jobs.JobManagerImpl)(nil)

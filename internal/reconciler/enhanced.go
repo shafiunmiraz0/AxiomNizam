@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"example.com/axiomnizam/internal/events"
+	"axiomnizam.bitbd.net/axiomnizam/internal/events"
 )
 
 // ========== ENHANCED RESOURCE INTERFACE ==========

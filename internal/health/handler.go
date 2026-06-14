@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"example.com/axiomnizam/internal/database"
-	"example.com/axiomnizam/internal/models"
+	"axiomnizam.bitbd.net/axiomnizam/internal/database"
+	"axiomnizam.bitbd.net/axiomnizam/internal/models"
 	"github.com/gin-gonic/gin"
 )
 

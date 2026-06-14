@@ -1,8 +1,8 @@
 package tenant
 
 import (
-	"example.com/axiomnizam/internal/platform/store"
-	"example.com/axiomnizam/internal/tenant/models"
+	"axiomnizam.bitbd.net/axiomnizam/internal/platform/store"
+	"axiomnizam.bitbd.net/axiomnizam/internal/tenant/models"
 )
 
 // Re-exported resource types from models/.

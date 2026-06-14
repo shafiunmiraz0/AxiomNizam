@@ -1,6 +1,6 @@
 package audit
 
-import "example.com/axiomnizam/internal/audit/models"
+import "axiomnizam.bitbd.net/axiomnizam/internal/audit/models"
 
 const (
 	AuditPolicyKind       = models.AuditPolicyKind

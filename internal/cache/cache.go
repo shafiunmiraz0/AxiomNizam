@@ -1,7 +1,7 @@
 package cache
 
 import (
-	"example.com/axiomnizam/internal/cache/config"
+	"axiomnizam.bitbd.net/axiomnizam/internal/cache/config"
 	"context"
 	"errors"
 	"time"

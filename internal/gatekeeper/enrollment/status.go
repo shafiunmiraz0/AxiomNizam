@@ -1,6 +1,6 @@
 package enrollment
 
-import "example.com/axiomnizam/internal/gatekeeper/models"
+import "axiomnizam.bitbd.net/axiomnizam/internal/gatekeeper/models"
 
 // FactorStatusSummary provides a user-friendly summary of factor status.
 type FactorStatusSummary struct {

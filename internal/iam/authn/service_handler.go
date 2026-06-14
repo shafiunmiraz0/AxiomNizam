@@ -3,8 +3,8 @@ package authn
 import (
 	"net/http"
 
-	"example.com/axiomnizam/internal/models"
-	"example.com/axiomnizam/internal/services"
+	"axiomnizam.bitbd.net/axiomnizam/internal/models"
+	"axiomnizam.bitbd.net/axiomnizam/internal/services"
 	"github.com/gin-gonic/gin"
 )
 

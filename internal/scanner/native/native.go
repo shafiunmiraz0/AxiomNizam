@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"time"
 
-	"example.com/axiomnizam/internal/antivirus"
-	"example.com/axiomnizam/internal/scanner"
+	"axiomnizam.bitbd.net/axiomnizam/internal/antivirus"
+	"axiomnizam.bitbd.net/axiomnizam/internal/scanner"
 )
 
 // Scanner wraps the internal antivirus.Engine as a scanner.Scanner

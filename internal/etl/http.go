@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"strings"
 
-	"example.com/axiomnizam/internal/etl/audit"
-	"example.com/axiomnizam/internal/etl/metrics"
+	"axiomnizam.bitbd.net/axiomnizam/internal/etl/audit"
+	"axiomnizam.bitbd.net/axiomnizam/internal/etl/metrics"
 	"github.com/gin-gonic/gin"
 )
 

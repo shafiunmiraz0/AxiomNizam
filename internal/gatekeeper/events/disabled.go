@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"example.com/axiomnizam/internal/gatekeeper/models"
+	"axiomnizam.bitbd.net/axiomnizam/internal/gatekeeper/models"
 )
 
 // FactorDisabled is emitted when a factor is disabled.

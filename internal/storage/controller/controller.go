@@ -1,15 +1,15 @@
 package controller
 
 import (
-	"example.com/axiomnizam/internal/logging"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
 	"context"
 	"fmt"
 	"strings"
 	"sync"
 	"time"
 
-	"example.com/axiomnizam/internal/storage/models"
-	"example.com/axiomnizam/internal/storage/store"
+	"axiomnizam.bitbd.net/axiomnizam/internal/storage/models"
+	"axiomnizam.bitbd.net/axiomnizam/internal/storage/store"
 )
 
 const defaultResyncInterval = 7 * time.Minute

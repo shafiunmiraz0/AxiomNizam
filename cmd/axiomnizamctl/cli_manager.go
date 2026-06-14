@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/ghodss/yaml"
-	"example.com/axiomnizam/internal/controllers"
-	"example.com/axiomnizam/internal/resources/apiresource"
+	"axiomnizam.bitbd.net/axiomnizam/internal/controllers"
+	"axiomnizam.bitbd.net/axiomnizam/internal/resources/apiresource"
 )
 
 // CLIManager manages API resources via CLI

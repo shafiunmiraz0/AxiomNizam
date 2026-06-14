@@ -1,6 +1,6 @@
 package conductor
 
-import "example.com/axiomnizam/internal/conductor/config"
+import "axiomnizam.bitbd.net/axiomnizam/internal/conductor/config"
 
 // LoadConfigFromEnv re-exports the config loader from the config subpackage.
 var LoadConfigFromEnv = config.LoadFromEnv

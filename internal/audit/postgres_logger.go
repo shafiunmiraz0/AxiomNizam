@@ -10,8 +10,8 @@ import (
 	"fmt"
 	"time"
 
-	"example.com/axiomnizam/internal/models"
-	"example.com/axiomnizam/internal/repositories"
+	"axiomnizam.bitbd.net/axiomnizam/internal/models"
+	"axiomnizam.bitbd.net/axiomnizam/internal/repositories"
 )
 
 // PostgresAuditLogger implements AuditLogger backed by PostgreSQL via GORM.

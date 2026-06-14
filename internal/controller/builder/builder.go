@@ -22,10 +22,10 @@ package builder
 import (
 	"fmt"
 
-	"example.com/axiomnizam/internal/controller/handler"
-	"example.com/axiomnizam/internal/controller/predicate"
-	"example.com/axiomnizam/internal/controller/reconcile"
-	"example.com/axiomnizam/internal/controller/source"
+	"axiomnizam.bitbd.net/axiomnizam/internal/controller/handler"
+	"axiomnizam.bitbd.net/axiomnizam/internal/controller/predicate"
+	"axiomnizam.bitbd.net/axiomnizam/internal/controller/reconcile"
+	"axiomnizam.bitbd.net/axiomnizam/internal/controller/source"
 )
 
 // Manager is the narrow subset of manager.Manager the Builder uses.

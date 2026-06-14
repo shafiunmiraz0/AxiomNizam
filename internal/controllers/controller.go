@@ -1,15 +1,15 @@
 package controllers
 
 import (
-	"example.com/axiomnizam/internal/logging"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
 	"context"
 	"fmt"
 	"time"
 
-	"example.com/axiomnizam/internal/apiserver"
-	"example.com/axiomnizam/internal/platform/timing"
-	"example.com/axiomnizam/internal/resources"
-	"example.com/axiomnizam/internal/workqueue"
+	"axiomnizam.bitbd.net/axiomnizam/internal/apiserver"
+	"axiomnizam.bitbd.net/axiomnizam/internal/platform/timing"
+	"axiomnizam.bitbd.net/axiomnizam/internal/resources"
+	"axiomnizam.bitbd.net/axiomnizam/internal/workqueue"
 )
 
 // ResourceWatcher is an alias to apiserver.ResourceWatcher for watching resource changes

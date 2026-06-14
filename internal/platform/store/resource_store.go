@@ -24,9 +24,9 @@ import (
 	"sync"
 	"time"
 
-	"example.com/axiomnizam/internal/platform/errs"
-	"example.com/axiomnizam/internal/reconciler"
-	"example.com/axiomnizam/internal/resources"
+	"axiomnizam.bitbd.net/axiomnizam/internal/platform/errs"
+	"axiomnizam.bitbd.net/axiomnizam/internal/reconciler"
+	"axiomnizam.bitbd.net/axiomnizam/internal/resources"
 
 	clientv3 "go.etcd.io/etcd/client/v3"
 )

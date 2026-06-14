@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	"example.com/axiomnizam/internal/gatekeeper/models"
+	"axiomnizam.bitbd.net/axiomnizam/internal/gatekeeper/models"
 )
 
 // IPRestrictionRule requires MFA for requests from specific IP ranges or patterns.

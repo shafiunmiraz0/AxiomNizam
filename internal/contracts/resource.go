@@ -2,7 +2,7 @@ package contracts
 
 // Type aliases re-exporting from models/ so existing code compiles unchanged.
 
-import "example.com/axiomnizam/internal/contracts/models"
+import "axiomnizam.bitbd.net/axiomnizam/internal/contracts/models"
 
 const (
 	Kind       = models.Kind

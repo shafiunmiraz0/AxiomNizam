@@ -1,7 +1,7 @@
 package access
 
 import (
-	"example.com/axiomnizam/internal/logging"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
 	"context"
 	"crypto/hmac"
 	"crypto/rand"
@@ -14,11 +14,11 @@ import (
 	"sync"
 	"time"
 
-	"example.com/axiomnizam/internal/iam/token"
-	platformstore "example.com/axiomnizam/internal/platform/store"
-	"example.com/axiomnizam/internal/storage/audit"
-	"example.com/axiomnizam/internal/storage/models"
-	"example.com/axiomnizam/internal/storage/store"
+	"axiomnizam.bitbd.net/axiomnizam/internal/iam/token"
+	platformstore "axiomnizam.bitbd.net/axiomnizam/internal/platform/store"
+	"axiomnizam.bitbd.net/axiomnizam/internal/storage/audit"
+	"axiomnizam.bitbd.net/axiomnizam/internal/storage/models"
+	"axiomnizam.bitbd.net/axiomnizam/internal/storage/store"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	clientv3 "go.etcd.io/etcd/client/v3"

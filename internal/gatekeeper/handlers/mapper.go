@@ -3,7 +3,7 @@ package handlers
 import (
 	"time"
 
-	"example.com/axiomnizam/internal/gatekeeper/models"
+	"axiomnizam.bitbd.net/axiomnizam/internal/gatekeeper/models"
 )
 
 // FactorToResponse converts a Factor model to an API response DTO.

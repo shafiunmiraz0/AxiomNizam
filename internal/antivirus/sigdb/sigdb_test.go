@@ -12,10 +12,10 @@ import (
 	"testing"
 	"time"
 
-	"example.com/axiomnizam/internal/antivirus"
-	"example.com/axiomnizam/internal/antivirus/hashdb"
-	"example.com/axiomnizam/internal/antivirus/matcher"
-	"example.com/axiomnizam/internal/antivirus/yara"
+	"axiomnizam.bitbd.net/axiomnizam/internal/antivirus"
+	"axiomnizam.bitbd.net/axiomnizam/internal/antivirus/hashdb"
+	"axiomnizam.bitbd.net/axiomnizam/internal/antivirus/matcher"
+	"axiomnizam.bitbd.net/axiomnizam/internal/antivirus/yara"
 )
 
 // ─────────────────────────────────────────────────────────────────────────────

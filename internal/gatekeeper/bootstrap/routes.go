@@ -1,7 +1,7 @@
 package bootstrap
 
 import (
-	"example.com/axiomnizam/internal/gatekeeper/handlers"
+	"axiomnizam.bitbd.net/axiomnizam/internal/gatekeeper/handlers"
 	"github.com/gin-gonic/gin"
 )
 

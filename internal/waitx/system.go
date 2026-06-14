@@ -3,9 +3,9 @@ package waitx
 import (
 	"context"
 
-	"example.com/axiomnizam/internal/logging"
-	platformstore "example.com/axiomnizam/internal/platform/store"
-	"example.com/axiomnizam/internal/waitx/audit"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
+	platformstore "axiomnizam.bitbd.net/axiomnizam/internal/platform/store"
+	"axiomnizam.bitbd.net/axiomnizam/internal/waitx/audit"
 )
 
 // System holds the waitx module's dependencies and provides

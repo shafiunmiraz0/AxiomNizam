@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"example.com/axiomnizam/internal/client"
+	"axiomnizam.bitbd.net/axiomnizam/internal/client"
 	"github.com/spf13/cobra"
 )
 

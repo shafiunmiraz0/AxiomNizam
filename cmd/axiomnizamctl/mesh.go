@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"example.com/axiomnizam/internal/mesh"
+	"axiomnizam.bitbd.net/axiomnizam/internal/mesh"
 
 	"github.com/spf13/cobra"
 )

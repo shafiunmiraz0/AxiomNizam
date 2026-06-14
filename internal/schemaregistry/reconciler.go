@@ -16,11 +16,11 @@ import (
 	"sync/atomic"
 	"time"
 
-	"example.com/axiomnizam/internal/logging"
-	"example.com/axiomnizam/internal/platform/store"
-	"example.com/axiomnizam/internal/platform/storeutil"
-	"example.com/axiomnizam/internal/reconciler"
-	"example.com/axiomnizam/internal/resources"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
+	"axiomnizam.bitbd.net/axiomnizam/internal/platform/store"
+	"axiomnizam.bitbd.net/axiomnizam/internal/platform/storeutil"
+	"axiomnizam.bitbd.net/axiomnizam/internal/reconciler"
+	"axiomnizam.bitbd.net/axiomnizam/internal/resources"
 
 	"go.uber.org/zap"
 )

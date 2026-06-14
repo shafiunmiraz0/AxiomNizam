@@ -15,8 +15,8 @@ import (
 	"sync"
 	"time"
 
-	"example.com/axiomnizam/internal/governance/models"
-	"example.com/axiomnizam/internal/logging"
+	"axiomnizam.bitbd.net/axiomnizam/internal/governance/models"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
 )
 
 // EnforcementDecision represents the outcome of a policy check.

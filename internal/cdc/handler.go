@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"strings"
 
-	"example.com/axiomnizam/internal/etl"
+	"axiomnizam.bitbd.net/axiomnizam/internal/etl"
 	"github.com/gin-gonic/gin"
 	clientv3 "go.etcd.io/etcd/client/v3"
 )

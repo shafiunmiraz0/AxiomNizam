@@ -1,14 +1,14 @@
 package runtime
 
 import (
-	"example.com/axiomnizam/internal/logging"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
 	"context"
 	"fmt"
 	"sync"
 
-	"example.com/axiomnizam/internal/apiserver"
-	"example.com/axiomnizam/internal/controllers"
-	"example.com/axiomnizam/internal/workqueue"
+	"axiomnizam.bitbd.net/axiomnizam/internal/apiserver"
+	"axiomnizam.bitbd.net/axiomnizam/internal/controllers"
+	"axiomnizam.bitbd.net/axiomnizam/internal/workqueue"
 )
 
 // ControllerManager manages all controllers in the system

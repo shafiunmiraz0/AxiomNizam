@@ -24,12 +24,12 @@
 package matcher
 
 import (
-	"example.com/axiomnizam/internal/logging"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
 	"fmt"
 	"sync"
 	"sync/atomic"
 
-	"example.com/axiomnizam/internal/antivirus"
+	"axiomnizam.bitbd.net/axiomnizam/internal/antivirus"
 )
 
 // ─────────────────────────────────────────────────────────────────────────────

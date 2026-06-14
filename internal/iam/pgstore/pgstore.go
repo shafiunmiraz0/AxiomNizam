@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	iamconfig "example.com/axiomnizam/internal/iam/config"
-	"example.com/axiomnizam/internal/iam/models"
+	iamconfig "axiomnizam.bitbd.net/axiomnizam/internal/iam/config"
+	"axiomnizam.bitbd.net/axiomnizam/internal/iam/models"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )

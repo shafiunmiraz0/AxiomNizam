@@ -4,7 +4,7 @@
 // This package re-exports them for import consistency.
 package config
 
-import "example.com/axiomnizam/internal/antivirus"
+import "axiomnizam.bitbd.net/axiomnizam/internal/antivirus"
 
 // Config is an alias for antivirus.Config.
 type Config = antivirus.Config

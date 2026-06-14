@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"example.com/axiomnizam/internal/apibanks"
-	"example.com/axiomnizam/internal/mesh"
+	"axiomnizam.bitbd.net/axiomnizam/internal/apibanks"
+	"axiomnizam.bitbd.net/axiomnizam/internal/mesh"
 )
 
 const (

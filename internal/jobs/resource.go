@@ -2,7 +2,7 @@ package jobs
 
 // Re-export domain types from models sub-package for backward compatibility.
 import (
-	"example.com/axiomnizam/internal/jobs/models"
+	"axiomnizam.bitbd.net/axiomnizam/internal/jobs/models"
 )
 
 // --- Constants ---

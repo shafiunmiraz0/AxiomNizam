@@ -1,13 +1,13 @@
 package jobs
 
 import (
-	"example.com/axiomnizam/internal/logging"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
 	"context"
 	"fmt"
 	"sync"
 	"time"
 
-	"example.com/axiomnizam/internal/platform/timing"
+	"axiomnizam.bitbd.net/axiomnizam/internal/platform/timing"
 )
 
 // Scheduler implements job scheduling with cron-like expressions

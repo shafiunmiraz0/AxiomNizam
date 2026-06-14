@@ -1,6 +1,6 @@
 package tracing
 
-import "example.com/axiomnizam/internal/tracing/models"
+import "axiomnizam.bitbd.net/axiomnizam/internal/tracing/models"
 
 // Re-exported resource types from models/.
 type TracingConfigResource = models.TracingConfigResource

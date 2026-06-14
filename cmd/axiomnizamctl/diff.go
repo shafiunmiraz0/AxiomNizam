@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"example.com/axiomnizam/internal/diff"
+	"axiomnizam.bitbd.net/axiomnizam/internal/diff"
 	"gopkg.in/yaml.v3"
 
 	"github.com/spf13/cobra"

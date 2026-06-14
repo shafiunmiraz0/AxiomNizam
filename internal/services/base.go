@@ -2,12 +2,12 @@ package services
 
 import (
 	"fmt"
-	"example.com/axiomnizam/internal/logging"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
 	"context"
 	"errors"
 
-	"example.com/axiomnizam/internal/repositories"
-	"example.com/axiomnizam/internal/utils"
+	"axiomnizam.bitbd.net/axiomnizam/internal/repositories"
+	"axiomnizam.bitbd.net/axiomnizam/internal/utils"
 )
 
 // Service is the base interface for all services

@@ -2,12 +2,12 @@ package cache
 
 import (
 	"fmt"
-	"example.com/axiomnizam/internal/logging"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
 	"context"
 	"sync"
 	"time"
 
-	"example.com/axiomnizam/internal/resources"
+	"axiomnizam.bitbd.net/axiomnizam/internal/resources"
 )
 
 // Informer watches resources and maintains a local cache

@@ -18,8 +18,8 @@ import (
 	"strings"
 	"time"
 
-	"example.com/axiomnizam/internal/alerting/models"
-	"example.com/axiomnizam/internal/platform/resilience"
+	"axiomnizam.bitbd.net/axiomnizam/internal/alerting/models"
+	"axiomnizam.bitbd.net/axiomnizam/internal/platform/resilience"
 )
 
 // NotificationMessage is the payload sent to a channel.

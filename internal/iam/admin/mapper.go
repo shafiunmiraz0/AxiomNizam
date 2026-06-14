@@ -4,11 +4,11 @@ import (
 	"strings"
 	"time"
 
-	"example.com/axiomnizam/internal/iam/authz"
-	"example.com/axiomnizam/internal/iam/identity"
-	"example.com/axiomnizam/internal/iam/models"
-	"example.com/axiomnizam/internal/iam/oauth"
-	"example.com/axiomnizam/internal/iam/token"
+	"axiomnizam.bitbd.net/axiomnizam/internal/iam/authz"
+	"axiomnizam.bitbd.net/axiomnizam/internal/iam/identity"
+	"axiomnizam.bitbd.net/axiomnizam/internal/iam/models"
+	"axiomnizam.bitbd.net/axiomnizam/internal/iam/oauth"
+	"axiomnizam.bitbd.net/axiomnizam/internal/iam/token"
 )
 
 // ──────────────────────────────────────────────

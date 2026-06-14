@@ -1,7 +1,7 @@
 ﻿package native
 
 import (
-	"example.com/axiomnizam/internal/logging"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
 	"context"
 	"crypto/aes"
 	"crypto/cipher"
@@ -21,7 +21,7 @@ import (
 	"sync"
 	"time"
 
-	"example.com/axiomnizam/internal/storage/models"
+	"axiomnizam.bitbd.net/axiomnizam/internal/storage/models"
 )
 
 // Backend is a self-contained, filesystem-based object storage engine.

@@ -2,12 +2,12 @@ package controller
 
 import (
 	"fmt"
-	"example.com/axiomnizam/internal/logging"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
 	"context"
 	"time"
 
-	"example.com/axiomnizam/internal/gatekeeper/models"
-	"example.com/axiomnizam/internal/gatekeeper/repositories"
+	"axiomnizam.bitbd.net/axiomnizam/internal/gatekeeper/models"
+	"axiomnizam.bitbd.net/axiomnizam/internal/gatekeeper/repositories"
 	"github.com/google/uuid"
 )
 

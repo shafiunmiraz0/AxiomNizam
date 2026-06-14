@@ -6,8 +6,8 @@
 package controller
 
 import (
-	"example.com/axiomnizam/internal/reconciler"
-	"example.com/axiomnizam/internal/storage/models"
+	"axiomnizam.bitbd.net/axiomnizam/internal/reconciler"
+	"axiomnizam.bitbd.net/axiomnizam/internal/storage/models"
 )
 
 // AsReconciler returns the canonical reconciler.Reconciler wrapper around

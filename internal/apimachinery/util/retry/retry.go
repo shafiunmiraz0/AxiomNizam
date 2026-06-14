@@ -19,7 +19,7 @@ import (
 	"errors"
 	"time"
 
-	"example.com/axiomnizam/internal/apimachinery/util/wait"
+	"axiomnizam.bitbd.net/axiomnizam/internal/apimachinery/util/wait"
 )
 
 // DefaultRetry is the budget controllers use for optimistic-locking

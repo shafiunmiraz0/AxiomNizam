@@ -2,7 +2,7 @@ package slo
 
 // Type aliases re-exporting from models/ so existing code compiles unchanged.
 
-import "example.com/axiomnizam/internal/slo/models"
+import "axiomnizam.bitbd.net/axiomnizam/internal/slo/models"
 
 const (
 	SLOKind       = models.SLOKind

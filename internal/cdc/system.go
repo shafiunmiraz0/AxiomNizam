@@ -3,9 +3,9 @@ package cdc
 import (
 	"context"
 
-	"example.com/axiomnizam/internal/cdc/audit"
-	"example.com/axiomnizam/internal/logging"
-	platformstore "example.com/axiomnizam/internal/platform/store"
+	"axiomnizam.bitbd.net/axiomnizam/internal/cdc/audit"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
+	platformstore "axiomnizam.bitbd.net/axiomnizam/internal/platform/store"
 
 	clientv3 "go.etcd.io/etcd/client/v3"
 )

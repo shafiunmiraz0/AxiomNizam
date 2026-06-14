@@ -3,7 +3,7 @@ package testutil
 import (
 	"time"
 
-	"example.com/axiomnizam/internal/iam/models"
+	"axiomnizam.bitbd.net/axiomnizam/internal/iam/models"
 )
 
 // TestRealmID is a fixed realm ID for testing.

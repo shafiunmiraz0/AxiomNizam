@@ -21,8 +21,8 @@ import (
 	"net/http"
 	"time"
 
-	"example.com/axiomnizam/internal/platform/store"
-	"example.com/axiomnizam/internal/resources"
+	"axiomnizam.bitbd.net/axiomnizam/internal/platform/store"
+	"axiomnizam.bitbd.net/axiomnizam/internal/resources"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"example.com/axiomnizam/internal/storage/models"
-	"example.com/axiomnizam/internal/storage/store"
+	"axiomnizam.bitbd.net/axiomnizam/internal/storage/models"
+	"axiomnizam.bitbd.net/axiomnizam/internal/storage/store"
 )
 
 // Manager enforces multi-tenancy for object storage.

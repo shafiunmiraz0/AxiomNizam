@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 	// Imports removed temporarily to test build without event package conflicts
-	// "example.com/axiomnizam/internal/events"
-	// "example.com/axiomnizam/internal/metrics"
+	// "axiomnizam.bitbd.net/axiomnizam/internal/events"
+	// "axiomnizam.bitbd.net/axiomnizam/internal/metrics"
 )
 
 // ========== ADAPTER IMPLEMENTATIONS ==========

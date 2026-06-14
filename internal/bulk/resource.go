@@ -1,6 +1,6 @@
 package bulk
 
-import "example.com/axiomnizam/internal/bulk/models"
+import "axiomnizam.bitbd.net/axiomnizam/internal/bulk/models"
 
 const (
 	BulkOperationKind       = models.BulkOperationKind

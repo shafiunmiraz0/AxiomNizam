@@ -8,7 +8,7 @@ package federation
 // =====================================================
 
 import (
-	"example.com/axiomnizam/internal/federation/models"
+	"axiomnizam.bitbd.net/axiomnizam/internal/federation/models"
 )
 
 // --- Constants ---

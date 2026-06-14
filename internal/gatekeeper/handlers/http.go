@@ -3,8 +3,8 @@ package handlers
 import (
 	"net/http"
 
-	"example.com/axiomnizam/internal/gatekeeper/contracts"
-	"example.com/axiomnizam/internal/gatekeeper/models"
+	"axiomnizam.bitbd.net/axiomnizam/internal/gatekeeper/contracts"
+	"axiomnizam.bitbd.net/axiomnizam/internal/gatekeeper/models"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )

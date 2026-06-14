@@ -18,7 +18,7 @@ import (
 	"sync"
 	"time"
 
-	iamconfig "example.com/axiomnizam/internal/iam/config"
+	iamconfig "axiomnizam.bitbd.net/axiomnizam/internal/iam/config"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 )

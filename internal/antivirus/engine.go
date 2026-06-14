@@ -1,7 +1,7 @@
 package antivirus
 
 import (
-	"example.com/axiomnizam/internal/logging"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"

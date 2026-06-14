@@ -12,7 +12,7 @@ import (
 	"fmt"
 	"time"
 
-	"example.com/axiomnizam/internal/controller/leaderelection/resourcelock"
+	"axiomnizam.bitbd.net/axiomnizam/internal/controller/leaderelection/resourcelock"
 )
 
 // Config bundles the election knobs.  Zero defaults mirror upstream

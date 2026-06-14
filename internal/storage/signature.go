@@ -1,7 +1,7 @@
 package storage
 
 import (
-	"example.com/axiomnizam/internal/logging"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
 	"context"
 	"crypto/hmac"
 	"crypto/sha256"
@@ -18,8 +18,8 @@ import (
 	"sync"
 	"time"
 
-	"example.com/axiomnizam/internal/storage/access"
-	"example.com/axiomnizam/internal/storage/models"
+	"axiomnizam.bitbd.net/axiomnizam/internal/storage/access"
+	"axiomnizam.bitbd.net/axiomnizam/internal/storage/models"
 )
 
 const (

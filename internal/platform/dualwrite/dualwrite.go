@@ -6,12 +6,12 @@ package dualwrite
 
 import (
 	"fmt"
-	"example.com/axiomnizam/internal/logging"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
 	"context"
 	"time"
 
-	"example.com/axiomnizam/internal/platform/featureflags"
-	"example.com/axiomnizam/internal/platform/store"
+	"axiomnizam.bitbd.net/axiomnizam/internal/platform/featureflags"
+	"axiomnizam.bitbd.net/axiomnizam/internal/platform/store"
 )
 
 // Write asynchronously creates or updates a resource in the etcd store

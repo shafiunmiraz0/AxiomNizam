@@ -1,8 +1,8 @@
 // Package events is a backward-compatible re-export of the storage audit package.
-// New code should import "example.com/axiomnizam/internal/storage/audit" directly.
+// New code should import "axiomnizam.bitbd.net/axiomnizam/internal/storage/audit" directly.
 package events
 
-import "example.com/axiomnizam/internal/storage/audit"
+import "axiomnizam.bitbd.net/axiomnizam/internal/storage/audit"
 
 // Type aliases for backward compatibility.
 type AuditLog = audit.AuditLog

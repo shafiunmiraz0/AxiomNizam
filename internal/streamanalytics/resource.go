@@ -1,7 +1,7 @@
 package streamanalytics
 
 import (
-	"example.com/axiomnizam/internal/streamanalytics/models"
+	"axiomnizam.bitbd.net/axiomnizam/internal/streamanalytics/models"
 )
 
 // --- Constants (aliases) ---

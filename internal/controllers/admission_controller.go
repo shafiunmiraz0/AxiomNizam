@@ -6,11 +6,11 @@ import (
 	"sync"
 	"time"
 
-	"example.com/axiomnizam/internal/events"
-	"example.com/axiomnizam/internal/platform/timing"
-	"example.com/axiomnizam/internal/policies"
-	"example.com/axiomnizam/internal/rbac"
-	"example.com/axiomnizam/internal/utils/logger"
+	"axiomnizam.bitbd.net/axiomnizam/internal/events"
+	"axiomnizam.bitbd.net/axiomnizam/internal/platform/timing"
+	"axiomnizam.bitbd.net/axiomnizam/internal/policies"
+	"axiomnizam.bitbd.net/axiomnizam/internal/rbac"
+	"axiomnizam.bitbd.net/axiomnizam/internal/utils/logger"
 	"go.uber.org/zap"
 )
 

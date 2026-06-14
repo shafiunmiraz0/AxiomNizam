@@ -3,8 +3,8 @@ package scanner
 import (
 	"context"
 
-	"example.com/axiomnizam/internal/logging"
-	platformstore "example.com/axiomnizam/internal/platform/store"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
+	platformstore "axiomnizam.bitbd.net/axiomnizam/internal/platform/store"
 )
 
 // System holds the scanner module's orchestrator and provides

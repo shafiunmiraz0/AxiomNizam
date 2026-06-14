@@ -6,9 +6,9 @@ import (
 	"context"
 	"time"
 
-	"example.com/axiomnizam/internal/platform/store"
-	"example.com/axiomnizam/internal/reconciler"
-	"example.com/axiomnizam/internal/resources"
+	"axiomnizam.bitbd.net/axiomnizam/internal/platform/store"
+	"axiomnizam.bitbd.net/axiomnizam/internal/reconciler"
+	"axiomnizam.bitbd.net/axiomnizam/internal/resources"
 )
 
 // GISReconciler reconciles GISResource objects.

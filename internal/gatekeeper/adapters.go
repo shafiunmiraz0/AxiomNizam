@@ -7,13 +7,13 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"example.com/axiomnizam/internal/gatekeeper/challenge"
-	"example.com/axiomnizam/internal/gatekeeper/contracts"
-	"example.com/axiomnizam/internal/gatekeeper/enrollment"
-	"example.com/axiomnizam/internal/gatekeeper/models"
-	"example.com/axiomnizam/internal/gatekeeper/repositories"
-	"example.com/axiomnizam/internal/gatekeeper/trusteddevices"
-	gkwebauthn "example.com/axiomnizam/internal/gatekeeper/webauthn"
+	"axiomnizam.bitbd.net/axiomnizam/internal/gatekeeper/challenge"
+	"axiomnizam.bitbd.net/axiomnizam/internal/gatekeeper/contracts"
+	"axiomnizam.bitbd.net/axiomnizam/internal/gatekeeper/enrollment"
+	"axiomnizam.bitbd.net/axiomnizam/internal/gatekeeper/models"
+	"axiomnizam.bitbd.net/axiomnizam/internal/gatekeeper/repositories"
+	"axiomnizam.bitbd.net/axiomnizam/internal/gatekeeper/trusteddevices"
+	gkwebauthn "axiomnizam.bitbd.net/axiomnizam/internal/gatekeeper/webauthn"
 )
 
 // enrollmentServiceWrapper wraps enrollment.Service to match contracts.EnrollmentService.

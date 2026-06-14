@@ -3,7 +3,7 @@ package conductor
 import (
 	"time"
 
-	"example.com/axiomnizam/internal/conductor/models"
+	"axiomnizam.bitbd.net/axiomnizam/internal/conductor/models"
 )
 
 // Backend types for message brokers.

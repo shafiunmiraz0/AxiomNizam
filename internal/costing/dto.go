@@ -1,6 +1,6 @@
 package costing
 
-import "example.com/axiomnizam/internal/costing/models"
+import "axiomnizam.bitbd.net/axiomnizam/internal/costing/models"
 
 // MessageResponse is a generic error/ack response.
 type MessageResponse struct {

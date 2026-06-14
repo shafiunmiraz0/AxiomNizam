@@ -11,10 +11,10 @@ import (
 	"syscall"
 	"time"
 
-	"example.com/axiomnizam/internal/apiserver"
-	"example.com/axiomnizam/internal/cache"
-	"example.com/axiomnizam/internal/controllers"
-	"example.com/axiomnizam/internal/events"
+	"axiomnizam.bitbd.net/axiomnizam/internal/apiserver"
+	"axiomnizam.bitbd.net/axiomnizam/internal/cache"
+	"axiomnizam.bitbd.net/axiomnizam/internal/controllers"
+	"axiomnizam.bitbd.net/axiomnizam/internal/events"
 )
 
 var (

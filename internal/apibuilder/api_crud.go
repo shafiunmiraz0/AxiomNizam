@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"example.com/axiomnizam/internal/logging"
-	"example.com/axiomnizam/internal/sqlfilter"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
+	"axiomnizam.bitbd.net/axiomnizam/internal/sqlfilter"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"

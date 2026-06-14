@@ -8,7 +8,7 @@
 //
 // Usage in reconcilers:
 //
-//	import "example.com/axiomnizam/internal/platform/storeutil"
+//	import "axiomnizam.bitbd.net/axiomnizam/internal/platform/storeutil"
 //
 //	if err := storeutil.Update(ctx, r.store, resource); err != nil {
 //	    return reconciler.ReconcileResult{Requeue: true, RequeueAfter: 5 * time.Second}
@@ -19,8 +19,8 @@ import (
 	"context"
 	"fmt"
 
-	"example.com/axiomnizam/internal/logging"
-	"example.com/axiomnizam/internal/platform/store"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
+	"axiomnizam.bitbd.net/axiomnizam/internal/platform/store"
 
 	"go.uber.org/zap"
 )

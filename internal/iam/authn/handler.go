@@ -16,11 +16,11 @@ import (
 	"strings"
 	"time"
 
-	"example.com/axiomnizam/internal/auth"
-	iamidentity "example.com/axiomnizam/internal/iam/identity"
-	iammodels "example.com/axiomnizam/internal/iam/models"
-	"example.com/axiomnizam/internal/logging"
-	"example.com/axiomnizam/internal/models"
+	"axiomnizam.bitbd.net/axiomnizam/internal/auth"
+	iamidentity "axiomnizam.bitbd.net/axiomnizam/internal/iam/identity"
+	iammodels "axiomnizam.bitbd.net/axiomnizam/internal/iam/models"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
+	"axiomnizam.bitbd.net/axiomnizam/internal/models"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"

@@ -14,8 +14,8 @@ import (
 	"fmt"
 	"time"
 
-	"example.com/axiomnizam/internal/logging"
-	"example.com/axiomnizam/internal/resources"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
+	"axiomnizam.bitbd.net/axiomnizam/internal/resources"
 )
 
 const gcComponent = "gc"

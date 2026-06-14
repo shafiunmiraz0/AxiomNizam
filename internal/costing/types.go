@@ -2,7 +2,7 @@ package costing
 
 // Type aliases re-exported from models/ for backward compatibility.
 
-import "example.com/axiomnizam/internal/costing/models"
+import "axiomnizam.bitbd.net/axiomnizam/internal/costing/models"
 
 type UsageDimension = models.UsageDimension
 type Quota = models.Quota

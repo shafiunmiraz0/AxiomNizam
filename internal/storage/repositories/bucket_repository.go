@@ -1,7 +1,7 @@
 package repositories
 
 import (
-	"example.com/axiomnizam/internal/storage/models"
+	"axiomnizam.bitbd.net/axiomnizam/internal/storage/models"
 )
 
 // BucketRepository defines CRUD operations for bucket resources.

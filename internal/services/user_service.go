@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"example.com/axiomnizam/internal/models"
-	"example.com/axiomnizam/internal/repositories"
-	"example.com/axiomnizam/internal/utils"
+	"axiomnizam.bitbd.net/axiomnizam/internal/models"
+	"axiomnizam.bitbd.net/axiomnizam/internal/repositories"
+	"axiomnizam.bitbd.net/axiomnizam/internal/utils"
 )
 
 // UserService defines the interface for user business logic

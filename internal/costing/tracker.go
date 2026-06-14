@@ -14,9 +14,9 @@ import (
 	"sync"
 	"time"
 
-	"example.com/axiomnizam/internal/costing/models"
-	"example.com/axiomnizam/internal/logging"
-	"example.com/axiomnizam/internal/platform/store"
+	"axiomnizam.bitbd.net/axiomnizam/internal/costing/models"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
+	"axiomnizam.bitbd.net/axiomnizam/internal/platform/store"
 	"github.com/gin-gonic/gin"
 
 	"go.uber.org/zap"

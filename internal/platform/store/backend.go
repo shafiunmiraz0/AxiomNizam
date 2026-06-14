@@ -15,12 +15,12 @@
 package store
 
 import (
-	"example.com/axiomnizam/internal/logging"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
 	"fmt"
 	"os"
 	"strings"
 
-	axraft "example.com/axiomnizam/internal/platform/raft"
+	axraft "axiomnizam.bitbd.net/axiomnizam/internal/platform/raft"
 
 	"github.com/hashicorp/go-memdb"
 	clientv3 "go.etcd.io/etcd/client/v3"

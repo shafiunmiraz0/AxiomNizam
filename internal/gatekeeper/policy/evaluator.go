@@ -3,7 +3,7 @@ package policy
 import (
 	"context"
 
-	"example.com/axiomnizam/internal/gatekeeper/models"
+	"axiomnizam.bitbd.net/axiomnizam/internal/gatekeeper/models"
 )
 
 // AdaptiveEvaluator evaluates policies based on risk score and context.

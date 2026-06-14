@@ -11,7 +11,7 @@ import (
 	"net/http"
 	"strings"
 
-	"example.com/axiomnizam/internal/scanner"
+	"axiomnizam.bitbd.net/axiomnizam/internal/scanner"
 )
 
 // Scanner detects file type spoofing by comparing the actual MIME type

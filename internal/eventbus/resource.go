@@ -1,6 +1,6 @@
 package eventbus
 
-import "example.com/axiomnizam/internal/eventbus/models"
+import "axiomnizam.bitbd.net/axiomnizam/internal/eventbus/models"
 
 const (
 	TopicKind       = models.TopicKind

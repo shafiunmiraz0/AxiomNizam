@@ -4,7 +4,7 @@ import (
 	"context"
 	"os"
 
-	"example.com/axiomnizam/internal/logging"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"

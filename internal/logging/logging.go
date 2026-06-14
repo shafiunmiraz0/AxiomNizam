@@ -4,7 +4,7 @@
 //
 //   - stdlib `log` (~70 files)
 //   - `go.uber.org/zap` directly (~7 files)
-//   - `example.com/axiomnizam/internal/utils/logger` (zap wrapper, 4 files)
+//   - `axiomnizam.bitbd.net/axiomnizam/internal/utils/logger` (zap wrapper, 4 files)
 //
 // Rather than force a mass migration in one pass this package gives us
 // a single front door: `logging.L()` returns a `*zap.Logger` that is
@@ -21,7 +21,7 @@ import (
 	"context"
 	"sync"
 
-	"example.com/axiomnizam/internal/utils/logger"
+	"axiomnizam.bitbd.net/axiomnizam/internal/utils/logger"
 
 	"go.uber.org/zap"
 )

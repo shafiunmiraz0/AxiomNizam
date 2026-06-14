@@ -15,7 +15,7 @@ import (
 	"io"
 	"strings"
 
-	"example.com/axiomnizam/internal/scanner"
+	"axiomnizam.bitbd.net/axiomnizam/internal/scanner"
 )
 
 // Scanner detects zip bombs, path traversal, symlink bombs, and malicious archives.

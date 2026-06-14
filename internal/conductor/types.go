@@ -2,7 +2,7 @@ package conductor
 
 // Type aliases re-exported from models/ for backward compatibility.
 
-import "example.com/axiomnizam/internal/conductor/models"
+import "axiomnizam.bitbd.net/axiomnizam/internal/conductor/models"
 
 type ProducerConfig = models.ProducerConfig
 type ProducerSpec = models.ProducerSpec

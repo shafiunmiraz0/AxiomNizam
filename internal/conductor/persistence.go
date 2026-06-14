@@ -2,7 +2,7 @@ package conductor
 
 import (
 	"fmt"
-	"example.com/axiomnizam/internal/logging"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
 	"encoding/json"
 	"time"
 

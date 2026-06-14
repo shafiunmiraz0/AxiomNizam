@@ -1,6 +1,6 @@
 package versioning
 
-import "example.com/axiomnizam/internal/versioning/models"
+import "axiomnizam.bitbd.net/axiomnizam/internal/versioning/models"
 
 // Re-export domain Resource types from models subpackage.
 type VersionPolicyResource = models.VersionPolicyResource

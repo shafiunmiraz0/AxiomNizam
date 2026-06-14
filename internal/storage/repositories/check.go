@@ -4,7 +4,7 @@ package repositories
 // These ensure concrete types implement the repository interfaces.
 
 import (
-	"example.com/axiomnizam/internal/storage/store"
+	"axiomnizam.bitbd.net/axiomnizam/internal/storage/store"
 )
 
 var _ BucketRepository = (*store.BucketStore)(nil)

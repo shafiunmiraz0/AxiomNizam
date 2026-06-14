@@ -1,6 +1,6 @@
 package apiscanner
 
-import "example.com/axiomnizam/internal/apiscanner/models"
+import "axiomnizam.bitbd.net/axiomnizam/internal/apiscanner/models"
 
 const (
 	APIScanKind       = models.APIScanKind

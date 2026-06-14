@@ -8,15 +8,15 @@ package cdc
 // =====================================================
 
 import (
-	"example.com/axiomnizam/internal/logging"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
 	"context"
 	"fmt"
 	"sync"
 	"time"
 
-	"example.com/axiomnizam/internal/reconciler"
-	"example.com/axiomnizam/internal/resources"
-	"example.com/axiomnizam/internal/workqueue"
+	"axiomnizam.bitbd.net/axiomnizam/internal/reconciler"
+	"axiomnizam.bitbd.net/axiomnizam/internal/resources"
+	"axiomnizam.bitbd.net/axiomnizam/internal/workqueue"
 )
 
 // CDCPipelineStore is a minimal persistence boundary.

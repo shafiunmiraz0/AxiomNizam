@@ -1,7 +1,7 @@
 package store
 
 import (
-	"example.com/axiomnizam/internal/logging"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -9,8 +9,8 @@ import (
 	"sync"
 	"time"
 
-	platformstore "example.com/axiomnizam/internal/platform/store"
-	"example.com/axiomnizam/internal/storage/models"
+	platformstore "axiomnizam.bitbd.net/axiomnizam/internal/platform/store"
+	"axiomnizam.bitbd.net/axiomnizam/internal/storage/models"
 	"github.com/google/uuid"
 	clientv3 "go.etcd.io/etcd/client/v3"
 )

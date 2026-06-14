@@ -14,8 +14,8 @@ package source
 import (
 	"context"
 
-	"example.com/axiomnizam/internal/controller/handler"
-	"example.com/axiomnizam/internal/controller/predicate"
+	"axiomnizam.bitbd.net/axiomnizam/internal/controller/handler"
+	"axiomnizam.bitbd.net/axiomnizam/internal/controller/predicate"
 )
 
 // Event is the canonical envelope passed down the pipeline.  Old is

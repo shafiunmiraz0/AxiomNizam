@@ -1,6 +1,6 @@
 package scanner
 
-import "example.com/axiomnizam/internal/scanner/config"
+import "axiomnizam.bitbd.net/axiomnizam/internal/scanner/config"
 
 // Config re-exports the scanner config type from the config sub-package.
 // This preserves backward compatibility for callers using scanner.Config.

@@ -35,7 +35,7 @@
 package hashdb
 
 import (
-	"example.com/axiomnizam/internal/logging"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
 	"crypto/sha256"
 	"encoding/binary"
 	"fmt"
@@ -44,7 +44,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"example.com/axiomnizam/internal/antivirus"
+	"axiomnizam.bitbd.net/axiomnizam/internal/antivirus"
 )
 
 // ─────────────────────────────────────────────────────────────────────────────

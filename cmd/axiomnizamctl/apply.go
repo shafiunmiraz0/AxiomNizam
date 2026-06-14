@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	"example.com/axiomnizam/internal/client"
+	"axiomnizam.bitbd.net/axiomnizam/internal/client"
 	"gopkg.in/yaml.v3"
 )
 

@@ -8,7 +8,7 @@ package encryption
 // =====================================================
 
 import (
-	"example.com/axiomnizam/internal/encryption/models"
+	"axiomnizam.bitbd.net/axiomnizam/internal/encryption/models"
 )
 
 const (

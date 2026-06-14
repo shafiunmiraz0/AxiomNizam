@@ -1,6 +1,6 @@
 package iam
 
-import "example.com/axiomnizam/internal/errors"
+import "axiomnizam.bitbd.net/axiomnizam/internal/errors"
 
 // IAM-specific sentinel errors.
 var (

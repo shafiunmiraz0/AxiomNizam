@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"time"
 
-	"example.com/axiomnizam/internal/audit"
+	"axiomnizam.bitbd.net/axiomnizam/internal/audit"
 
 	"github.com/gin-gonic/gin"
 )

@@ -1,6 +1,6 @@
 package datasourceresource
 
-import "example.com/axiomnizam/internal/datasource/models"
+import "axiomnizam.bitbd.net/axiomnizam/internal/datasource/models"
 
 // =====================================================
 // Type aliases — re-export all domain types from models/

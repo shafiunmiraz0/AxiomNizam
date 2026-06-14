@@ -13,9 +13,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"example.com/axiomnizam/internal/gatekeeper/models"
-	"example.com/axiomnizam/internal/gatekeeper/repositories"
-	"example.com/axiomnizam/internal/gatekeeper/totp"
+	"axiomnizam.bitbd.net/axiomnizam/internal/gatekeeper/models"
+	"axiomnizam.bitbd.net/axiomnizam/internal/gatekeeper/repositories"
+	"axiomnizam.bitbd.net/axiomnizam/internal/gatekeeper/totp"
 )
 
 // Service manages the 2FA enrollment workflow.

@@ -9,8 +9,8 @@ import (
 	"sync"
 	"time"
 
-	"example.com/axiomnizam/internal/logging"
-	"example.com/axiomnizam/internal/models"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
+	"axiomnizam.bitbd.net/axiomnizam/internal/models"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"

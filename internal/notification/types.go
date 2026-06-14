@@ -2,7 +2,7 @@ package notification
 
 // Type aliases re-exporting from models/ so existing code compiles unchanged.
 
-import "example.com/axiomnizam/internal/notification/models"
+import "axiomnizam.bitbd.net/axiomnizam/internal/notification/models"
 
 const (
 	ChannelKind       = models.ChannelKind

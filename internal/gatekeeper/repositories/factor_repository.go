@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"example.com/axiomnizam/internal/gatekeeper/models"
+	"axiomnizam.bitbd.net/axiomnizam/internal/gatekeeper/models"
 )
 
 // ErrFactorNotFound is returned when a factor is not found.

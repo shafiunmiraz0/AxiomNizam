@@ -6,9 +6,9 @@ import (
 	"log"
 	"time"
 
-	"example.com/axiomnizam/internal/controllers"
-	"example.com/axiomnizam/internal/events"
-	"example.com/axiomnizam/internal/models"
+	"axiomnizam.bitbd.net/axiomnizam/internal/controllers"
+	"axiomnizam.bitbd.net/axiomnizam/internal/events"
+	"axiomnizam.bitbd.net/axiomnizam/internal/models"
 )
 
 // ExampleAdmissionControllerFlow demonstrates the complete admission flow

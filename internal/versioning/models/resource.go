@@ -9,7 +9,7 @@ package models
 // =====================================================
 
 import (
-	"example.com/axiomnizam/internal/resources"
+	"axiomnizam.bitbd.net/axiomnizam/internal/resources"
 )
 
 // RetentionPolicy defines how long version is kept

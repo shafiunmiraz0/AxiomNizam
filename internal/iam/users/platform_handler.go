@@ -10,8 +10,8 @@ import (
 	"sync"
 	"time"
 
-	"example.com/axiomnizam/internal/iam/authn"
-	"example.com/axiomnizam/internal/logging"
+	"axiomnizam.bitbd.net/axiomnizam/internal/iam/authn"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
 
 	"github.com/gin-gonic/gin"
 	clientv3 "go.etcd.io/etcd/client/v3"

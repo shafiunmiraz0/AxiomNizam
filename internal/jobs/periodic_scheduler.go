@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"example.com/axiomnizam/internal/logging"
-	"example.com/axiomnizam/internal/periodic"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
+	"axiomnizam.bitbd.net/axiomnizam/internal/periodic"
 )
 
 // PeriodicScheduler wraps the periodic.Dispatcher as a lightweight

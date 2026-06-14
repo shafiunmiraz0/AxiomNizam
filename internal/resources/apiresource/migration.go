@@ -3,7 +3,7 @@ package apiresource
 import (
 	"time"
 
-	apiv1 "example.com/axiomnizam/internal/resources/apiresource/v1"
+	apiv1 "axiomnizam.bitbd.net/axiomnizam/internal/resources/apiresource/v1"
 )
 
 // Migration helpers to convert between old lifecycle.go types and new v1 types

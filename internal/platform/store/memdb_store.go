@@ -28,7 +28,7 @@ import (
 	"sync"
 	"time"
 
-	"example.com/axiomnizam/internal/platform/errs"
+	"axiomnizam.bitbd.net/axiomnizam/internal/platform/errs"
 
 	"github.com/hashicorp/go-memdb"
 )

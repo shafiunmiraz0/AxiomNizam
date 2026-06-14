@@ -1,10 +1,10 @@
 package bootstrap
 
 import (
-	"example.com/axiomnizam/internal/gatekeeper/audit"
-	"example.com/axiomnizam/internal/gatekeeper/cache"
-	"example.com/axiomnizam/internal/gatekeeper/contracts"
-	"example.com/axiomnizam/internal/gatekeeper/metrics"
+	"axiomnizam.bitbd.net/axiomnizam/internal/gatekeeper/audit"
+	"axiomnizam.bitbd.net/axiomnizam/internal/gatekeeper/cache"
+	"axiomnizam.bitbd.net/axiomnizam/internal/gatekeeper/contracts"
+	"axiomnizam.bitbd.net/axiomnizam/internal/gatekeeper/metrics"
 )
 
 // Provider implements contracts.Provider for dependency injection.

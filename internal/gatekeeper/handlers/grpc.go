@@ -3,7 +3,7 @@ package handlers
 import (
 	"context"
 
-	"example.com/axiomnizam/internal/gatekeeper/contracts"
+	"axiomnizam.bitbd.net/axiomnizam/internal/gatekeeper/contracts"
 )
 
 // GRPCHandler provides gRPC endpoints for MFA operations.

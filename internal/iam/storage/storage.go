@@ -1,7 +1,7 @@
 package storage
 
 import (
-	"example.com/axiomnizam/internal/logging"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
 	"context"
 	"encoding/json"
 	"errors"
@@ -10,10 +10,10 @@ import (
 	"sync"
 	"time"
 
-	"example.com/axiomnizam/internal/iam/authn"
-	"example.com/axiomnizam/internal/iam/authz"
-	"example.com/axiomnizam/internal/iam/identity"
-	"example.com/axiomnizam/internal/iam/oauth"
+	"axiomnizam.bitbd.net/axiomnizam/internal/iam/authn"
+	"axiomnizam.bitbd.net/axiomnizam/internal/iam/authz"
+	"axiomnizam.bitbd.net/axiomnizam/internal/iam/identity"
+	"axiomnizam.bitbd.net/axiomnizam/internal/iam/oauth"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"gorm.io/gorm"
 )

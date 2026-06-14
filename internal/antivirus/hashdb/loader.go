@@ -1,7 +1,7 @@
 package hashdb
 
 import (
-	"example.com/axiomnizam/internal/logging"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
 	"bufio"
 	"encoding/json"
 	"fmt"
@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"strings"
 
-	"example.com/axiomnizam/internal/antivirus"
+	"axiomnizam.bitbd.net/axiomnizam/internal/antivirus"
 )
 
 // ─────────────────────────────────────────────────────────────────────────────

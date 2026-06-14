@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"example.com/axiomnizam/internal/gatekeeper/audit"
+	"axiomnizam.bitbd.net/axiomnizam/internal/gatekeeper/audit"
 )
 
 // AuditRepository implements audit.AuditBackend using PostgreSQL.

@@ -1,7 +1,7 @@
 package admin
 
 import (
-	"example.com/axiomnizam/internal/logging"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -14,16 +14,16 @@ import (
 	"strings"
 	"time"
 
-	"example.com/axiomnizam/internal/antivirus"
-	avcache "example.com/axiomnizam/internal/antivirus/cache"
-	"example.com/axiomnizam/internal/scanner"
-	"example.com/axiomnizam/internal/storage/access"
-	"example.com/axiomnizam/internal/storage/controller"
-	"example.com/axiomnizam/internal/storage/audit"
-	storageMetrics "example.com/axiomnizam/internal/storage/metrics"
-	"example.com/axiomnizam/internal/storage/models"
-	"example.com/axiomnizam/internal/storage/store"
-	"example.com/axiomnizam/internal/storage/tenant"
+	"axiomnizam.bitbd.net/axiomnizam/internal/antivirus"
+	avcache "axiomnizam.bitbd.net/axiomnizam/internal/antivirus/cache"
+	"axiomnizam.bitbd.net/axiomnizam/internal/scanner"
+	"axiomnizam.bitbd.net/axiomnizam/internal/storage/access"
+	"axiomnizam.bitbd.net/axiomnizam/internal/storage/controller"
+	"axiomnizam.bitbd.net/axiomnizam/internal/storage/audit"
+	storageMetrics "axiomnizam.bitbd.net/axiomnizam/internal/storage/metrics"
+	"axiomnizam.bitbd.net/axiomnizam/internal/storage/models"
+	"axiomnizam.bitbd.net/axiomnizam/internal/storage/store"
+	"axiomnizam.bitbd.net/axiomnizam/internal/storage/tenant"
 	"github.com/gin-gonic/gin"
 )
 

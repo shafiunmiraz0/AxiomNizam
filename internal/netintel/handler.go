@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"time"
 
-	"example.com/axiomnizam/internal/netintel/audit"
-	nmetrics "example.com/axiomnizam/internal/netintel/metrics"
+	"axiomnizam.bitbd.net/axiomnizam/internal/netintel/audit"
+	nmetrics "axiomnizam.bitbd.net/axiomnizam/internal/netintel/metrics"
 
 	"github.com/gin-gonic/gin"
 )

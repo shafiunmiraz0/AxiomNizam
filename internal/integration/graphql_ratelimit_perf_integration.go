@@ -1,9 +1,9 @@
 package integration
 
 import (
-	graphqlpkg "example.com/axiomnizam/internal/graphql"
-	"example.com/axiomnizam/internal/performance"
-	"example.com/axiomnizam/internal/ratelimit"
+	graphqlpkg "axiomnizam.bitbd.net/axiomnizam/internal/graphql"
+	"axiomnizam.bitbd.net/axiomnizam/internal/performance"
+	"axiomnizam.bitbd.net/axiomnizam/internal/ratelimit"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )

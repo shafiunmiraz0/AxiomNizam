@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	"example.com/axiomnizam/internal/output"
+	"axiomnizam.bitbd.net/axiomnizam/internal/output"
 
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"

@@ -1,7 +1,7 @@
 package lineage
 
 import (
-	"example.com/axiomnizam/internal/platform/store"
+	"axiomnizam.bitbd.net/axiomnizam/internal/platform/store"
 )
 
 // LineageDualWriteStore is set when dual-write is enabled.

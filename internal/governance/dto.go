@@ -1,6 +1,6 @@
 package governance
 
-import "example.com/axiomnizam/internal/governance/models"
+import "axiomnizam.bitbd.net/axiomnizam/internal/governance/models"
 
 // MessageResponse is a generic error/ack response.
 type MessageResponse struct {

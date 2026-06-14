@@ -2,14 +2,14 @@ package database
 
 import (
 	"context"
-	"example.com/axiomnizam/internal/logging"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
 	"fmt"
 	"log"
 	"os"
 	"strings"
 	"time"
 
-	"example.com/axiomnizam/internal/config"
+	"axiomnizam.bitbd.net/axiomnizam/internal/config"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"

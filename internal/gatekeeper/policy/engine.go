@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"example.com/axiomnizam/internal/gatekeeper/models"
+	"axiomnizam.bitbd.net/axiomnizam/internal/gatekeeper/models"
 )
 
 // Engine evaluates MFA policies to determine enforcement requirements.

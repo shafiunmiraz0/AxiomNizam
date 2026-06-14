@@ -1,7 +1,7 @@
 package utils
 
 import (
-	"example.com/axiomnizam/internal/logging"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
 	"errors"
 	"fmt"
 	"strings"

@@ -1,6 +1,6 @@
 package waitx
 
-import "example.com/axiomnizam/internal/waitx/models"
+import "axiomnizam.bitbd.net/axiomnizam/internal/waitx/models"
 
 // Type aliases for backward compatibility — types live in models/.
 type (

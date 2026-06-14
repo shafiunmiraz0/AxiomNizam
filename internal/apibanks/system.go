@@ -3,9 +3,9 @@ package apibanks
 import (
 	"context"
 
-	"example.com/axiomnizam/internal/apibanks/audit"
-	"example.com/axiomnizam/internal/logging"
-	platformstore "example.com/axiomnizam/internal/platform/store"
+	"axiomnizam.bitbd.net/axiomnizam/internal/apibanks/audit"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
+	platformstore "axiomnizam.bitbd.net/axiomnizam/internal/platform/store"
 )
 
 // System holds the APIBanks module's dependencies and provides

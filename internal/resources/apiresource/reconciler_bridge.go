@@ -9,7 +9,7 @@ package apiresource
 import (
 	"context"
 
-	"example.com/axiomnizam/internal/reconciler"
+	"axiomnizam.bitbd.net/axiomnizam/internal/reconciler"
 )
 
 // AsReconciler returns the canonical reconciler.Reconciler wrapper around

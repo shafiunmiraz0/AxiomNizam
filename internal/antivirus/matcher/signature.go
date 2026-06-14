@@ -1,7 +1,7 @@
 package matcher
 
 import (
-	"example.com/axiomnizam/internal/logging"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
 	"bufio"
 	"encoding/hex"
 	"encoding/json"
@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"example.com/axiomnizam/internal/antivirus"
+	"axiomnizam.bitbd.net/axiomnizam/internal/antivirus"
 )
 
 // ─────────────────────────────────────────────────────────────────────────────

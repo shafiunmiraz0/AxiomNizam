@@ -1,13 +1,13 @@
 package events
 
 import (
-	"example.com/axiomnizam/internal/logging"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
 	"context"
 	"fmt"
 	"sync"
 	"time"
 
-	"example.com/axiomnizam/internal/resources"
+	"axiomnizam.bitbd.net/axiomnizam/internal/resources"
 )
 
 // EventType is defined in event.go with common event types

@@ -3,7 +3,7 @@ package docs
 import (
 	"net/http"
 
-	"example.com/axiomnizam/internal/models"
+	"axiomnizam.bitbd.net/axiomnizam/internal/models"
 	"github.com/gin-gonic/gin"
 )
 

@@ -1,6 +1,6 @@
 package storage
 
-import "example.com/axiomnizam/internal/errors"
+import "axiomnizam.bitbd.net/axiomnizam/internal/errors"
 
 // Storage-specific sentinel errors.
 var (

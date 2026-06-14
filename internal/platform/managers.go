@@ -1,17 +1,17 @@
 package platform
 
 import (
-	"example.com/axiomnizam/internal/bulk"
-	"example.com/axiomnizam/internal/database"
-	"example.com/axiomnizam/internal/eventbus"
-	exportpkg "example.com/axiomnizam/internal/export"
-	"example.com/axiomnizam/internal/lineage"
-	"example.com/axiomnizam/internal/rbac"
-	"example.com/axiomnizam/internal/streaming"
-	"example.com/axiomnizam/internal/tenant"
-	"example.com/axiomnizam/internal/tracing"
-	"example.com/axiomnizam/internal/versioning"
-	"example.com/axiomnizam/internal/webhooks"
+	"axiomnizam.bitbd.net/axiomnizam/internal/bulk"
+	"axiomnizam.bitbd.net/axiomnizam/internal/database"
+	"axiomnizam.bitbd.net/axiomnizam/internal/eventbus"
+	exportpkg "axiomnizam.bitbd.net/axiomnizam/internal/export"
+	"axiomnizam.bitbd.net/axiomnizam/internal/lineage"
+	"axiomnizam.bitbd.net/axiomnizam/internal/rbac"
+	"axiomnizam.bitbd.net/axiomnizam/internal/streaming"
+	"axiomnizam.bitbd.net/axiomnizam/internal/tenant"
+	"axiomnizam.bitbd.net/axiomnizam/internal/tracing"
+	"axiomnizam.bitbd.net/axiomnizam/internal/versioning"
+	"axiomnizam.bitbd.net/axiomnizam/internal/webhooks"
 )
 
 // Managers bundles persistent platform manager implementations used by API handlers.

@@ -1,7 +1,7 @@
 package repositories
 
 import (
-	"example.com/axiomnizam/internal/iam/models"
+	"axiomnizam.bitbd.net/axiomnizam/internal/iam/models"
 )
 
 // ClientScopeRepository defines CRUD operations for IAM client scopes.

@@ -2,15 +2,15 @@ package metrics
 
 import (
 	"fmt"
-	"example.com/axiomnizam/internal/logging"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
 	"context"
 	"encoding/json"
 	"sync"
 	"sync/atomic"
 	"time"
 
-	platformstore "example.com/axiomnizam/internal/platform/store"
-	"example.com/axiomnizam/internal/storage/models"
+	platformstore "axiomnizam.bitbd.net/axiomnizam/internal/platform/store"
+	"axiomnizam.bitbd.net/axiomnizam/internal/storage/models"
 )
 
 const (

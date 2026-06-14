@@ -13,7 +13,7 @@ import (
 	"sync"
 	"time"
 
-	"example.com/axiomnizam/internal/platform/resilience"
+	"axiomnizam.bitbd.net/axiomnizam/internal/platform/resilience"
 )
 
 // DataSourceExecutor abstracts executing SQL against a single datasource.
