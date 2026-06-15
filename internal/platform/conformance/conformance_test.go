@@ -5,6 +5,7 @@ import (
 	"go/parser"
 	"go/token"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -52,45 +53,117 @@ func TestConformance_NoRawPersistenceInTargets(t *testing.T) {
 	}
 }
 
+// handlerDirs lists directories that contain handler code to check.
+var handlerDirs = []string{
+	"internal/storage/admin",
+	"internal/iam/admin",
+	"internal/antivirus",
+	"internal/scanner",
+	"internal/apibuilder",
+}
+
 // TestConformance_HandlersAreThin flags handler structs that still hold
-// a raw etcd client or *sql.DB field.  This is informational for now —
-// the test only *reports* offenders under internal/handlers/ and does
-// not fail, so we can track migration progress without breaking main.
+// a raw etcd client or *sql.DB field.  This is informational for now.
 func TestConformance_HandlersAreThin(t *testing.T) {
 	root := repoRoot(t)
-	dir := filepath.Join(root, "internal", "handlers")
-	fset := token.NewFileSet()
-	pkgs, err := parser.ParseDir(fset, dir, skipTests, parser.ParseComments)
-	if err != nil {
-		t.Skipf("cannot parse handlers package: %v", err)
-		return
-	}
 
 	var violations []string
-	for _, pkg := range pkgs {
-		for fname, f := range pkg.Files {
-			ast.Inspect(f, func(n ast.Node) bool {
-				st, ok := n.(*ast.StructType)
-				if !ok || st.Fields == nil {
-					return true
-				}
-				for _, field := range st.Fields.List {
-					typeText := exprText(field.Type)
-					switch {
-					case strings.Contains(typeText, "clientv3.Client"),
-						strings.Contains(typeText, "sql.DB"):
-						violations = append(violations,
-							filepath.Base(fname)+": field type "+typeText)
+	for _, rel := range handlerDirs {
+		dir := filepath.Join(root, filepath.FromSlash(rel))
+		fset := token.NewFileSet()
+		pkgs, err := parser.ParseDir(fset, dir, skipTests, parser.ParseComments)
+		if err != nil {
+			continue
+		}
+		for _, pkg := range pkgs {
+			for fname, f := range pkg.Files {
+				ast.Inspect(f, func(n ast.Node) bool {
+					st, ok := n.(*ast.StructType)
+					if !ok || st.Fields == nil {
+						return true
 					}
-				}
-				return true
-			})
+					for _, field := range st.Fields.List {
+						typeText := exprText(field.Type)
+						switch {
+						case strings.Contains(typeText, "clientv3.Client"),
+							strings.Contains(typeText, "sql.DB"):
+							violations = append(violations,
+								filepath.Base(fname)+": field type "+typeText)
+						}
+					}
+					return true
+				})
+			}
 		}
 	}
+
 	if len(violations) > 0 {
 		t.Logf("handlers still holding raw persistence (informational, %d):", len(violations))
 		for _, v := range violations {
 			t.Logf("  - %s", v)
 		}
 	}
+}
+
+// TestConformance_HandlersUseTypedErrors flags handlers that use ad-hoc
+// gin.H{"error": ...} instead of the standard internal/errors package.
+func TestConformance_HandlersUseTypedErrors(t *testing.T) {
+	root := repoRoot(t)
+
+	var violations []string
+	for _, rel := range handlerDirs {
+		dir := filepath.Join(root, filepath.FromSlash(rel))
+		fset := token.NewFileSet()
+		pkgs, err := parser.ParseDir(fset, dir, skipTests, parser.ParseComments)
+		if err != nil {
+			continue
+		}
+		for _, pkg := range pkgs {
+			for fname, f := range pkg.Files {
+				ast.Inspect(f, func(n ast.Node) bool {
+					call, ok := n.(*ast.CallExpr)
+					if !ok {
+						return true
+					}
+					if isGinHErrorCall(call) {
+						pos := fset.Position(call.Pos())
+						violations = append(violations,
+							filepath.Base(fname)+":"+strconv.Itoa(pos.Line)+" uses gin.H{\"error\":...}")
+					}
+					return true
+				})
+			}
+		}
+	}
+	if len(violations) > 0 {
+		t.Logf("handlers using ad-hoc error format (informational, %d):", len(violations))
+		for _, v := range violations {
+			t.Logf("  - %s", v)
+		}
+	}
+}
+
+// isGinHErrorCall checks if a call expression is gin.H{"error": ...}.
+func isGinHErrorCall(call *ast.CallExpr) bool {
+	// This is a simplified check - looks for composite literals with "error" key.
+	cl, ok := call.Fun.(*ast.CompositeLit)
+	if !ok {
+		return false
+	}
+	// Check if it's gin.H type.
+	if ident, ok := cl.Type.(*ast.Ident); ok {
+		if ident.Name != "H" {
+			return false
+		}
+	}
+	for _, elt := range cl.Elts {
+		kv, ok := elt.(*ast.KeyValueExpr)
+		if !ok {
+			continue
+		}
+		if lit, ok := kv.Key.(*ast.BasicLit); ok && lit.Value == `"error"` {
+			return true
+		}
+	}
+	return false
 }
