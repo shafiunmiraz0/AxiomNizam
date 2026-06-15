@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sync"
 
-	"example.com/axiomnizam/internal/resources"
+	"axiomnizam.bitbd.net/axiomnizam/internal/resources"
 )
 
 // Store interface for storing resources

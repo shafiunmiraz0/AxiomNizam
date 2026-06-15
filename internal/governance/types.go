@@ -3,7 +3,7 @@ package governance
 // Type aliases re-exported from models/ for backward compatibility.
 // New code should import governance/models directly.
 
-import "example.com/axiomnizam/internal/governance/models"
+import "axiomnizam.bitbd.net/axiomnizam/internal/governance/models"
 
 type ComplianceFramework = models.ComplianceFramework
 type EnforcementMode = models.EnforcementMode

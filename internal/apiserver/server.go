@@ -7,13 +7,13 @@ import (
 	"sync"
 	"time"
 
-	"example.com/axiomnizam/internal/kubeplus/admission"
-	"example.com/axiomnizam/internal/kubeplus/crd"
-	"example.com/axiomnizam/internal/kubeplus/scheduler"
-	"example.com/axiomnizam/internal/netintel/modes"
-	"example.com/axiomnizam/internal/resources"
-	"example.com/axiomnizam/internal/reviewflow"
-	"example.com/axiomnizam/internal/vectorplus"
+	"axiomnizam.bitbd.net/axiomnizam/internal/kubeplus/admission"
+	"axiomnizam.bitbd.net/axiomnizam/internal/kubeplus/crd"
+	"axiomnizam.bitbd.net/axiomnizam/internal/kubeplus/scheduler"
+	"axiomnizam.bitbd.net/axiomnizam/internal/netintel/modes"
+	"axiomnizam.bitbd.net/axiomnizam/internal/resources"
+	"axiomnizam.bitbd.net/axiomnizam/internal/reviewflow"
+	"axiomnizam.bitbd.net/axiomnizam/internal/vectorplus"
 	"github.com/gin-gonic/gin"
 )
 

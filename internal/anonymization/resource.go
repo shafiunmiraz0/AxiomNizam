@@ -1,6 +1,6 @@
 package anonymization
 
-import "example.com/axiomnizam/internal/anonymization/models"
+import "axiomnizam.bitbd.net/axiomnizam/internal/anonymization/models"
 
 // Type aliases re-exported from models/ for backward compatibility.
 

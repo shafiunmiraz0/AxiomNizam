@@ -3,7 +3,7 @@ package admin
 import (
 	"time"
 
-	"example.com/axiomnizam/internal/storage/models"
+	"axiomnizam.bitbd.net/axiomnizam/internal/storage/models"
 )
 
 // --- Bucket DTOs ---

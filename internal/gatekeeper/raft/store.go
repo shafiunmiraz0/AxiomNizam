@@ -6,7 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	hraft "github.com/hashicorp/raft"
-	"example.com/axiomnizam/internal/gatekeeper/models"
+	"axiomnizam.bitbd.net/axiomnizam/internal/gatekeeper/models"
 )
 
 // Store is the Raft-backed distributed state store for Gatekeeper.

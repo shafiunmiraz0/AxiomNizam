@@ -1,6 +1,6 @@
 package apibanks
 
-import "example.com/axiomnizam/internal/apibanks/models"
+import "axiomnizam.bitbd.net/axiomnizam/internal/apibanks/models"
 
 // Re-export domain Resource types from models subpackage.
 type APIBankResource = models.APIBankResource

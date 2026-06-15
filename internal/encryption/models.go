@@ -3,7 +3,7 @@ package encryption
 import (
 	"time"
 
-	"example.com/axiomnizam/internal/encryption/models"
+	"axiomnizam.bitbd.net/axiomnizam/internal/encryption/models"
 )
 
 // EncryptedField represents an encrypted data field

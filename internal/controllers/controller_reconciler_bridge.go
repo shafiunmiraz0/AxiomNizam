@@ -10,7 +10,7 @@ import (
 	"context"
 	"time"
 
-	"example.com/axiomnizam/internal/reconciler"
+	"axiomnizam.bitbd.net/axiomnizam/internal/reconciler"
 )
 
 // keyedShim adapts ControllerReconciler.Reconcile(ctx, key) to the

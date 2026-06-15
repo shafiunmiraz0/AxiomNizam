@@ -15,7 +15,7 @@ package models
 import (
 	"time"
 
-	"example.com/axiomnizam/internal/resources"
+	"axiomnizam.bitbd.net/axiomnizam/internal/resources"
 )
 
 // APIReference is a reference to an API in the bank

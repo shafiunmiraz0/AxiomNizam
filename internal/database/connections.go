@@ -1,23 +1,21 @@
 package database
 
 import (
-	"example.com/axiomnizam/internal/logging"
 	"context"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
 	"fmt"
 	"log"
 	"os"
 	"strings"
 	"time"
 
-	"example.com/axiomnizam/internal/config"
+	"axiomnizam.bitbd.net/axiomnizam/internal/config"
 	"github.com/redis/go-redis/v9"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
-	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 
+	"go.mongodb.org/mongo-driver/mongo"
 	elastic "github.com/elastic/go-elasticsearch/v8"
 	etcdclient "go.etcd.io/etcd/client/v3"
 )
@@ -49,73 +47,19 @@ var gormCfg = &gorm.Config{
 	),
 }
 
-// InitConnections initializes all database connections
+// InitConnections initializes system database connections.
+// Only PostgreSQL and etcd (when STORAGE_BACKEND=etcd) connect at startup.
+// All other databases (MySQL, MariaDB, Percona, MongoDB, Oracle, etc.)
+// are configured dynamically from the UI at runtime.
 func InitConnections(cfg *config.Config) *Connections {
 	conns := &Connections{}
 
-	// MySQL
-	if db, err := gorm.Open(mysql.Open(cfg.GetMySQLDSN()), gormCfg); err == nil {
-		conns.MySQL = db
-		logging.Z().Info("✅ MySQL connected")
-	} else {
-		logging.Z().Info(fmt.Sprintf("❌ MySQL connection failed: %v", err))
-	}
-
-	// MariaDB
-	if db, err := gorm.Open(mysql.Open(cfg.GetMariaDBDSN()), gormCfg); err == nil {
-		conns.MariaDB = db
-		logging.Z().Info("✅ MariaDB connected")
-	} else {
-		logging.Z().Info(fmt.Sprintf("❌ MariaDB connection failed: %v", err))
-	}
-
-	// Percona
-	if db, err := gorm.Open(mysql.Open(cfg.GetPerconaDSN()), gormCfg); err == nil {
-		conns.Percona = db
-		logging.Z().Info("✅ Percona connected")
-	} else {
-		logging.Z().Info(fmt.Sprintf("❌ Percona connection failed: %v", err))
-	}
-
-	// PostgreSQL
+	// PostgreSQL — system database, required
 	if db, err := gorm.Open(postgres.Open(cfg.GetPostgresDSN()), gormCfg); err == nil {
 		conns.PostgreSQL = db
 		logging.Z().Info("✅ PostgreSQL connected")
 	} else {
 		logging.Z().Info(fmt.Sprintf("❌ PostgreSQL connection failed: %v", err))
-	}
-
-	// MongoDB
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	if client, err := mongo.Connect(ctx, options.Client().ApplyURI(cfg.GetMongoDBURI())); err == nil {
-		conns.MongoDB = client
-		logging.Z().Info("✅ MongoDB connected")
-	} else {
-		logging.Z().Info(fmt.Sprintf("❌ MongoDB connection failed: %v", err))
-	}
-
-	// Valkey
-	conns.Valkey = redis.NewClient(&redis.Options{
-		Addr:     cfg.GetValkeyAddr(),
-		Password: cfg.Valkey.Password,
-	})
-	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	if _, err := conns.Valkey.Ping(ctx).Result(); err == nil {
-		logging.Z().Info("✅ Valkey connected")
-	} else {
-		logging.Z().Info(fmt.Sprintf("❌ Valkey connection failed: %v", err))
-	}
-
-	// Elasticsearch
-	if client, err := elastic.NewClient(elastic.Config{
-		Addresses: []string{cfg.GetElasticsearchURL()},
-	}); err == nil {
-		conns.Elasticsearch = client
-		logging.Z().Info("✅ Elasticsearch connected")
-	} else {
-		logging.Z().Info(fmt.Sprintf("❌ Elasticsearch connection failed: %v", err))
 	}
 
 	// etcd — skip when using embedded Raft storage backend
@@ -131,17 +75,6 @@ func InitConnections(cfg *config.Config) *Connections {
 	} else {
 		logging.Z().Info(fmt.Sprintf("❌ etcd connection failed: %v", err))
 	}
-
-	// Oracle
-	if db, err := gorm.Open(postgres.Open(cfg.GetOracleDSN()), gormCfg); err == nil {
-		conns.Oracle = db
-		logging.Z().Info("✅ Oracle connected")
-	} else {
-		logging.Z().Info(fmt.Sprintf("⚠️  Oracle connection failed: %v", err))
-	}
-
-	// Firebase (placeholder)
-	logging.Z().Info("⚠️  Firebase connection - placeholder (requires Firebase credentials)")
 
 	return conns
 }

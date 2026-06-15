@@ -1,13 +1,13 @@
 package policy
 
 import (
-	"example.com/axiomnizam/internal/logging"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
 	"encoding/json"
 	"fmt"
 	"strings"
 	"sync"
 
-	"example.com/axiomnizam/internal/storage/models"
+	"axiomnizam.bitbd.net/axiomnizam/internal/storage/models"
 )
 
 // Controller maps IAM roles to S3-compatible bucket policies.

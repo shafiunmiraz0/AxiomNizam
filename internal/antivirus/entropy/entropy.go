@@ -30,13 +30,13 @@
 package entropy
 
 import (
-	"example.com/axiomnizam/internal/logging"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
 	"bytes"
 	"fmt"
 	"math"
 	"sync/atomic"
 
-	"example.com/axiomnizam/internal/antivirus"
+	"axiomnizam.bitbd.net/axiomnizam/internal/antivirus"
 )
 
 // ─────────────────────────────────────────────────────────────────────────────

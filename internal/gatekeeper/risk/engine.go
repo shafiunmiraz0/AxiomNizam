@@ -5,7 +5,7 @@ import (
 	"net"
 	"time"
 
-	"example.com/axiomnizam/internal/gatekeeper/models"
+	"axiomnizam.bitbd.net/axiomnizam/internal/gatekeeper/models"
 )
 
 // Engine scores authentication requests based on risk signals.

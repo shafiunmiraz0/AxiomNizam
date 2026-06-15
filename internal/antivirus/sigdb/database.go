@@ -18,7 +18,7 @@
 package sigdb
 
 import (
-	"example.com/axiomnizam/internal/logging"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -26,9 +26,9 @@ import (
 	"sync"
 	"time"
 
-	"example.com/axiomnizam/internal/antivirus/hashdb"
-	"example.com/axiomnizam/internal/antivirus/matcher"
-	"example.com/axiomnizam/internal/antivirus/yara"
+	"axiomnizam.bitbd.net/axiomnizam/internal/antivirus/hashdb"
+	"axiomnizam.bitbd.net/axiomnizam/internal/antivirus/matcher"
+	"axiomnizam.bitbd.net/axiomnizam/internal/antivirus/yara"
 )
 
 // ─────────────────────────────────────────────────────────────────────────────

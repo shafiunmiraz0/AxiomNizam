@@ -2,14 +2,14 @@ package metrics
 
 import (
 	"fmt"
-	"example.com/axiomnizam/internal/logging"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
 	"context"
 	"encoding/json"
 	"sync"
 	"sync/atomic"
 	"time"
 
-	platformstore "example.com/axiomnizam/internal/platform/store"
+	platformstore "axiomnizam.bitbd.net/axiomnizam/internal/platform/store"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"

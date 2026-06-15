@@ -6,9 +6,9 @@
 package handler
 
 import (
-	"example.com/axiomnizam/internal/apimachinery/meta"
-	"example.com/axiomnizam/internal/controller/predicate"
-	"example.com/axiomnizam/internal/controller/reconcile"
+	"axiomnizam.bitbd.net/axiomnizam/internal/apimachinery/meta"
+	"axiomnizam.bitbd.net/axiomnizam/internal/controller/predicate"
+	"axiomnizam.bitbd.net/axiomnizam/internal/controller/reconcile"
 )
 
 // EnqueueRequestForOwner enqueues each OwnerReference of the event

@@ -10,7 +10,7 @@ import (
 	"regexp"
 	"strings"
 
-	"example.com/axiomnizam/internal/scanner"
+	"axiomnizam.bitbd.net/axiomnizam/internal/scanner"
 )
 
 // Scanner detects XSS attacks and malicious content embedded in SVG files.

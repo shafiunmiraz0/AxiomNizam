@@ -9,7 +9,7 @@ import (
 	"context"
 	"time"
 
-	platformstore "example.com/axiomnizam/internal/platform/store"
+	platformstore "axiomnizam.bitbd.net/axiomnizam/internal/platform/store"
 )
 
 // iamBackend is the internal interface for IAM key-value operations.

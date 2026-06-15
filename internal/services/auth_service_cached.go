@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"time"
 
-	"example.com/axiomnizam/internal/cache"
-	"example.com/axiomnizam/internal/models"
-	"example.com/axiomnizam/internal/repositories"
-	"example.com/axiomnizam/internal/utils"
+	"axiomnizam.bitbd.net/axiomnizam/internal/cache"
+	"axiomnizam.bitbd.net/axiomnizam/internal/models"
+	"axiomnizam.bitbd.net/axiomnizam/internal/repositories"
+	"axiomnizam.bitbd.net/axiomnizam/internal/utils"
 )
 
 // AuthServiceWithCache extends AuthService with caching capabilities

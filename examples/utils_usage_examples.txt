@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"example.com/axiomnizam/internal/policies"
-	"example.com/axiomnizam/internal/utils"
+	"axiomnizam.bitbd.net/axiomnizam/internal/policies"
+	"axiomnizam.bitbd.net/axiomnizam/internal/utils"
 )
 
 // ExampleAdmissionPolicies demonstrates OPA-like admission policies

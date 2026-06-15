@@ -6,10 +6,10 @@ import (
 	"sync"
 	"time"
 
-	"example.com/axiomnizam/internal/apiserver"
-	"example.com/axiomnizam/internal/client"
-	"example.com/axiomnizam/internal/resources"
-	"example.com/axiomnizam/internal/status"
+	"axiomnizam.bitbd.net/axiomnizam/internal/apiserver"
+	"axiomnizam.bitbd.net/axiomnizam/internal/client"
+	"axiomnizam.bitbd.net/axiomnizam/internal/resources"
+	"axiomnizam.bitbd.net/axiomnizam/internal/status"
 )
 
 // ========== RECONCILIATION INTEGRATION MANAGER ==========

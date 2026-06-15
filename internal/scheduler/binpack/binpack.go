@@ -14,7 +14,7 @@ package binpack
 import (
 	"sort"
 
-	"example.com/axiomnizam/internal/planner"
+	"axiomnizam.bitbd.net/axiomnizam/internal/planner"
 )
 
 // Node is what the allocator operates on.

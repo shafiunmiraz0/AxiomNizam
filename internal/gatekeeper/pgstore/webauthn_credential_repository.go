@@ -6,7 +6,7 @@ import (
 	"errors"
 	"time"
 
-	"example.com/axiomnizam/internal/gatekeeper/webauthn"
+	"axiomnizam.bitbd.net/axiomnizam/internal/gatekeeper/webauthn"
 )
 
 // WebAuthnCredentialRepository implements webauthn.CredentialStore using PostgreSQL.

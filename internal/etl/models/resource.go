@@ -16,7 +16,7 @@ package models
 import (
 	"time"
 
-	"example.com/axiomnizam/internal/resources"
+	"axiomnizam.bitbd.net/axiomnizam/internal/resources"
 )
 
 // PipelineStatus represents the lifecycle state of an ETL pipeline.

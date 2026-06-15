@@ -6,15 +6,16 @@ import (
 	"sync"
 	"time"
 
-	"example.com/axiomnizam/internal/antivirus"
-	"example.com/axiomnizam/internal/logging"
-	"example.com/axiomnizam/internal/scanner"
-	"example.com/axiomnizam/internal/scanner/archivescan"
-	"example.com/axiomnizam/internal/scanner/macro"
-	"example.com/axiomnizam/internal/scanner/metadata"
-	"example.com/axiomnizam/internal/scanner/mimetype"
-	"example.com/axiomnizam/internal/scanner/native"
-	"example.com/axiomnizam/internal/scanner/svg"
+	"axiomnizam.bitbd.net/axiomnizam/internal/antivirus"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
+	platformstore "axiomnizam.bitbd.net/axiomnizam/internal/platform/store"
+	"axiomnizam.bitbd.net/axiomnizam/internal/scanner"
+	"axiomnizam.bitbd.net/axiomnizam/internal/scanner/archivescan"
+	"axiomnizam.bitbd.net/axiomnizam/internal/scanner/macro"
+	"axiomnizam.bitbd.net/axiomnizam/internal/scanner/metadata"
+	"axiomnizam.bitbd.net/axiomnizam/internal/scanner/mimetype"
+	"axiomnizam.bitbd.net/axiomnizam/internal/scanner/native"
+	"axiomnizam.bitbd.net/axiomnizam/internal/scanner/svg"
 
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.uber.org/zap"
@@ -147,6 +148,7 @@ type APIBuilderHandler struct {
 	csvData             map[string][][]string               // raw CSV data per upload
 	db                  map[string]*gorm.DB
 	etcd                *clientv3.Client
+	kvStore             platformstore.KVStore // Raft KV fallback when etcd is nil
 	stateKey            string
 	scanOrch            *scanner.Orchestrator
 	// reference to analytics & GIS handlers for conversion
@@ -198,6 +200,15 @@ func NewAPIBuilderHandler(ah *AnalyticsHandler, gh *GISHandler, db map[string]*g
 	return h
 }
 
+// SetKVStore wires the Raft KV store for state persistence when etcd is unavailable.
+func (h *APIBuilderHandler) SetKVStore(kv platformstore.KVStore) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.kvStore = kv
+	// Try to load persisted state from KV store
+	h.loadStateFromKV()
+}
+
 // SetAVEngine wires the antivirus engine into the scanner orchestrator.
 // Called after storage system initialization provides the shared engine.
 func (h *APIBuilderHandler) SetAVEngine(engine *antivirus.Engine) {
@@ -232,8 +243,34 @@ func (h *APIBuilderHandler) loadState() bool {
 		return false
 	}
 
+	return h.applyState(resp.Kvs[0].Value)
+}
+
+// loadStateFromKV loads state from the Raft KV store (called when KV is wired late).
+func (h *APIBuilderHandler) loadStateFromKV() {
+	if h.kvStore == nil {
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	val, err := h.kvStore.Get(ctx, h.stateKey)
+	if err != nil {
+		logging.Z().Warn("api-builder: failed to load state from KV", zap.Error(err))
+		return
+	}
+	if val == "" {
+		return
+	}
+
+	h.applyState([]byte(val))
+}
+
+// applyState deserializes and applies a persisted state blob.
+func (h *APIBuilderHandler) applyState(data []byte) bool {
 	var state apiBuilderState
-	if err := json.Unmarshal(resp.Kvs[0].Value, &state); err != nil {
+	if err := json.Unmarshal(data, &state); err != nil {
 		logging.Z().Warn("api-builder: failed to decode persisted state", zap.Error(err))
 		return false
 	}
@@ -275,14 +312,12 @@ func (h *APIBuilderHandler) loadState() bool {
 		}
 		h.analyticsHandler.mu.Unlock()
 	}
+
+	logging.Z().Info("api-builder: state loaded", zap.Int("apis", len(h.customAPIs)))
 	return true
 }
 
 func (h *APIBuilderHandler) persistStateLocked() {
-	if h.etcd == nil {
-		return
-	}
-
 	state := apiBuilderState{
 		CustomAPIs:          h.customAPIs,
 		APIData:             h.apiData,
@@ -301,8 +336,18 @@ func (h *APIBuilderHandler) persistStateLocked() {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	if _, err := h.etcd.Put(ctx, h.stateKey, string(payload)); err != nil {
-		logging.Z().Warn("api-builder: failed to persist state", zap.Error(err))
+	// Try etcd first, then KV store
+	if h.etcd != nil {
+		if _, err := h.etcd.Put(ctx, h.stateKey, string(payload)); err != nil {
+			logging.Z().Warn("api-builder: failed to persist state (etcd)", zap.Error(err))
+		}
+		return
+	}
+
+	if h.kvStore != nil {
+		if err := h.kvStore.Put(ctx, h.stateKey, string(payload)); err != nil {
+			logging.Z().Warn("api-builder: failed to persist state (kv)", zap.Error(err))
+		}
 	}
 }
 

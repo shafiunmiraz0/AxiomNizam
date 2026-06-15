@@ -1,6 +1,6 @@
 package webhooks
 
-import "example.com/axiomnizam/internal/webhooks/models"
+import "axiomnizam.bitbd.net/axiomnizam/internal/webhooks/models"
 
 // Re-exported resource types from models/.
 type WebhookResource = models.WebhookResource

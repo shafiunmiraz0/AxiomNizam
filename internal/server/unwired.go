@@ -9,34 +9,35 @@ import (
 	"sync"
 	"time"
 
-	"example.com/axiomnizam/internal/alerting"
-	alertingmodels "example.com/axiomnizam/internal/alerting/models"
-	"example.com/axiomnizam/internal/anonymization"
-	"example.com/axiomnizam/internal/antivirus"
-	"example.com/axiomnizam/internal/autopilot"
-	"example.com/axiomnizam/internal/catalog"
-	"example.com/axiomnizam/internal/config"
-	"example.com/axiomnizam/internal/contracts"
-	"example.com/axiomnizam/internal/costing"
-	"example.com/axiomnizam/internal/database"
-	"example.com/axiomnizam/internal/deployment"
-	"example.com/axiomnizam/internal/featurestore"
-	"example.com/axiomnizam/internal/federation"
-	"example.com/axiomnizam/internal/governance"
-	governancemodels "example.com/axiomnizam/internal/governance/models"
-	"example.com/axiomnizam/internal/heartbeat"
-	"example.com/axiomnizam/internal/migrations"
-	"example.com/axiomnizam/internal/mlpipeline"
-	"example.com/axiomnizam/internal/platform"
-	platformstore "example.com/axiomnizam/internal/platform/store"
-	"example.com/axiomnizam/internal/ratelimit"
-	"example.com/axiomnizam/internal/schemaregistry"
-	"example.com/axiomnizam/internal/serviceregistry"
-	"example.com/axiomnizam/internal/slo"
-	"example.com/axiomnizam/internal/storage"
-	"example.com/axiomnizam/internal/stream"
-	"example.com/axiomnizam/internal/streamanalytics"
-	"example.com/axiomnizam/internal/trivy"
+	"axiomnizam.bitbd.net/axiomnizam/internal/alerting"
+	alertingmodels "axiomnizam.bitbd.net/axiomnizam/internal/alerting/models"
+	"axiomnizam.bitbd.net/axiomnizam/internal/anonymization"
+	"axiomnizam.bitbd.net/axiomnizam/internal/antivirus"
+	"axiomnizam.bitbd.net/axiomnizam/internal/autopilot"
+	"axiomnizam.bitbd.net/axiomnizam/internal/catalog"
+	"axiomnizam.bitbd.net/axiomnizam/internal/config"
+	"axiomnizam.bitbd.net/axiomnizam/internal/contracts"
+	"axiomnizam.bitbd.net/axiomnizam/internal/costing"
+	"axiomnizam.bitbd.net/axiomnizam/internal/database"
+	"axiomnizam.bitbd.net/axiomnizam/internal/deployment"
+	"axiomnizam.bitbd.net/axiomnizam/internal/featurestore"
+	"axiomnizam.bitbd.net/axiomnizam/internal/federation"
+	"axiomnizam.bitbd.net/axiomnizam/internal/governance"
+	governancemodels "axiomnizam.bitbd.net/axiomnizam/internal/governance/models"
+	"axiomnizam.bitbd.net/axiomnizam/internal/heartbeat"
+	"axiomnizam.bitbd.net/axiomnizam/internal/migrations"
+	"axiomnizam.bitbd.net/axiomnizam/internal/mlpipeline"
+	"axiomnizam.bitbd.net/axiomnizam/internal/platform"
+	platformstore "axiomnizam.bitbd.net/axiomnizam/internal/platform/store"
+	"axiomnizam.bitbd.net/axiomnizam/internal/ratelimit"
+	"axiomnizam.bitbd.net/axiomnizam/internal/scanner"
+	"axiomnizam.bitbd.net/axiomnizam/internal/schemaregistry"
+	"axiomnizam.bitbd.net/axiomnizam/internal/serviceregistry"
+	"axiomnizam.bitbd.net/axiomnizam/internal/slo"
+	"axiomnizam.bitbd.net/axiomnizam/internal/storage"
+	"axiomnizam.bitbd.net/axiomnizam/internal/stream"
+	"axiomnizam.bitbd.net/axiomnizam/internal/streamanalytics"
+	"axiomnizam.bitbd.net/axiomnizam/internal/trivy"
 	"github.com/gin-gonic/gin"
 )
 
@@ -314,10 +315,32 @@ func WireUnwiredModules(
 	// ====================================
 	if storageSys != nil && storageSys.AVEngine != nil {
 		avHandler := antivirus.NewAPIHandler(storageSys.AVEngine)
-		avHandler.RegisterRoutes(router.Group("/api/v1", authMiddleware))
+		if backendMgr != nil {
+			avHandler.SetKVStore(backendMgr.KV())
+		}
+		avHandler.RegisterRoutes(router.Group("/api/v1", authMiddleware), adminOrSysMiddleware)
 		log.Println("✅ Antivirus management API registered (reusing storage engine)")
 	} else {
 		log.Println("⚠️  Antivirus engine not available — management API skipped")
+	}
+
+	// ====================================
+	// SCANNER CONFIG API (uses existing orchestrator from storage module)
+	// ====================================
+	if storageSys != nil && storageSys.ScanOrch != nil {
+		var kvStore platformstore.KVStore
+		if backendMgr != nil {
+			kvStore = backendMgr.KV()
+		}
+		scannerHandler := scanner.NewScannerConfigHandler(storageSys.ScanOrch, kvStore)
+		scGroup := router.Group("/api/v1/scanner", authMiddleware)
+		adminSc := scGroup.Group("/")
+		adminSc.Use(adminOrSysMiddleware)
+		{
+			adminSc.GET("/config", scannerHandler.GetConfig)
+			adminSc.PUT("/config", scannerHandler.UpdateConfig)
+		}
+		log.Println("✅ Scanner config API registered")
 	}
 
 	// ====================================
@@ -442,7 +465,11 @@ func PrintStartupBanner(cfg *config.Config, iamOnlyAuth bool) {
 	apiPort := cfg.API.Port
 	apiHost := cfg.API.Host
 
-	fmt.Printf("📡 API Server running on http://%s:%s\n", apiHost, apiPort)
+	scheme := "https"
+	if os.Getenv("TLS_ENABLED") == "false" {
+		scheme = "http"
+	}
+	fmt.Printf("📡 AxiomNizam running on %s://%s:%s\n", scheme, apiHost, apiPort)
 	fmt.Println("\n🔐 RBAC Security Model:")
 	fmt.Println("  ✅ READ  operations (GET)     - Allowed for all authenticated users")
 	fmt.Println("  ❌ WRITE operations (POST/PUT/DELETE) - Allowed ONLY for users with 'admin' role")
@@ -480,7 +507,7 @@ func PrintStartupBanner(cfg *config.Config, iamOnlyAuth bool) {
 	fmt.Println("       Body: [{\"query\": \"SQL_QUERY\", \"params\": []}]")
 	fmt.Println("  GET  /api/{db}/schema           - Get table schema")
 	fmt.Println("       Example: /api/mysql/schema?table=users")
-	fmt.Println("  Available databases: mysql, mariadb, postgres, percona, oracle")
+	fmt.Println("  Available databases: postgres (others configured dynamically from UI)")
 	fmt.Println()
 	fmt.Println("Notification endpoints (authenticated users):")
 	fmt.Println("  POST /api/notifications/send    - Send custom notification to Discord")

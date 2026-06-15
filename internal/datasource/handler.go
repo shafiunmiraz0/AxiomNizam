@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"example.com/axiomnizam/internal/logging"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"

@@ -1,6 +1,6 @@
 package schemaregistry
 
-import "example.com/axiomnizam/internal/schemaregistry/models"
+import "axiomnizam.bitbd.net/axiomnizam/internal/schemaregistry/models"
 
 // Re-export constants
 const (

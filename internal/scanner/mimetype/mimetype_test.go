@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"example.com/axiomnizam/internal/scanner"
+	"axiomnizam.bitbd.net/axiomnizam/internal/scanner"
 )
 
 var ctx = context.Background()

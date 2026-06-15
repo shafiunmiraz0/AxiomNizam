@@ -14,8 +14,8 @@ import (
 	"sync"
 	"time"
 
-	"example.com/axiomnizam/internal/controller/predicate"
-	"example.com/axiomnizam/internal/controller/reconcile"
+	"axiomnizam.bitbd.net/axiomnizam/internal/controller/predicate"
+	"axiomnizam.bitbd.net/axiomnizam/internal/controller/reconcile"
 )
 
 // Queue is the narrow subset of workqueue.RateLimitingInterface the

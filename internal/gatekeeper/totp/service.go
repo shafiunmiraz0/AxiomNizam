@@ -7,7 +7,7 @@ import (
 	"errors"
 	"time"
 
-	"example.com/axiomnizam/internal/gatekeeper/models"
+	"axiomnizam.bitbd.net/axiomnizam/internal/gatekeeper/models"
 )
 
 // Service generates and validates TOTP (Time-based One-Time Password) OTPs.

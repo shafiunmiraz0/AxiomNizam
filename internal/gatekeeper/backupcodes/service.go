@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"example.com/axiomnizam/internal/gatekeeper/models"
-	"example.com/axiomnizam/internal/gatekeeper/repositories"
+	"axiomnizam.bitbd.net/axiomnizam/internal/gatekeeper/models"
+	"axiomnizam.bitbd.net/axiomnizam/internal/gatekeeper/repositories"
 )
 
 // Service manages backup code generation, validation, and consumption.

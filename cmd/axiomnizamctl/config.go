@@ -5,8 +5,8 @@ import (
 	"os"
 	"strings"
 
-	"example.com/axiomnizam/internal/client"
-	"example.com/axiomnizam/internal/output"
+	"axiomnizam.bitbd.net/axiomnizam/internal/client"
+	"axiomnizam.bitbd.net/axiomnizam/internal/output"
 	"github.com/spf13/cobra"
 )
 

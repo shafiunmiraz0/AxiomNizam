@@ -4,8 +4,8 @@ package client
 import (
 	"context"
 
-	"example.com/axiomnizam/internal/reconciler"
-	"example.com/axiomnizam/internal/resources"
+	"axiomnizam.bitbd.net/axiomnizam/internal/reconciler"
+	"axiomnizam.bitbd.net/axiomnizam/internal/resources"
 )
 
 func (r *DefaultReconciler) AsReconciler() reconciler.Reconciler {

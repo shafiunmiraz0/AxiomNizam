@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"example.com/axiomnizam/internal/workflows"
+	"axiomnizam.bitbd.net/axiomnizam/internal/workflows"
 	"gopkg.in/yaml.v3"
 
 	"github.com/spf13/cobra"

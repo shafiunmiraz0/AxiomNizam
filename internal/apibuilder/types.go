@@ -1,6 +1,6 @@
 package apibuilder
 
-import "example.com/axiomnizam/internal/apibuilder/models"
+import "axiomnizam.bitbd.net/axiomnizam/internal/apibuilder/models"
 
 // Type aliases for backward compatibility — types live in models/.
 type (

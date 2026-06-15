@@ -3,10 +3,10 @@ package eventbus
 import (
 	"time"
 
-	"example.com/axiomnizam/internal/platform/dualwrite"
-	"example.com/axiomnizam/internal/platform/featureflags"
-	"example.com/axiomnizam/internal/platform/store"
-	"example.com/axiomnizam/internal/resources"
+	"axiomnizam.bitbd.net/axiomnizam/internal/platform/dualwrite"
+	"axiomnizam.bitbd.net/axiomnizam/internal/platform/featureflags"
+	"axiomnizam.bitbd.net/axiomnizam/internal/platform/store"
+	"axiomnizam.bitbd.net/axiomnizam/internal/resources"
 )
 
 const eventbusDWModule = "eventbus"

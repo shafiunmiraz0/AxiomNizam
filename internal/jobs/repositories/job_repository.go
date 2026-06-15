@@ -3,7 +3,7 @@ package repositories
 import (
 	"context"
 
-	"example.com/axiomnizam/internal/jobs"
+	"axiomnizam.bitbd.net/axiomnizam/internal/jobs"
 )
 
 // JobRepository defines persistence operations for background jobs.

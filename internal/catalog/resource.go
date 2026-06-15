@@ -1,7 +1,7 @@
 package catalog
 
 // Re-export domain types from models sub-package for backward compatibility.
-import "example.com/axiomnizam/internal/catalog/models"
+import "axiomnizam.bitbd.net/axiomnizam/internal/catalog/models"
 
 // --- Constants ---
 const (

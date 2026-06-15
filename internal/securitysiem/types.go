@@ -1,6 +1,6 @@
 package securitysiem
 
-import "example.com/axiomnizam/internal/securitysiem/models"
+import "axiomnizam.bitbd.net/axiomnizam/internal/securitysiem/models"
 
 // Type aliases for backward compatibility.
 type SecurityEventResource = models.SecurityEventResource

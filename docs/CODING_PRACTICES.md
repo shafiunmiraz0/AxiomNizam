@@ -110,7 +110,7 @@ The codebase has **three logging patterns** in active use:
 | Pattern | Import | Files Using | Structured | Level Control |
 |---------|--------|-------------|------------|---------------|
 | stdlib `log` | `"log"` | **~46 files** (pre-existing only) | ❌ No | ❌ No |
-| zap via `internal/logging` | `"example.com/axiomnizam/internal/logging"` | **38 files** (13 reconcilers + 13 handlers + 9 legacy handlers + storeutil + tracker + channels) | ✅ Yes | ✅ Yes |
+| zap via `internal/logging` | `"axiomnizam.bitbd.net/axiomnizam/internal/logging"` | **38 files** (13 reconcilers + 13 handlers + 9 legacy handlers + storeutil + tracker + channels) | ✅ Yes | ✅ Yes |
 | zap direct | `"go.uber.org/zap"` | **~11 files** | ✅ Yes | ✅ Yes |
 
 **All 26 new module files (13 reconcilers + 13 handlers) and all 9 legacy handler files now use `internal/logging`** with structured Debug/Warn/Info/Error log lines. 62 handler error paths, 13+ reconciler error paths, and 57 legacy handler log points have structured logging. The migration of remaining pre-existing files (~46) is tracked separately.
@@ -120,7 +120,7 @@ The codebase has **three logging patterns** in active use:
 **Use `internal/logging` for all new code:**
 
 ```go
-import "example.com/axiomnizam/internal/logging"
+import "axiomnizam.bitbd.net/axiomnizam/internal/logging"
 
 // GOOD — structured, leveled, context-aware
 func (r *MyReconciler) Reconcile(ctx context.Context, obj reconciler.Resource) reconciler.ReconcileResult {
@@ -500,11 +500,11 @@ import (
     "time"
 
     // 2. Internal packages
-    "example.com/axiomnizam/internal/logging"
-    "example.com/axiomnizam/internal/platform/store"
-    "example.com/axiomnizam/internal/platform/storeutil"
-    "example.com/axiomnizam/internal/reconciler"
-    "example.com/axiomnizam/internal/resources"
+    "axiomnizam.bitbd.net/axiomnizam/internal/logging"
+    "axiomnizam.bitbd.net/axiomnizam/internal/platform/store"
+    "axiomnizam.bitbd.net/axiomnizam/internal/platform/storeutil"
+    "axiomnizam.bitbd.net/axiomnizam/internal/reconciler"
+    "axiomnizam.bitbd.net/axiomnizam/internal/resources"
 
     // 3. External dependencies
     "github.com/gin-gonic/gin"

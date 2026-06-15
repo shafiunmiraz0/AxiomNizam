@@ -7,9 +7,9 @@ import (
 	"sync"
 	"time"
 
-	"example.com/axiomnizam/internal/cache"
-	"example.com/axiomnizam/internal/resources"
-	"example.com/axiomnizam/internal/utils/logger"
+	"axiomnizam.bitbd.net/axiomnizam/internal/cache"
+	"axiomnizam.bitbd.net/axiomnizam/internal/resources"
+	"axiomnizam.bitbd.net/axiomnizam/internal/utils/logger"
 	"go.uber.org/zap"
 )
 

@@ -1,7 +1,7 @@
 package scanner
 
 import (
-	"example.com/axiomnizam/internal/logging"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -9,7 +9,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	platformstore "example.com/axiomnizam/internal/platform/store"
+	platformstore "axiomnizam.bitbd.net/axiomnizam/internal/platform/store"
 )
 
 const (

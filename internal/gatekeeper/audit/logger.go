@@ -2,16 +2,16 @@ package audit
 
 import (
 	"fmt"
-	"example.com/axiomnizam/internal/logging"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
 	"context"
 	"encoding/json"
 	"sync"
 	"time"
 
-	platformstore "example.com/axiomnizam/internal/platform/store"
+	platformstore "axiomnizam.bitbd.net/axiomnizam/internal/platform/store"
 
 	"github.com/google/uuid"
-	"example.com/axiomnizam/internal/gatekeeper/models"
+	"axiomnizam.bitbd.net/axiomnizam/internal/gatekeeper/models"
 )
 
 const (

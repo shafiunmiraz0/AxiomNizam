@@ -4,7 +4,7 @@ package cdc
 import (
 	"time"
 
-	"example.com/axiomnizam/internal/cdc/models"
+	"axiomnizam.bitbd.net/axiomnizam/internal/cdc/models"
 )
 
 // --- Constants ---

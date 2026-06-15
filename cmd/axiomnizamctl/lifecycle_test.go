@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"example.com/axiomnizam/internal/resources/apiresource"
+	"axiomnizam.bitbd.net/axiomnizam/internal/resources/apiresource"
 )
 
 const testAPIName = "test-api"

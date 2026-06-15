@@ -15,8 +15,8 @@ import (
 	"context"
 	"fmt"
 
-	"example.com/axiomnizam/internal/controller/handler"
-	"example.com/axiomnizam/internal/controller/predicate"
+	"axiomnizam.bitbd.net/axiomnizam/internal/controller/handler"
+	"axiomnizam.bitbd.net/axiomnizam/internal/controller/predicate"
 )
 
 // Channel is a Source that forwards values from a caller-owned chan

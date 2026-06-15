@@ -93,3 +93,48 @@ func ThreatsToResponse(threats []ScanResult) ThreatListResponse {
 	}
 	return ThreatListResponse{Threats: records, Count: len(records)}
 }
+
+// ApplyUpdateRequest merges a partial update request onto an existing Config,
+// returning a new Config with the changes applied. Only non-nil fields are updated.
+func ApplyUpdateRequest(base *Config, req *UpdateConfigRequest) *Config {
+	updated := *base // copy
+
+	if req.Enabled != nil {
+		updated.Enabled = *req.Enabled
+	}
+	if req.Workers != nil {
+		updated.Workers = *req.Workers
+	}
+	if req.QueueSize != nil {
+		updated.QueueSize = *req.QueueSize
+	}
+	if req.MaxFileSize != nil {
+		updated.MaxFileSize = *req.MaxFileSize
+	}
+	if req.CacheSize != nil {
+		updated.CacheSize = *req.CacheSize
+	}
+	if req.CacheTTL != nil {
+		updated.CacheTTL = parseDurationOrDefault(*req.CacheTTL, base.CacheTTL)
+	}
+	if req.QuarantineAction != nil {
+		updated.QuarantineAction = ParseQuarantineAction(*req.QuarantineAction)
+	}
+	if req.HashDBEnabled != nil {
+		updated.HashDBEnabled = *req.HashDBEnabled
+	}
+	if req.PatternEnabled != nil {
+		updated.PatternEnabled = *req.PatternEnabled
+	}
+	if req.HeuristicEnabled != nil {
+		updated.HeuristicEnabled = *req.HeuristicEnabled
+	}
+	if req.YARAEnabled != nil {
+		updated.YARAEnabled = *req.YARAEnabled
+	}
+	if req.EntropyEnabled != nil {
+		updated.EntropyEnabled = *req.EntropyEnabled
+	}
+
+	return &updated
+}

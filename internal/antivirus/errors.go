@@ -3,7 +3,7 @@ package antivirus
 import (
 	stderrors "errors"
 
-	"example.com/axiomnizam/internal/errors"
+	"axiomnizam.bitbd.net/axiomnizam/internal/errors"
 )
 
 // Antivirus-specific sentinel errors.

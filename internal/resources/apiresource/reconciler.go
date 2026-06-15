@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"example.com/axiomnizam/internal/reconciler"
-	apiv1 "example.com/axiomnizam/internal/resources/apiresource/v1"
+	"axiomnizam.bitbd.net/axiomnizam/internal/reconciler"
+	apiv1 "axiomnizam.bitbd.net/axiomnizam/internal/resources/apiresource/v1"
 )
 
 // APIResourceReconciler implements the Reconciler interface for APIResource

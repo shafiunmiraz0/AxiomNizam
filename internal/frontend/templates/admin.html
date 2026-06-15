@@ -139,7 +139,7 @@
         </div>
 
         <!-- Toolbar -->
-        <div class="builder-toolbar">
+        <div class="builder-toolbar" style="background:var(--darker-bg);border:1px solid var(--border-color);border-radius:10px;padding:16px 20px;margin-bottom:20px;">
             <div class="toolbar-left">
                 <h3>Custom APIs</h3>
                 <select id="apiCategoryFilter" onchange="loadCustomAPIs()">
@@ -158,7 +158,7 @@
                     <option value="draft">Draft</option>
                 </select>
             </div>
-            <button class="btn-primary" onclick="openCreateAPIModal()">+ Create API</button>
+            <button class="btn-primary" onclick="openCreateAPIModal()" style="padding:12px 28px;font-size:15px;font-weight:600;background:linear-gradient(135deg,var(--primary-color),#00c853);box-shadow:0 4px 15px rgba(var(--primary-rgb),0.4);letter-spacing:0.3px;">+ Create API</button>
         </div>
 
         <!-- API List -->
@@ -683,6 +683,128 @@
                 <button id="adminCertRenewBtn" class="btn-danger">Renew Now</button>
             </div>
             <pre id="adminCertificateOutput" class="cp-output">Certificate lifecycle status will appear here.</pre>
+        </div>
+
+        <!-- Antivirus Engine Configuration -->
+        <div class="settings-section" style="margin-top:16px;">
+            <h3>Antivirus Engine Configuration</h3>
+            <div class="settings-grid">
+                <div class="setting-item">
+                    <div class="setting-label">Engine Enabled</div>
+                    <div class="toggle">
+                        <input type="checkbox" id="avEnabled" aria-label="Antivirus enabled">
+                        <span class="toggle-switch"></span>
+                    </div>
+                </div>
+                <div class="setting-item">
+                    <div class="setting-label">Workers</div>
+                    <input type="number" id="avWorkers" class="setting-input" min="1" max="64" value="4">
+                </div>
+                <div class="setting-item">
+                    <div class="setting-label">Queue Size</div>
+                    <input type="number" id="avQueueSize" class="setting-input" min="1" max="100000" value="10000">
+                </div>
+                <div class="setting-item">
+                    <div class="setting-label">Max File Size (MB)</div>
+                    <input type="number" id="avMaxFileSize" class="setting-input" min="1" value="100">
+                </div>
+                <div class="setting-item">
+                    <div class="setting-label">Cache Size</div>
+                    <input type="number" id="avCacheSize" class="setting-input" min="0" value="100000">
+                </div>
+                <div class="setting-item">
+                    <div class="setting-label">Cache TTL</div>
+                    <input type="text" id="avCacheTTL" class="setting-input" value="24h" placeholder="24h">
+                </div>
+                <div class="setting-item">
+                    <div class="setting-label">Quarantine Action</div>
+                    <select id="avQuarantineAction" class="setting-input">
+                        <option value="tag">Tag (metadata only)</option>
+                        <option value="delete">Delete</option>
+                        <option value="move">Move</option>
+                    </select>
+                </div>
+            </div>
+            <h4 style="margin-top:12px;color:var(--text-secondary);">Scan Layers</h4>
+            <div class="settings-grid">
+                <div class="setting-item">
+                    <div class="setting-label">Hash DB</div>
+                    <div class="toggle">
+                        <input type="checkbox" id="avHashDB" aria-label="Hash DB" checked>
+                        <span class="toggle-switch"></span>
+                    </div>
+                </div>
+                <div class="setting-item">
+                    <div class="setting-label">Pattern Matching</div>
+                    <div class="toggle">
+                        <input type="checkbox" id="avPattern" aria-label="Pattern matching" checked>
+                        <span class="toggle-switch"></span>
+                    </div>
+                </div>
+                <div class="setting-item">
+                    <div class="setting-label">Heuristic Analysis</div>
+                    <div class="toggle">
+                        <input type="checkbox" id="avHeuristic" aria-label="Heuristic analysis" checked>
+                        <span class="toggle-switch"></span>
+                    </div>
+                </div>
+                <div class="setting-item">
+                    <div class="setting-label">YARA Rules</div>
+                    <div class="toggle">
+                        <input type="checkbox" id="avYARA" aria-label="YARA rules" checked>
+                        <span class="toggle-switch"></span>
+                    </div>
+                </div>
+                <div class="setting-item">
+                    <div class="setting-label">Entropy Analysis</div>
+                    <div class="toggle">
+                        <input type="checkbox" id="avEntropy" aria-label="Entropy analysis" checked>
+                        <span class="toggle-switch"></span>
+                    </div>
+                </div>
+            </div>
+            <div class="cp-actions" style="margin-top:12px;">
+                <button id="saveAntivirusBtn" class="btn-primary" onclick="saveAntivirusConfig()">Save Antivirus Settings</button>
+                <span id="avSaveStatus" style="margin-left:12px;font-size:0.85rem;"></span>
+            </div>
+        </div>
+
+        <!-- Scanner Configuration -->
+        <div class="settings-section" style="margin-top:16px;">
+            <h3>Scanner Configuration</h3>
+            <div class="settings-grid">
+                <div class="setting-item">
+                    <div class="setting-label">Max File Size (MB)</div>
+                    <input type="number" id="scanMaxFileSize" class="setting-input" min="1" value="100">
+                </div>
+                <div class="setting-item">
+                    <div class="setting-label">Archive Max Decompress (MB)</div>
+                    <input type="number" id="scanArchiveMaxDecompress" class="setting-input" min="1" value="1024">
+                </div>
+                <div class="setting-item">
+                    <div class="setting-label">Archive Max Depth</div>
+                    <input type="number" id="scanArchiveMaxDepth" class="setting-input" min="1" max="50" value="5">
+                </div>
+                <div class="setting-item">
+                    <div class="setting-label">Archive Max Files</div>
+                    <input type="number" id="scanArchiveMaxFiles" class="setting-input" min="1" value="10000">
+                </div>
+                <div class="setting-item">
+                    <div class="setting-label">Timeout</div>
+                    <input type="text" id="scanTimeout" class="setting-input" value="2m" placeholder="2m">
+                </div>
+                <div class="setting-item">
+                    <div class="setting-label">Parallel Scanning</div>
+                    <div class="toggle">
+                        <input type="checkbox" id="scanParallel" aria-label="Parallel scanning" checked>
+                        <span class="toggle-switch"></span>
+                    </div>
+                </div>
+            </div>
+            <div class="cp-actions" style="margin-top:12px;">
+                <button id="saveScannerBtn" class="btn-primary" onclick="saveScannerConfig()">Save Scanner Settings</button>
+                <span id="scanSaveStatus" style="margin-left:12px;font-size:0.85rem;"></span>
+            </div>
         </div>
     </div>
 </div>

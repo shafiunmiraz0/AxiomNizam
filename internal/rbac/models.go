@@ -3,7 +3,7 @@ package rbac
 import (
 	"time"
 
-	"example.com/axiomnizam/internal/rbac/models"
+	"axiomnizam.bitbd.net/axiomnizam/internal/rbac/models"
 )
 
 // Re-export shared primitives so existing rbac-package callers keep compiling.

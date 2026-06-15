@@ -3,9 +3,9 @@ package apibuilder
 import (
 	"context"
 
-	"example.com/axiomnizam/internal/apibuilder/audit"
-	"example.com/axiomnizam/internal/logging"
-	platformstore "example.com/axiomnizam/internal/platform/store"
+	"axiomnizam.bitbd.net/axiomnizam/internal/apibuilder/audit"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
+	platformstore "axiomnizam.bitbd.net/axiomnizam/internal/platform/store"
 )
 
 // System holds the apibuilder module's dependencies and provides
@@ -41,8 +41,11 @@ func (s *System) Stop() error {
 	return nil
 }
 
-// SetKVStore wires the KVStore-backed persistence into the audit log.
+// SetKVStore wires the KVStore-backed persistence into the handler and audit log.
 func (s *System) SetKVStore(kv platformstore.KVStore) {
+	if s.handler != nil {
+		s.handler.SetKVStore(kv)
+	}
 	if s.auditLogger != nil {
 		s.auditLogger.ConfigureKVPersistence(kv)
 	}

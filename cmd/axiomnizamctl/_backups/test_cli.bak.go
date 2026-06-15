@@ -7,7 +7,7 @@ import (
 	"log"
 	"time"
 
-	"example.com/axiomnizam/internal/distributedstate"
+	"axiomnizam.bitbd.net/axiomnizam/internal/distributedstate"
 )
 
 func main() {

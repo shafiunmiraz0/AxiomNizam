@@ -6,10 +6,10 @@ import (
 	"sync"
 	"time"
 
-	"example.com/axiomnizam/internal/apibanks"
-	"example.com/axiomnizam/internal/events"
-	"example.com/axiomnizam/internal/mesh"
-	"example.com/axiomnizam/internal/metrics"
+	"axiomnizam.bitbd.net/axiomnizam/internal/apibanks"
+	"axiomnizam.bitbd.net/axiomnizam/internal/events"
+	"axiomnizam.bitbd.net/axiomnizam/internal/mesh"
+	"axiomnizam.bitbd.net/axiomnizam/internal/metrics"
 )
 
 // DataPlatformIntegration integrates API banks and mesh with the core system

@@ -4,7 +4,7 @@ package etl
 import (
 	"time"
 
-	"example.com/axiomnizam/internal/etl/models"
+	"axiomnizam.bitbd.net/axiomnizam/internal/etl/models"
 )
 
 // --- Constants ---

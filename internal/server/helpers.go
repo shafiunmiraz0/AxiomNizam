@@ -12,14 +12,14 @@ import (
 	"strings"
 	"time"
 
-	"example.com/axiomnizam/internal/auth"
-	"example.com/axiomnizam/internal/bootstrapsecrets"
-	"example.com/axiomnizam/internal/config"
-	"example.com/axiomnizam/internal/database"
-	"example.com/axiomnizam/internal/models"
-	platformstore "example.com/axiomnizam/internal/platform/store"
-	resourcespkg "example.com/axiomnizam/internal/resources"
-	"example.com/axiomnizam/internal/workflows"
+	"axiomnizam.bitbd.net/axiomnizam/internal/auth"
+	"axiomnizam.bitbd.net/axiomnizam/internal/bootstrapsecrets"
+	"axiomnizam.bitbd.net/axiomnizam/internal/config"
+	"axiomnizam.bitbd.net/axiomnizam/internal/database"
+	"axiomnizam.bitbd.net/axiomnizam/internal/models"
+	platformstore "axiomnizam.bitbd.net/axiomnizam/internal/platform/store"
+	resourcespkg "axiomnizam.bitbd.net/axiomnizam/internal/resources"
+	"axiomnizam.bitbd.net/axiomnizam/internal/workflows"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"gorm.io/gorm"
 )
@@ -256,9 +256,6 @@ func ApplySecurityGuardrails(cfg *config.Config) {
 	if isDefault(cfg.IAM.SysadminPassword, "", "change-me", "changeme", "default", "password", "admin") {
 		addBlocking("IAM_SYSADMIN_PASSWORD is empty or default-like")
 	}
-	if strings.TrimSpace(os.Getenv("DEMO_JWT_SECRET")) == "" {
-		addBlocking("DEMO_JWT_SECRET is not set")
-	}
 	if strings.TrimSpace(os.Getenv("CORS_ALLOWED_ORIGINS")) == "" {
 		addBlocking("CORS_ALLOWED_ORIGINS is empty")
 	}
@@ -268,14 +265,9 @@ func ApplySecurityGuardrails(cfg *config.Config) {
 		addBlocking("TRUSTED_PROXIES=0.0.0.0/0 trusts all sources; restrict to actual proxy CIDRs")
 	}
 
-	if isDefault(cfg.MySQL.Password, "root", "password") {
-		addBlocking("MYSQL_PASSWORD is a default credential")
-	}
+	// Only check PostgreSQL — system database. MySQL/Oracle are configured dynamically from UI.
 	if isDefault(cfg.PostgreSQL.Password, "postgres", "password") {
 		addBlocking("POSTGRES_PASSWORD is a default credential")
-	}
-	if isDefault(cfg.Oracle.Password, "oracle123", "password") {
-		addBlocking("ORACLE_PASSWORD is a default credential")
 	}
 
 	if len(blocking) == 0 {

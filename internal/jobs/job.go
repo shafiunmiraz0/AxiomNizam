@@ -2,8 +2,8 @@ package jobs
 
 import (
 	"fmt"
-	"example.com/axiomnizam/internal/jobs/config"
-	"example.com/axiomnizam/internal/logging"
+	"axiomnizam.bitbd.net/axiomnizam/internal/jobs/config"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
 	"context"
 	"errors"
 	"time"

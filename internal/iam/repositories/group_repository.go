@@ -1,7 +1,7 @@
 package repositories
 
 import (
-	"example.com/axiomnizam/internal/iam/models"
+	"axiomnizam.bitbd.net/axiomnizam/internal/iam/models"
 )
 
 // GroupRepository defines CRUD operations for IAM groups.

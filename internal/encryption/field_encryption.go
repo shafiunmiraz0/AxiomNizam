@@ -10,8 +10,8 @@ import (
 	"sync"
 	"time"
 
-	"example.com/axiomnizam/internal/keyring"
-	"example.com/axiomnizam/internal/logging"
+	"axiomnizam.bitbd.net/axiomnizam/internal/keyring"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
 
 	"go.uber.org/zap"
 )

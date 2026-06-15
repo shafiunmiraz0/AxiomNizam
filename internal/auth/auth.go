@@ -1,7 +1,7 @@
 package auth
 
 import (
-	"example.com/axiomnizam/internal/logging"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
 	"crypto/rand"
 	"crypto/rsa"
 	"encoding/base64"

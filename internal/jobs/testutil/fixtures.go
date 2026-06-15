@@ -3,7 +3,7 @@ package testutil
 import (
 	"time"
 
-	"example.com/axiomnizam/internal/jobs"
+	"axiomnizam.bitbd.net/axiomnizam/internal/jobs"
 )
 
 // TestJobID is a fixed job ID for testing.

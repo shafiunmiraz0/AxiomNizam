@@ -7,11 +7,11 @@ import (
 	"net/http"
 	"time"
 
-	"example.com/axiomnizam/internal/logging"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
 
 	"go.uber.org/zap"
 
-	"example.com/axiomnizam/internal/models"
+	"axiomnizam.bitbd.net/axiomnizam/internal/models"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )

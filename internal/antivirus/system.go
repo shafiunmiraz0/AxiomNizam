@@ -2,16 +2,18 @@ package antivirus
 
 import (
 	"context"
+	"fmt"
 
-	"example.com/axiomnizam/internal/logging"
-	platformstore "example.com/axiomnizam/internal/platform/store"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
+	platformstore "axiomnizam.bitbd.net/axiomnizam/internal/platform/store"
 	"github.com/gin-gonic/gin"
 )
 
 // System holds the antivirus module's engine and provides
 // a standard bootstrap interface (NewSystem, RegisterRoutes, Start, SetKVStore).
 type System struct {
-	engine *Engine
+	engine  *Engine
+	kvStore platformstore.KVStore
 }
 
 // NewSystem creates a new antivirus System with the given engine.
@@ -38,14 +40,28 @@ func (s *System) Stop() error {
 
 // SetKVStore wires the KVStore-backed persistence into the antivirus module.
 func (s *System) SetKVStore(kv platformstore.KVStore) {
-	// Antivirus uses in-memory threat log; no KV persistence needed currently.
-	logging.Z().Info("✅ Antivirus: KVStore persistence configured (no-op)")
+	s.kvStore = kv
+
+	// Load persisted config if available, falling back to env-var config.
+	if kv != nil {
+		if persisted := LoadConfigFromKV(context.Background(), kv); persisted != nil {
+			if _, err := s.engine.UpdateConfig(persisted); err != nil {
+				logging.Z().Warn(fmt.Sprintf("antivirus: failed to load persisted config, using env defaults: %v", err))
+			} else {
+				logging.Z().Info("✅ Antivirus: loaded config from KV store")
+			}
+		}
+	}
+
+	logging.Z().Info("✅ Antivirus: KVStore persistence configured")
 }
 
 // RegisterRoutes registers antivirus API routes on the given router group.
-func (s *System) RegisterRoutes(rg *gin.RouterGroup) {
+// sysadminMiddleware is applied to write endpoints (PUT /config).
+func (s *System) RegisterRoutes(rg *gin.RouterGroup, sysadminMiddleware ...gin.HandlerFunc) {
 	handler := NewAPIHandler(s.engine)
-	handler.RegisterRoutes(rg)
+	handler.SetKVStore(s.kvStore)
+	handler.RegisterRoutes(rg, sysadminMiddleware...)
 	logging.Z().Info("✅ Antivirus routes registered")
 }
 

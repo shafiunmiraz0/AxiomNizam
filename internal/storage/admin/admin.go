@@ -1,28 +1,29 @@
 package admin
 
 import (
-	"example.com/axiomnizam/internal/logging"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
 
-	"example.com/axiomnizam/internal/antivirus"
-	avcache "example.com/axiomnizam/internal/antivirus/cache"
-	"example.com/axiomnizam/internal/scanner"
-	"example.com/axiomnizam/internal/storage/access"
-	"example.com/axiomnizam/internal/storage/controller"
-	"example.com/axiomnizam/internal/storage/audit"
-	storageMetrics "example.com/axiomnizam/internal/storage/metrics"
-	"example.com/axiomnizam/internal/storage/models"
-	"example.com/axiomnizam/internal/storage/store"
-	"example.com/axiomnizam/internal/storage/tenant"
+	"axiomnizam.bitbd.net/axiomnizam/internal/antivirus"
+	avcache "axiomnizam.bitbd.net/axiomnizam/internal/antivirus/cache"
+	"axiomnizam.bitbd.net/axiomnizam/internal/scanner"
+	"axiomnizam.bitbd.net/axiomnizam/internal/storage/access"
+	"axiomnizam.bitbd.net/axiomnizam/internal/storage/controller"
+	"axiomnizam.bitbd.net/axiomnizam/internal/storage/audit"
+	storageMetrics "axiomnizam.bitbd.net/axiomnizam/internal/storage/metrics"
+	"axiomnizam.bitbd.net/axiomnizam/internal/storage/models"
+	"axiomnizam.bitbd.net/axiomnizam/internal/storage/store"
+	"axiomnizam.bitbd.net/axiomnizam/internal/storage/tenant"
 	"github.com/gin-gonic/gin"
 )
 
@@ -1094,8 +1095,14 @@ func (h *Handler) PutObject(c *gin.Context) {
 	// storage if the scan passes. This prevents malicious objects from ever
 	// being written to storage.
 	if h.scanOrch != nil && h.scanOrch.ScannerCount() > 0 {
-		// Buffer upload to memory (limit to 100MB to prevent OOM).
-		const maxBufferSize = 100 * 1024 * 1024
+		// Buffer upload to memory for pre-commit scanning.
+		// Uses MAX_REQUEST_BODY_MB (in MB) to match the middleware limit.
+		maxBufferSize := int64(100 * 1024 * 1024) // 100 MB default
+		if v := os.Getenv("MAX_REQUEST_BODY_MB"); v != "" {
+			if mb, err := strconv.ParseInt(v, 10, 64); err == nil && mb > 0 {
+				maxBufferSize = mb << 20
+			}
+		}
 		if c.Request.ContentLength > maxBufferSize {
 			c.JSON(http.StatusRequestEntityTooLarge, gin.H{
 				"error": fmt.Sprintf("file too large for pre-commit scan (%d bytes, max %d bytes)", c.Request.ContentLength, maxBufferSize),
@@ -2172,7 +2179,12 @@ func (h *Handler) scanObjectAsync(bucket, key, tenantID, userID string, size int
 	// Limit to the engine's max file size to prevent OOM.
 	maxSize := h.avEngine.MaxFileSize()
 	if maxSize <= 0 {
-		maxSize = 100 * 1024 * 1024 // 100MB fallback
+		maxSize = int64(100 * 1024 * 1024) // 100MB fallback
+		if v := os.Getenv("MAX_REQUEST_BODY_MB"); v != "" {
+			if mb, err := strconv.ParseInt(v, 10, 64); err == nil && mb > 0 {
+				maxSize = mb << 20
+			}
+		}
 	}
 	content, err := io.ReadAll(io.LimitReader(reader, maxSize+1))
 	if err != nil {

@@ -1,7 +1,7 @@
 package s3client
 
 import (
-	"example.com/axiomnizam/internal/logging"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
 	"bytes"
 	"context"
 	"encoding/xml"
@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"example.com/axiomnizam/internal/storage/models"
+	"axiomnizam.bitbd.net/axiomnizam/internal/storage/models"
 )
 
 // Client is a native S3-compatible HTTP client implementing AWS Signature V4.

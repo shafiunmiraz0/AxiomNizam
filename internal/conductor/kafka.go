@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"example.com/axiomnizam/internal/conductor/models"
-	"example.com/axiomnizam/internal/logging"
+	"axiomnizam.bitbd.net/axiomnizam/internal/conductor/models"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
 
 	"github.com/IBM/sarama"
 )

@@ -3,8 +3,8 @@ package etl
 import (
 	"time"
 
-	"example.com/axiomnizam/internal/etl/audit"
-	"example.com/axiomnizam/internal/etl/metrics"
+	"axiomnizam.bitbd.net/axiomnizam/internal/etl/audit"
+	"axiomnizam.bitbd.net/axiomnizam/internal/etl/metrics"
 )
 
 // --- Pipeline DTOs ---

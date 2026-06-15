@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"strings"
 
-	"example.com/axiomnizam/internal/iam/models"
-	"example.com/axiomnizam/internal/iam/pgstore"
+	"axiomnizam.bitbd.net/axiomnizam/internal/iam/models"
+	"axiomnizam.bitbd.net/axiomnizam/internal/iam/pgstore"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )

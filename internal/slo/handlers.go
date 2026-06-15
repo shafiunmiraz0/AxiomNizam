@@ -10,9 +10,9 @@ import (
 	"net/http"
 	"time"
 
-	"example.com/axiomnizam/internal/logging"
-	"example.com/axiomnizam/internal/platform/store"
-	"example.com/axiomnizam/internal/platform/validate"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
+	"axiomnizam.bitbd.net/axiomnizam/internal/platform/store"
+	"axiomnizam.bitbd.net/axiomnizam/internal/platform/validate"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )

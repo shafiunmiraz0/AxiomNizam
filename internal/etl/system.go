@@ -3,10 +3,10 @@ package etl
 import (
 	"context"
 
-	"example.com/axiomnizam/internal/etl/audit"
-	"example.com/axiomnizam/internal/etl/metrics"
-	"example.com/axiomnizam/internal/logging"
-	platformstore "example.com/axiomnizam/internal/platform/store"
+	"axiomnizam.bitbd.net/axiomnizam/internal/etl/audit"
+	"axiomnizam.bitbd.net/axiomnizam/internal/etl/metrics"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
+	platformstore "axiomnizam.bitbd.net/axiomnizam/internal/platform/store"
 )
 
 // System holds the ETL module's dependencies and provides

@@ -3,8 +3,8 @@ package transform
 import (
 	"net/http"
 
-	"example.com/axiomnizam/internal/models"
-	"example.com/axiomnizam/internal/utils"
+	"axiomnizam.bitbd.net/axiomnizam/internal/models"
+	"axiomnizam.bitbd.net/axiomnizam/internal/utils"
 	"github.com/gin-gonic/gin"
 )
 

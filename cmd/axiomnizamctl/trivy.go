@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"example.com/axiomnizam/internal/trivy"
+	"axiomnizam.bitbd.net/axiomnizam/internal/trivy"
 	"github.com/spf13/cobra"
 )
 

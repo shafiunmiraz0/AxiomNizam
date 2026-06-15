@@ -10,7 +10,7 @@ import (
 	"strings"
 	"unicode"
 
-	"example.com/axiomnizam/internal/scanner"
+	"axiomnizam.bitbd.net/axiomnizam/internal/scanner"
 )
 
 // Scanner checks file size, empty files, null bytes, control characters,

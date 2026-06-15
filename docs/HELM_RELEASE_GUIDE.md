@@ -88,8 +88,8 @@ docker push shafiunmiraz0/axiomnizam:0.1.0
 
 ```bash
 docker login registry.example.com
-docker build -t registry.example.com/axiomnizam/axiomnizam:0.1.0 .
-docker push registry.example.com/axiomnizam/axiomnizam:0.1.0
+docker build -t registry.axiomnizam.bitbd.net/axiomnizam/axiomnizam:0.1.0 .
+docker push registry.axiomnizam.bitbd.net/axiomnizam/axiomnizam:0.1.0
 ```
 
 ### Update chart defaults (optional)

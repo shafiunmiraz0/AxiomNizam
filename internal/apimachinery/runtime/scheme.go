@@ -15,7 +15,7 @@ import (
 	"reflect"
 	"sync"
 
-	metav1 "example.com/axiomnizam/internal/apimachinery/meta/v1"
+	metav1 "axiomnizam.bitbd.net/axiomnizam/internal/apimachinery/meta/v1"
 )
 
 // Object is the interface every registered type must satisfy.  Any

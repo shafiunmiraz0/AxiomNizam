@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	"example.com/axiomnizam/internal/logging"
-	"example.com/axiomnizam/internal/reconciler"
-	amodels "example.com/axiomnizam/internal/apibuilder/models"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
+	"axiomnizam.bitbd.net/axiomnizam/internal/reconciler"
+	amodels "axiomnizam.bitbd.net/axiomnizam/internal/apibuilder/models"
 )
 
 // CustomAPIReconciler reconciles CustomAPIResource objects.

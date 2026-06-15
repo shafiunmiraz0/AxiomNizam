@@ -7,7 +7,7 @@ import (
 	"sync"
 	"testing"
 
-	"example.com/axiomnizam/internal/client"
+	"axiomnizam.bitbd.net/axiomnizam/internal/client"
 )
 
 func setupPlatformCommandTestContext(t *testing.T, serverURL string) {

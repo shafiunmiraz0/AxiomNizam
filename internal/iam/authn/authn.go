@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"example.com/axiomnizam/internal/iam/identity"
+	"axiomnizam.bitbd.net/axiomnizam/internal/iam/identity"
 )
 
 // Session represents an authenticated session.

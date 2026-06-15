@@ -1,7 +1,7 @@
 package admin
 
 import (
-	"example.com/axiomnizam/internal/logging"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -12,14 +12,14 @@ import (
 	"strings"
 	"time"
 
-	iamconfig "example.com/axiomnizam/internal/iam/config"
-	"example.com/axiomnizam/internal/iam/authn"
-	"example.com/axiomnizam/internal/iam/authz"
-	"example.com/axiomnizam/internal/iam/identity"
-	iammw "example.com/axiomnizam/internal/iam/middleware"
-	"example.com/axiomnizam/internal/iam/oauth"
-	"example.com/axiomnizam/internal/iam/storage"
-	"example.com/axiomnizam/internal/iam/token"
+	iamconfig "axiomnizam.bitbd.net/axiomnizam/internal/iam/config"
+	"axiomnizam.bitbd.net/axiomnizam/internal/iam/authn"
+	"axiomnizam.bitbd.net/axiomnizam/internal/iam/authz"
+	"axiomnizam.bitbd.net/axiomnizam/internal/iam/identity"
+	iammw "axiomnizam.bitbd.net/axiomnizam/internal/iam/middleware"
+	"axiomnizam.bitbd.net/axiomnizam/internal/iam/oauth"
+	"axiomnizam.bitbd.net/axiomnizam/internal/iam/storage"
+	"axiomnizam.bitbd.net/axiomnizam/internal/iam/token"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 )

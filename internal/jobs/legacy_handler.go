@@ -9,11 +9,11 @@ import (
 	"sync"
 	"time"
 
-	"example.com/axiomnizam/internal/logging"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
 
 	"go.uber.org/zap"
 
-	"example.com/axiomnizam/internal/workqueue"
+	"axiomnizam.bitbd.net/axiomnizam/internal/workqueue"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"

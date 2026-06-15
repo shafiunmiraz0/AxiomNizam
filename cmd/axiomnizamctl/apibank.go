@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"example.com/axiomnizam/internal/apibanks"
+	"axiomnizam.bitbd.net/axiomnizam/internal/apibanks"
 
 	"github.com/spf13/cobra"
 )

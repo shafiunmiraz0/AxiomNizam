@@ -3,7 +3,7 @@ package repositories
 import (
 	"time"
 
-	"example.com/axiomnizam/internal/iam/models"
+	"axiomnizam.bitbd.net/axiomnizam/internal/iam/models"
 )
 
 // SessionRepository defines CRUD operations for IAM SSO sessions.

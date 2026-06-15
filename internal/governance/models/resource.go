@@ -17,7 +17,7 @@ package models
 import (
 	"time"
 
-	"example.com/axiomnizam/internal/resources"
+	"axiomnizam.bitbd.net/axiomnizam/internal/resources"
 )
 
 // --- Constants ---

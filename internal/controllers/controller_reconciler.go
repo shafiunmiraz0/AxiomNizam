@@ -7,12 +7,12 @@ import (
 	"sync"
 	"time"
 
-	"example.com/axiomnizam/internal/cache"
-	"example.com/axiomnizam/internal/events"
-	"example.com/axiomnizam/internal/jobs"
-	"example.com/axiomnizam/internal/rbac"
-	"example.com/axiomnizam/internal/resources"
-	"example.com/axiomnizam/internal/utils/logger"
+	"axiomnizam.bitbd.net/axiomnizam/internal/cache"
+	"axiomnizam.bitbd.net/axiomnizam/internal/events"
+	"axiomnizam.bitbd.net/axiomnizam/internal/jobs"
+	"axiomnizam.bitbd.net/axiomnizam/internal/rbac"
+	"axiomnizam.bitbd.net/axiomnizam/internal/resources"
+	"axiomnizam.bitbd.net/axiomnizam/internal/utils/logger"
 	"go.uber.org/zap"
 )
 

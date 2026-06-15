@@ -3,8 +3,8 @@ package admin
 import (
 	"time"
 
-	"example.com/axiomnizam/internal/iam/authz"
-	"example.com/axiomnizam/internal/iam/models"
+	"axiomnizam.bitbd.net/axiomnizam/internal/iam/authz"
+	"axiomnizam.bitbd.net/axiomnizam/internal/iam/models"
 )
 
 // ──────────────────────────────────────────────

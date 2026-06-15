@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"example.com/axiomnizam/internal/models"
+	"axiomnizam.bitbd.net/axiomnizam/internal/models"
 	"gorm.io/gorm"
 )
 

@@ -1,7 +1,7 @@
 package migrations
 
 import (
-	"example.com/axiomnizam/internal/models"
+	"axiomnizam.bitbd.net/axiomnizam/internal/models"
 
 	"gorm.io/gorm"
 )

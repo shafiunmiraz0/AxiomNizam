@@ -1,8 +1,8 @@
 package cache
 
 import (
-	cacheconfig "example.com/axiomnizam/internal/cache/config"
-	"example.com/axiomnizam/internal/logging"
+	cacheconfig "axiomnizam.bitbd.net/axiomnizam/internal/cache/config"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
 	"fmt"
 )
 

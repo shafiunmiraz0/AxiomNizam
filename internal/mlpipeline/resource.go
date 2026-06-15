@@ -1,7 +1,7 @@
 package mlpipeline
 
 // Re-export domain types from models sub-package for backward compatibility.
-import "example.com/axiomnizam/internal/mlpipeline/models"
+import "axiomnizam.bitbd.net/axiomnizam/internal/mlpipeline/models"
 
 // --- Constants ---
 const (

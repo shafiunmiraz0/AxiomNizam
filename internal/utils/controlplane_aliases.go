@@ -7,7 +7,7 @@
 // instead of relying on these aliases.
 package utils
 
-import "example.com/axiomnizam/internal/platform/controlplane"
+import "axiomnizam.bitbd.net/axiomnizam/internal/platform/controlplane"
 
 // ValidationError is re-exported from controlplane for backwards compatibility.
 type ValidationError = controlplane.ValidationError

@@ -59,7 +59,7 @@
         var uid = localStorage.getItem('userId') || localStorage.getItem('user_id') || '';
         if (uid) { currentUserId = uid; return Promise.resolve(uid); }
         var base = (window.resolveBackendURL ? window.resolveBackendURL() : (window.BACKEND_URL || 'http://localhost:8000')).replace(/\/+$/, '');
-        return fetch(base + '/iam/auth/whoami', { headers: mfaHeaders() })
+        return fetch(base + '/api/v1/auth/whoami', { headers: mfaHeaders() })
             .then(function (r) { return r.json(); })
             .then(function (data) {
                 currentUserId = data.user_id || data.id || data.sub || '';

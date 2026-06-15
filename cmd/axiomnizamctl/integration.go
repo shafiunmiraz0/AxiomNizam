@@ -8,7 +8,7 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"example.com/axiomnizam/internal/integration"
+	"axiomnizam.bitbd.net/axiomnizam/internal/integration"
 	"github.com/spf13/cobra"
 )
 

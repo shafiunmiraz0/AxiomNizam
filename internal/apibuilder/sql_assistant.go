@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"example.com/axiomnizam/internal/logging"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"

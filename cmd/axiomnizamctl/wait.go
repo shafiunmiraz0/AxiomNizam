@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"example.com/axiomnizam/internal/waitx"
+	"axiomnizam.bitbd.net/axiomnizam/internal/waitx"
 	"github.com/spf13/cobra"
 )
 

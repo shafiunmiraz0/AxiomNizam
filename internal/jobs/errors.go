@@ -1,6 +1,6 @@
 package jobs
 
-import "example.com/axiomnizam/internal/errors"
+import "axiomnizam.bitbd.net/axiomnizam/internal/errors"
 
 // Additional jobs-specific sentinel errors.
 // Core errors (ErrJobNotFound, ErrQueueFull, etc.) are defined in job.go.

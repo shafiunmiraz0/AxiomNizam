@@ -12,8 +12,8 @@ import (
 	"context"
 	"fmt"
 
-	"example.com/axiomnizam/internal/controller/handler"
-	"example.com/axiomnizam/internal/controller/predicate"
+	"axiomnizam.bitbd.net/axiomnizam/internal/controller/handler"
+	"axiomnizam.bitbd.net/axiomnizam/internal/controller/predicate"
 )
 
 // SharedInformer is the minimal subset of informer.SharedInformer

@@ -3,7 +3,7 @@ package testutil
 import (
 	"time"
 
-	"example.com/axiomnizam/internal/scanner"
+	"axiomnizam.bitbd.net/axiomnizam/internal/scanner"
 )
 
 // TestFilename is a fixed filename for testing.

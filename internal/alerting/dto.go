@@ -3,7 +3,7 @@ package alerting
 import (
 	"time"
 
-	"example.com/axiomnizam/internal/alerting/models"
+	"axiomnizam.bitbd.net/axiomnizam/internal/alerting/models"
 )
 
 // MessageResponse is a generic error/ack response.

@@ -1,7 +1,7 @@
 package streaming
 
 import (
-	"example.com/axiomnizam/internal/platform/store"
+	"axiomnizam.bitbd.net/axiomnizam/internal/platform/store"
 )
 
 const streamingDWModule = "streaming"

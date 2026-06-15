@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"example.com/axiomnizam/internal/evalbroker"
+	"axiomnizam.bitbd.net/axiomnizam/internal/evalbroker"
 )
 
 // BrokerQueue wraps an evalbroker.Broker and implements WorkQueue.

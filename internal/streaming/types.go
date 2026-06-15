@@ -4,7 +4,7 @@ package streaming
 // so existing code referencing streaming.StreamResource etc. continues
 // to compile without changes.
 
-import "example.com/axiomnizam/internal/streaming/models"
+import "axiomnizam.bitbd.net/axiomnizam/internal/streaming/models"
 
 // Constants
 const (

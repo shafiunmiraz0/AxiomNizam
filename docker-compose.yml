@@ -1,70 +1,36 @@
-# docker-compose.yml — Single Service (API + Frontend merged)
-#
-# Network topology:
-#   frontend-net  — public-facing
-#   backend-net   — backend ↔ message queues
-#   data-net      — backend ↔ databases (internal only, no host exposure)
-#   mq-net        — message queues internal
-#
-# Default: NO host ports exposed on data/mq tiers.
-# For development access: docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+# docker-compose.yml — Single Service (API + Frontend merged) + PostgreSQL
 #
 services:
-  # ── AxiomNizam (API + Frontend merged) ───────────────────────────────────
   axiomnizam:
     build: .
     container_name: axiomnizam
     ports:
-      - "8000:8000"   # API (frontend-net boundary)
+      - "8000:8000"
     env_file:
       - .env
-    environment:
-      OPENCLAW_SQL_ASSISTANT_URL: ${OPENCLAW_SQL_ASSISTANT_URL:-}
-      OPENCLAW_SQL_ASSISTANT_TOKEN: ${OPENCLAW_SQL_ASSISTANT_TOKEN:-}
-      OPENCLAW_SQL_ASSISTANT_MODEL: ${OPENCLAW_SQL_ASSISTANT_MODEL:-openclaw}
-      OPENCLAW_SQL_ASSISTANT_TIMEOUT_SECONDS: ${OPENCLAW_SQL_ASSISTANT_TIMEOUT_SECONDS:-20}
-      IAM_SYSADMIN_EMAIL: ${IAM_SYSADMIN_EMAIL:-sysadmin@axiomnizam.local}
-      IAM_SYSADMIN_PASSWORD: ${IAM_SYSADMIN_PASSWORD:-changeme-on-first-login}
-      DEMO_JWT_SECRET: ${DEMO_JWT_SECRET:-}
-      IAM_RSA_PRIVATE_KEY: ${IAM_RSA_PRIVATE_KEY:-}
-      IAM_RSA_PRIVATE_KEY_FILE: ${IAM_RSA_PRIVATE_KEY_FILE:-}
-      IAM_INTERNAL_BASE_URL: ${IAM_INTERNAL_BASE_URL:-https://axiomnizam:8000}
-      IAM_ISSUER_URL: ${IAM_ISSUER_URL:-https://axiomnizam-platform.bitbd.net}
-      PUBLIC_FRONTEND_URL: ${PUBLIC_FRONTEND_URL:-https://axiomnizam.bitbd.net}
-      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-https://axiomnizam.bitbd.net}
-      RABBITMQ_URL: ${RABBITMQ_URL:-amqp://axiomnizam:${RABBITMQ_PASSWORD}@rabbitmq:5672/axiom}
-      KAFKA_BROKERS: ${KAFKA_BROKERS:-kafka:9092}
-      AXIOMNIZAM_RAFT_DATA_DIR: /data/raft
-      STORAGE_DATA_DIR: /data/storage
-      # Phase 15: DB connections use internal network hostnames
-      POSTGRES_HOST: postgres
-      MONGODB_HOST: mongodb
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     volumes:
       - query_logs:/data/query_logs
       - storage-data:/data/storage
       - raft-data:/data/raft
       - certs-data:/data/certs
     networks:
-      - frontend-net
-      - backend-net
+      - axiomnizam-net
       - data-net
-      - mq-net
 
-  # ── Data Tier (internal only — no host port exposure) ────────────────────
   postgres:
     image: postgres:latest
     container_name: postgres
-    # Phase 15: NO host port — only accessible via data-net
+    ports:
+      - "5432:5432"
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-axiomnizam}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
       POSTGRES_DB: ${POSTGRES_DATABASE:-app_db}
-      POSTGRES_INITDB_ARGS: "-c shared_buffers=256MB -c max_connections=200"
     volumes:
       - postgres-data:/var/lib/postgresql
-      - ./init-postgres.sql:/docker-entrypoint-initdb.d/01-init.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-axiomnizam}"]
       interval: 5s
@@ -73,139 +39,16 @@ services:
     networks:
       - data-net
 
-  # mongodb:
-  #   image: mongo:latest
-  #   container_name: mongodb
-  #   # Phase 15: NO host port — only accessible via data-net
-  #   environment:
-  #     MONGO_INITDB_ROOT_USERNAME: ${MONGODB_USER:-axiomnizam}
-  #     MONGO_INITDB_ROOT_PASSWORD: ${MONGODB_PASSWORD:?MONGODB_PASSWORD must be set}
-  #   volumes:
-  #     - mongodb-data:/data/db
-  #   networks:
-  #     - data-net
-
-  # percona:
-  #   image: percona:latest
-  #   container_name: percona
-  #   # Phase 15: NO host port — only accessible via data-net
-  #   environment:
-  #     MYSQL_ROOT_PASSWORD: ${PERCONA_PASSWORD:?PERCONA_PASSWORD must be set}
-  #     MYSQL_DATABASE: ${PERCONA_DATABASE:-app_db}
-  #   volumes:
-  #     - percona-data:/var/lib/mysql
-  #   networks:
-  #     - data-net
-
-  # etcd:
-  #   image: quay.io/coreos/etcd:v3.5.9
-  #   container_name: etcd
-  #   profiles:
-  #     - etcd
-  #     - default
-  #   # Phase 15: NO host port — only accessible via data-net
-  #   environment:
-  #     ETCD_LISTEN_CLIENT_URLS: http://0.0.0.0:2379
-  #     ETCD_ADVERTISE_CLIENT_URLS: http://etcd:2379
-  #     ETCD_UNSUPPORTED_ARCH: arm64
-  #     ETCD_DATA_DIR: /etcd-data
-  #   volumes:
-  #     - etcd-data:/etcd-data
-  #   networks:
-  #     - data-net
-
-  # ── Message Queue Tier ──────────────────────────────────────────────────
-  # rabbitmq:
-  #   image: rabbitmq:3-management
-  #   container_name: rabbitmq
-  #   # Management UI on mq-net only; AMQP accessible via backend-net
-  #   ports:
-  #     - "15672:15672"  # Management UI (optional, for ops)
-  #   environment:
-  #     RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-axiomnizam}
-  #     RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD must be set}
-  #     RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_VHOST:-/axiom}
-  #   volumes:
-  #     - rabbitmq-data:/var/lib/rabbitmq
-  #   healthcheck:
-  #     test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
-  #     interval: 10s
-  #     timeout: 5s
-  #     retries: 10
-  #   networks:
-  #     - mq-net
-  #     - backend-net
-
-  # kafka:
-  #   image: apache/kafka:latest
-  #   container_name: kafka
-  #   # Phase 15: NO host port — only accessible via mq-net
-  #   environment:
-  #     KAFKA_NODE_ID: 1
-  #     KAFKA_PROCESS_ROLES: broker,controller
-  #     KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
-  #     KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
-  #     KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
-  #     KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
-  #     KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
-  #     KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-  #     KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-  #     KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-  #     KAFKA_LOG_DIRS: /tmp/kraft-combined-logs
-  #     CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
-  #   healthcheck:
-  #     test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 > /dev/null 2>&1"]
-  #     interval: 15s
-  #     timeout: 10s
-  #     retries: 10
-  #   networks:
-  #     - mq-net
-
-# ── Networks (Phase 15: Micro-segmentation) ─────────────────────────────────
 networks:
-  # Frontend tier — public-facing, connects frontend ↔ backend
-  frontend-net:
+  axiomnizam-net:
     driver: bridge
-    ipam:
-      config:
-        - subnet: 172.32.1.0/24
-  # Backend tier — backend ↔ message queues
-  backend-net:
-    driver: bridge
-    internal: false   # needs outbound for webhooks, SIEM, etc.
-    ipam:
-      config:
-        - subnet: 172.32.2.0/24
-  # Data tier — internal only (databases, etcd)
   data-net:
     driver: bridge
-    internal: true    # Phase 15: no outbound internet access
-    ipam:
-      config:
-        - subnet: 172.32.3.0/24
-  # Message queue tier — internal only
-  mq-net:
-    driver: bridge
-    internal: true    # Phase 15: no outbound internet access
-    ipam:
-      config:
-        - subnet: 172.32.4.0/24
+    internal: false
 
 volumes:
-  mysql-data:
-  mariadb-data:
   postgres-data:
-  mongodb-data:
-  percona-data:
-  elasticsearch-data:
-  firebase-data:
-  oracle-data:
-  valkey-data:
-  etcd-data:
-  rabbitmq-data:
   query_logs:
   storage-data:
   raft-data:
   certs-data:
-  openclaw-config:
-  ollama-data:

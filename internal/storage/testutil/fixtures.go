@@ -3,7 +3,7 @@ package testutil
 import (
 	"time"
 
-	"example.com/axiomnizam/internal/storage/models"
+	"axiomnizam.bitbd.net/axiomnizam/internal/storage/models"
 )
 
 // TestTenantID is a fixed tenant ID for testing.

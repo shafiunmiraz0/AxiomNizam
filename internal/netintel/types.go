@@ -2,7 +2,7 @@ package netintel
 
 // Type aliases re-exporting from models/ so existing code compiles unchanged.
 
-import "example.com/axiomnizam/internal/netintel/models"
+import "axiomnizam.bitbd.net/axiomnizam/internal/netintel/models"
 
 const (
 	ConfigKind       = models.ConfigKind

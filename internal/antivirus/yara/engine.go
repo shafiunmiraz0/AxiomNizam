@@ -22,7 +22,7 @@
 package yara
 
 import (
-	"example.com/axiomnizam/internal/logging"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
 	"bufio"
 	"bytes"
 	"encoding/hex"
@@ -35,7 +35,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"example.com/axiomnizam/internal/antivirus"
+	"axiomnizam.bitbd.net/axiomnizam/internal/antivirus"
 )
 
 // ─────────────────────────────────────────────────────────────────────────────

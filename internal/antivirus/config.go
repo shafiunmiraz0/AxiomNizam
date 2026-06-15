@@ -2,7 +2,7 @@ package antivirus
 
 import (
 	"fmt"
-	"example.com/axiomnizam/internal/logging"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
 	"os"
 	"strconv"
 	"strings"

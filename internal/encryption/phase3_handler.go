@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"time"
 
-	"example.com/axiomnizam/internal/audit"
-	"example.com/axiomnizam/internal/lineage"
-	"example.com/axiomnizam/internal/workflows"
+	"axiomnizam.bitbd.net/axiomnizam/internal/audit"
+	"axiomnizam.bitbd.net/axiomnizam/internal/lineage"
+	"axiomnizam.bitbd.net/axiomnizam/internal/workflows"
 
 	"github.com/gin-gonic/gin"
 )

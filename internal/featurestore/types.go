@@ -1,6 +1,6 @@
 package featurestore
 
-import "example.com/axiomnizam/internal/featurestore/models"
+import "axiomnizam.bitbd.net/axiomnizam/internal/featurestore/models"
 
 const (
 	FeatureGroupKind       = models.FeatureGroupKind

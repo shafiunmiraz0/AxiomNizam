@@ -23,11 +23,11 @@ import (
 	"testing"
 	"time"
 
-	"example.com/axiomnizam/internal/apibanks"
-	"example.com/axiomnizam/internal/platform/store"
-	"example.com/axiomnizam/internal/reconciler"
-	"example.com/axiomnizam/internal/resources"
-	"example.com/axiomnizam/internal/workqueue"
+	"axiomnizam.bitbd.net/axiomnizam/internal/apibanks"
+	"axiomnizam.bitbd.net/axiomnizam/internal/platform/store"
+	"axiomnizam.bitbd.net/axiomnizam/internal/reconciler"
+	"axiomnizam.bitbd.net/axiomnizam/internal/resources"
+	"axiomnizam.bitbd.net/axiomnizam/internal/workqueue"
 )
 
 // memStore is a minimal in-memory ResourceStore[T] used for the

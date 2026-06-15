@@ -1,6 +1,6 @@
 package resources
 
-import "example.com/axiomnizam/internal/resources/models"
+import "axiomnizam.bitbd.net/axiomnizam/internal/resources/models"
 
 // --- Type aliases for backward compatibility ---
 

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"example.com/axiomnizam/internal/auth"
+	"axiomnizam.bitbd.net/axiomnizam/internal/auth"
 	"github.com/gin-gonic/gin"
 )
 

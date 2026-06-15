@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"example.com/axiomnizam/internal/events"
+	"axiomnizam.bitbd.net/axiomnizam/internal/events"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 )

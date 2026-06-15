@@ -1,6 +1,6 @@
-module example.com/axiomnizam
+module axiomnizam.bitbd.net/axiomnizam
 
-go 1.25.0
+go 1.26.4
 
 require (
 	github.com/IBM/sarama v1.47.0

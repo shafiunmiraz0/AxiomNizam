@@ -25,8 +25,8 @@ import (
 	"sync"
 	"time"
 
-	"example.com/axiomnizam/internal/platform/errs"
-	axraft "example.com/axiomnizam/internal/platform/raft"
+	"axiomnizam.bitbd.net/axiomnizam/internal/platform/errs"
+	axraft "axiomnizam.bitbd.net/axiomnizam/internal/platform/raft"
 
 	"github.com/hashicorp/go-memdb"
 )

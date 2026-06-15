@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"example.com/axiomnizam/internal/waitx/audit"
-	wmetrics "example.com/axiomnizam/internal/waitx/metrics"
+	"axiomnizam.bitbd.net/axiomnizam/internal/waitx/audit"
+	wmetrics "axiomnizam.bitbd.net/axiomnizam/internal/waitx/metrics"
 
 	"github.com/gin-gonic/gin"
 )

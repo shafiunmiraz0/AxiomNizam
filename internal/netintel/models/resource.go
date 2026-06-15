@@ -3,7 +3,7 @@ package models
 // NetIntel resource domain types.
 
 import (
-	"example.com/axiomnizam/internal/resources"
+	"axiomnizam.bitbd.net/axiomnizam/internal/resources"
 )
 
 const (

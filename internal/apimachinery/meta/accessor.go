@@ -12,7 +12,7 @@ package meta
 import (
 	"fmt"
 
-	metav1 "example.com/axiomnizam/internal/apimachinery/meta/v1"
+	metav1 "axiomnizam.bitbd.net/axiomnizam/internal/apimachinery/meta/v1"
 )
 
 // Object is the minimal read-write view of a resource's metadata.

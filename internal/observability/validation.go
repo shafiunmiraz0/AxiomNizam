@@ -2,6 +2,8 @@ package observability
 
 import (
 	"net/http"
+	"os"
+	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -31,9 +33,16 @@ type RequestValidationConfig struct {
 }
 
 // DefaultRequestValidationConfig returns safe defaults.
+// MaxBodySize is read from MAX_REQUEST_BODY_MB (in megabytes, default 10).
 func DefaultRequestValidationConfig() RequestValidationConfig {
+	maxBody := DefaultMaxBodySize
+	if v := os.Getenv("MAX_REQUEST_BODY_MB"); v != "" {
+		if mb, err := strconv.ParseInt(v, 10, 64); err == nil && mb > 0 {
+			maxBody = mb << 20
+		}
+	}
 	return RequestValidationConfig{
-		MaxBodySize:            DefaultMaxBodySize,
+		MaxBodySize:            maxBody,
 		EnforceJSONContentType: false, // opt-in to avoid breaking existing clients
 	}
 }

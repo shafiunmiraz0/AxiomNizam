@@ -18,8 +18,8 @@ import (
 	"sync"
 	"time"
 
-	"example.com/axiomnizam/internal/logging"
-	"example.com/axiomnizam/internal/platform/resilience"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
+	"axiomnizam.bitbd.net/axiomnizam/internal/platform/resilience"
 
 	"go.uber.org/zap"
 )

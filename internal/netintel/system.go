@@ -3,11 +3,11 @@ package netintel
 import (
 	"context"
 
-	"example.com/axiomnizam/internal/logging"
-	"example.com/axiomnizam/internal/netintel/audit"
-	nmetrics "example.com/axiomnizam/internal/netintel/metrics"
-	"example.com/axiomnizam/internal/netintel/modes"
-	platformstore "example.com/axiomnizam/internal/platform/store"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
+	"axiomnizam.bitbd.net/axiomnizam/internal/netintel/audit"
+	nmetrics "axiomnizam.bitbd.net/axiomnizam/internal/netintel/metrics"
+	"axiomnizam.bitbd.net/axiomnizam/internal/netintel/modes"
+	platformstore "axiomnizam.bitbd.net/axiomnizam/internal/platform/store"
 
 	"github.com/gin-gonic/gin"
 )

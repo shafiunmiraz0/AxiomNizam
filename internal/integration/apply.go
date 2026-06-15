@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"example.com/axiomnizam/internal/client"
+	"axiomnizam.bitbd.net/axiomnizam/internal/client"
 )
 
 // ========== CLI APPLY INTEGRATION ==========

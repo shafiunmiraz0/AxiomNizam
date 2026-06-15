@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"strings"
 
-	"example.com/axiomnizam/internal/apimachinery/meta"
+	"axiomnizam.bitbd.net/axiomnizam/internal/apimachinery/meta"
 )
 
 // MetaNamespaceKeyFunc returns "namespace/name" for namespaced

@@ -12,7 +12,7 @@ import (
 	"fmt"
 	"time"
 
-	"example.com/axiomnizam/internal/governance/models"
+	"axiomnizam.bitbd.net/axiomnizam/internal/governance/models"
 )
 
 // ReportFormat defines the output format.

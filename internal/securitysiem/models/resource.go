@@ -1,7 +1,7 @@
 package models
 
 import (
-	"example.com/axiomnizam/internal/resources"
+	"axiomnizam.bitbd.net/axiomnizam/internal/resources"
 )
 
 // --- Severity ---

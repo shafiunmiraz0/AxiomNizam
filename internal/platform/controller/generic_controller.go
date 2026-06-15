@@ -9,15 +9,15 @@
 package controller
 
 import (
-	"example.com/axiomnizam/internal/logging"
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
 	"context"
 	"fmt"
 	"sync"
 
-	"example.com/axiomnizam/internal/metrics"
-	"example.com/axiomnizam/internal/platform/store"
-	"example.com/axiomnizam/internal/reconciler"
-	"example.com/axiomnizam/internal/workqueue"
+	"axiomnizam.bitbd.net/axiomnizam/internal/metrics"
+	"axiomnizam.bitbd.net/axiomnizam/internal/platform/store"
+	"axiomnizam.bitbd.net/axiomnizam/internal/reconciler"
+	"axiomnizam.bitbd.net/axiomnizam/internal/workqueue"
 )
 
 // GenericController watches a store and reconciles resources.
