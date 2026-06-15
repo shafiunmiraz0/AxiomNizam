@@ -61,6 +61,7 @@ type Scanner interface {
 type Orchestrator struct {
 	scanners []Scanner
 	config   Config
+	configMu sync.RWMutex // protects config for hot-reload
 	metrics  *Metrics
 }
 
@@ -86,7 +87,20 @@ func NewOrchestratorWithConfig(cfg Config, scanners ...Scanner) *Orchestrator {
 
 // Config returns the orchestrator's active configuration.
 func (o *Orchestrator) Config() Config {
+	o.configMu.RLock()
+	defer o.configMu.RUnlock()
 	return o.config
+}
+
+// UpdateConfig atomically replaces the orchestrator's configuration.
+func (o *Orchestrator) UpdateConfig(cfg Config) error {
+	if err := cfg.Validate(); err != nil {
+		return err
+	}
+	o.configMu.Lock()
+	o.config = cfg
+	o.configMu.Unlock()
+	return nil
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -97,10 +111,14 @@ func (o *Orchestrator) Config() Config {
 // Uses an internal context with Config.Timeout as the deadline.
 // This is the backward-compatible entry point.
 func (o *Orchestrator) Scan(file *FileInfo) *ScanResult {
+	o.configMu.RLock()
+	cfg := o.config
+	o.configMu.RUnlock()
+
 	ctx := context.Background()
-	if o.config.Timeout > 0 {
+	if cfg.Timeout > 0 {
 		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, o.config.Timeout)
+		ctx, cancel = context.WithTimeout(ctx, cfg.Timeout)
 		defer cancel()
 	}
 	return o.ScanWithContext(ctx, file)
@@ -112,11 +130,15 @@ func (o *Orchestrator) Scan(file *FileInfo) *ScanResult {
 func (o *Orchestrator) ScanWithContext(ctx context.Context, file *FileInfo) *ScanResult {
 	start := time.Now()
 
+	o.configMu.RLock()
+	cfg := o.config
+	o.configMu.RUnlock()
+
 	// Apply config timeout if shorter than existing deadline.
-	if o.config.Timeout > 0 {
-		if deadline, ok := ctx.Deadline(); !ok || time.Until(deadline) > o.config.Timeout {
+	if cfg.Timeout > 0 {
+		if deadline, ok := ctx.Deadline(); !ok || time.Until(deadline) > cfg.Timeout {
 			var cancel context.CancelFunc
-			ctx, cancel = context.WithTimeout(ctx, o.config.Timeout)
+			ctx, cancel = context.WithTimeout(ctx, cfg.Timeout)
 			defer cancel()
 		}
 	}
@@ -139,7 +161,7 @@ func (o *Orchestrator) ScanWithContext(ctx context.Context, file *FileInfo) *Sca
 		result.Timings[i].Scanner = s.Name()
 	}
 
-	if o.config.Parallel && len(o.scanners) > 1 {
+	if cfg.Parallel && len(o.scanners) > 1 {
 		o.scanParallel(ctx, file, result)
 	} else {
 		o.scanSequential(ctx, file, result)

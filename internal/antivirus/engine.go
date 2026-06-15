@@ -42,7 +42,8 @@ const (
 //
 //	result, err := engine.Scan(ctx, fileBytes, "report.pdf")
 type Engine struct {
-	cfg *Config
+	cfg      *Config
+	configMu sync.RWMutex // protects cfg for hot-reload
 
 	// layers holds registered scan layers in execution order. Protected
 	// by layersMu only during registration (which happens at startup,
@@ -160,7 +161,11 @@ func (e *Engine) Start() {
 // StartCtx starts the antivirus engine with the given context.
 // Satisfies the contracts.Module lifecycle interface.
 func (e *Engine) StartCtx(ctx context.Context) error {
-	if !e.cfg.Enabled {
+	e.configMu.RLock()
+	cfg := e.cfg
+	e.configMu.RUnlock()
+
+	if !cfg.Enabled {
 		logging.Z().Info("🛡️  antivirus: engine disabled via ANTIVIRUS_ENABLED=false")
 		return nil
 	}
@@ -183,7 +188,7 @@ func (e *Engine) StartCtx(ctx context.Context) error {
 	e.layersMu.Unlock()
 
 	logging.Z().Info(fmt.Sprintf("🛡️  antivirus engine v%s started — %d layers: %v, workers: %d, queue: %d",
-		EngineVersion, len(layerNames), layerNames, e.cfg.Workers, e.cfg.QueueSize))
+		EngineVersion, len(layerNames), layerNames, cfg.Workers, cfg.QueueSize))
 
 	// Background heartbeat/stats logger.
 	e.wg.Add(1)
@@ -248,8 +253,13 @@ func (e *Engine) IsRunning() bool {
 func (e *Engine) Scan(ctx context.Context, content []byte, filename string) (*ScanResult, error) {
 	start := time.Now()
 
+	// Snapshot config under read lock for hot-reload safety.
+	e.configMu.RLock()
+	cfg := e.cfg
+	e.configMu.RUnlock()
+
 	// Fast path: engine disabled.
-	if !e.cfg.Enabled {
+	if !cfg.Enabled {
 		return &ScanResult{
 			Verdict:       VerdictClean,
 			ScannedAt:     start.UTC(),
@@ -260,9 +270,9 @@ func (e *Engine) Scan(ctx context.Context, content []byte, filename string) (*Sc
 
 	// Validate file size.
 	fileSize := int64(len(content))
-	if fileSize > e.cfg.MaxFileSize {
+	if fileSize > cfg.MaxFileSize {
 		logging.Z().Info(fmt.Sprintf("🛡️  antivirus: skipping %q (%d bytes > max %d bytes)",
-			filename, fileSize, e.cfg.MaxFileSize))
+			filename, fileSize, cfg.MaxFileSize))
 		return &ScanResult{
 			Verdict:       VerdictClean,
 			FileSize:      fileSize,
@@ -397,6 +407,10 @@ func determineVerdict(threats []ThreatInfo) ScanVerdict {
 
 // Stats returns a snapshot of the current engine statistics.
 func (e *Engine) Stats() EngineStats {
+	e.configMu.RLock()
+	cfg := e.cfg
+	e.configMu.RUnlock()
+
 	total := e.stats.totalScanned.Load()
 	cacheHits := e.stats.cacheHits.Load()
 	cacheMisses := e.stats.cacheMisses.Load()
@@ -430,12 +444,14 @@ func (e *Engine) Stats() EngineStats {
 		UptimeSeconds: uptimeSeconds,
 		SigDBVersion:  e.getSigDBVersion(),
 		EngineVersion: EngineVersion,
-		LayersEnabled: e.cfg.EnabledLayers(),
+		LayersEnabled: cfg.EnabledLayers(),
 	}
 }
 
 // MaxFileSize returns the configured maximum file size for scanning.
 func (e *Engine) MaxFileSize() int64 {
+	e.configMu.RLock()
+	defer e.configMu.RUnlock()
 	return e.cfg.MaxFileSize
 }
 
@@ -509,8 +525,11 @@ func (e *Engine) Stop() error {
 // Config returns the engine's configuration. The returned pointer is
 // read-only — callers must not modify it.
 func (e *Engine) Config() *Config {
+	e.configMu.RLock()
+	defer e.configMu.RUnlock()
 	return e.cfg
 }
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Background Workers

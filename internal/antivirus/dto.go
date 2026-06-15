@@ -76,3 +76,19 @@ type ErrorResponse struct {
 	Detail  string `json:"detail,omitempty"`
 	MaxSize int64  `json:"maxSize,omitempty"`
 }
+
+// UpdateConfigRequest is the PUT request body for updating antivirus config.
+type UpdateConfigRequest struct {
+	Enabled          *bool   `json:"enabled"`
+	Workers          *int    `json:"workers"`
+	QueueSize        *int    `json:"queueSize"`
+	MaxFileSize      *int64  `json:"maxFileSize"`
+	CacheSize        *int    `json:"cacheSize"`
+	CacheTTL         *string `json:"cacheTTL"`
+	QuarantineAction *string `json:"quarantineAction"`
+	HashDBEnabled    *bool   `json:"hashDBEnabled"`
+	PatternEnabled   *bool   `json:"patternEnabled"`
+	HeuristicEnabled *bool   `json:"heuristicEnabled"`
+	YARAEnabled      *bool   `json:"yaraEnabled"`
+	EntropyEnabled   *bool   `json:"entropyEnabled"`
+}

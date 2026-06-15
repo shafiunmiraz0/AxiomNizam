@@ -140,7 +140,7 @@ function switchTab(tabName) {
     if (tabName === 'api-testing') { loadAPIs(); loadAdminApiScanReports(); toggleAdminApiScanFields(); }
     if (tabName === 'graphql-studio') { loadAdminGraphQLSchemaInfo(); }
     if (tabName === 'control-plane') { refreshAdminControlPlaneData(); }
-    if (tabName === 'settings') { loadAdminCertificatePanel(); }
+    if (tabName === 'settings') { loadAdminCertificatePanel(); loadAntivirusConfig(); loadScannerConfig(); }
 }
 
 // ===================================================================
@@ -3402,3 +3402,102 @@ function openCreateAPIModal() {
     loadBuilderDataSources();
     document.getElementById('createAPIModal').style.display = 'flex';
 }
+
+// ===================================================================
+// Antivirus & Scanner Settings (Settings tab)
+// ===================================================================
+function loadAntivirusConfig() {
+    fetchJSON('/api/v1/antivirus/config').then(function(cfg) {
+        if (!cfg || cfg.error) return;
+        var el;
+        el = document.getElementById('avEnabled'); if (el) el.checked = !!cfg.enabled;
+        el = document.getElementById('avWorkers'); if (el) el.value = cfg.workers || 4;
+        el = document.getElementById('avQueueSize'); if (el) el.value = cfg.queueSize || 10000;
+        el = document.getElementById('avMaxFileSize'); if (el) el.value = Math.round((cfg.maxFileSize || 0) / (1024 * 1024));
+        el = document.getElementById('avCacheSize'); if (el) el.value = cfg.cacheSize || 100000;
+        el = document.getElementById('avCacheTTL'); if (el) el.value = cfg.cacheTTL || '24h';
+        el = document.getElementById('avQuarantineAction'); if (el) el.value = cfg.quarantineAction || 'tag';
+        el = document.getElementById('avHashDB'); if (el) el.checked = !!cfg.hashDBEnabled;
+        el = document.getElementById('avPattern'); if (el) el.checked = !!cfg.patternEnabled;
+        el = document.getElementById('avHeuristic'); if (el) el.checked = !!cfg.heuristicEnabled;
+        el = document.getElementById('avYARA'); if (el) el.checked = !!cfg.yaraEnabled;
+        el = document.getElementById('avEntropy'); if (el) el.checked = !!cfg.entropyEnabled;
+    }).catch(function() {});
+}
+
+function saveAntivirusConfig() {
+    var maxFileSizeMB = parseInt(document.getElementById('avMaxFileSize').value) || 100;
+    var body = {
+        enabled: document.getElementById('avEnabled').checked,
+        workers: parseInt(document.getElementById('avWorkers').value) || 4,
+        queueSize: parseInt(document.getElementById('avQueueSize').value) || 10000,
+        maxFileSize: maxFileSizeMB * 1024 * 1024,
+        cacheSize: parseInt(document.getElementById('avCacheSize').value) || 100000,
+        cacheTTL: document.getElementById('avCacheTTL').value || '24h',
+        quarantineAction: document.getElementById('avQuarantineAction').value || 'tag',
+        hashDBEnabled: document.getElementById('avHashDB').checked,
+        patternEnabled: document.getElementById('avPattern').checked,
+        heuristicEnabled: document.getElementById('avHeuristic').checked,
+        yaraEnabled: document.getElementById('avYARA').checked,
+        entropyEnabled: document.getElementById('avEntropy').checked
+    };
+
+    putJSON('/api/v1/antivirus/config', body).then(function(r) {
+        var status = document.getElementById('avSaveStatus');
+        if (r.error) {
+            status.textContent = 'Error: ' + r.error;
+            status.style.color = '#ef4444';
+        } else {
+            status.textContent = 'Saved! Changes take effect immediately.';
+            status.style.color = '#22c55e';
+            setTimeout(function() { status.textContent = ''; }, 4000);
+        }
+    }).catch(function(err) {
+        var status = document.getElementById('avSaveStatus');
+        status.textContent = 'Error: ' + err.message;
+        status.style.color = '#ef4444';
+    });
+}
+
+function loadScannerConfig() {
+    fetchJSON('/api/v1/scanner/config').then(function(cfg) {
+        if (!cfg || cfg.error) return;
+        var el;
+        el = document.getElementById('scanMaxFileSize'); if (el) el.value = Math.round((cfg.maxFileSize || 0) / (1024 * 1024));
+        el = document.getElementById('scanArchiveMaxDecompress'); if (el) el.value = Math.round((cfg.archiveMaxDecompressSize || 0) / (1024 * 1024));
+        el = document.getElementById('scanArchiveMaxDepth'); if (el) el.value = cfg.archiveMaxDepth || 5;
+        el = document.getElementById('scanArchiveMaxFiles'); if (el) el.value = cfg.archiveMaxFiles || 10000;
+        el = document.getElementById('scanTimeout'); if (el) el.value = cfg.timeout || '2m0s';
+        el = document.getElementById('scanParallel'); if (el) el.checked = cfg.parallel !== false;
+    }).catch(function() {});
+}
+
+function saveScannerConfig() {
+    var maxFileSizeMB = parseInt(document.getElementById('scanMaxFileSize').value) || 100;
+    var maxDecompMB = parseInt(document.getElementById('scanArchiveMaxDecompress').value) || 1024;
+    var body = {
+        maxFileSize: maxFileSizeMB * 1024 * 1024,
+        archiveMaxDecompressSize: maxDecompMB * 1024 * 1024,
+        archiveMaxDepth: parseInt(document.getElementById('scanArchiveMaxDepth').value) || 5,
+        archiveMaxFiles: parseInt(document.getElementById('scanArchiveMaxFiles').value) || 10000,
+        timeout: document.getElementById('scanTimeout').value || '2m',
+        parallel: document.getElementById('scanParallel').checked
+    };
+
+    putJSON('/api/v1/scanner/config', body).then(function(r) {
+        var status = document.getElementById('scanSaveStatus');
+        if (r.error) {
+            status.textContent = 'Error: ' + r.error;
+            status.style.color = '#ef4444';
+        } else {
+            status.textContent = 'Saved! Changes take effect immediately.';
+            status.style.color = '#22c55e';
+            setTimeout(function() { status.textContent = ''; }, 4000);
+        }
+    }).catch(function(err) {
+        var status = document.getElementById('scanSaveStatus');
+        status.textContent = 'Error: ' + err.message;
+        status.style.color = '#ef4444';
+    });
+}
+

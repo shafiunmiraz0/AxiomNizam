@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
+	platformstore "axiomnizam.bitbd.net/axiomnizam/internal/platform/store"
 	"github.com/gin-gonic/gin"
 )
 
@@ -40,7 +42,8 @@ type ThreatRecord struct {
 // APIHandler exposes antivirus management endpoints. It references the
 // Engine directly and is embedded into the storage admin handler.
 type APIHandler struct {
-	engine *Engine
+	engine  *Engine
+	kvStore platformstore.KVStore
 }
 
 // NewAPIHandler creates a new antivirus API handler.
@@ -48,9 +51,14 @@ func NewAPIHandler(engine *Engine) *APIHandler {
 	return &APIHandler{engine: engine}
 }
 
+// SetKVStore wires the KV store for config persistence.
+func (h *APIHandler) SetKVStore(kv platformstore.KVStore) {
+	h.kvStore = kv
+}
+
 // RegisterRoutes mounts antivirus routes under the given router group.
-// Typically called as: handler.RegisterRoutes(adminGroup.Group("/antivirus"))
-func (h *APIHandler) RegisterRoutes(rg *gin.RouterGroup) {
+// sysadminMiddleware is applied to write endpoints (PUT /config).
+func (h *APIHandler) RegisterRoutes(rg *gin.RouterGroup, sysadminMiddleware ...gin.HandlerFunc) {
 	if h == nil || h.engine == nil {
 		return
 	}
@@ -63,6 +71,15 @@ func (h *APIHandler) RegisterRoutes(rg *gin.RouterGroup) {
 		av.GET("/threats", h.ListThreats)
 		av.GET("/config", h.GetConfig)
 	}
+
+	// Admin-only write endpoints.
+	admin := av.Group("/")
+	for _, mw := range sysadminMiddleware {
+		admin.Use(mw)
+	}
+	{
+		admin.PUT("/config", h.UpdateConfig)
+	}
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -74,14 +91,16 @@ func (h *APIHandler) RegisterRoutes(rg *gin.RouterGroup) {
 func (h *APIHandler) Status(c *gin.Context) {
 	stats := h.engine.Stats()
 
+	cfg := h.engine.ConfigSnapshot()
+
 	avStatus := "disabled"
 	if h.engine.IsRunning() {
 		avStatus = "running"
-	} else if h.engine.cfg.Enabled {
+	} else if cfg.Enabled {
 		avStatus = "stopped"
 	}
 
-	c.JSON(http.StatusOK, StatusToResponse(avStatus, EngineVersion, stats, h.engine.cfg))
+	c.JSON(http.StatusOK, StatusToResponse(avStatus, EngineVersion, stats, cfg))
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -163,7 +182,38 @@ func (h *APIHandler) ListThreats(c *gin.Context) {
 
 // GetConfig returns the current engine configuration (read-only view).
 func (h *APIHandler) GetConfig(c *gin.Context) {
-	c.JSON(http.StatusOK, ConfigToResponse(h.engine.cfg))
+	c.JSON(http.StatusOK, ConfigToResponse(h.engine.ConfigSnapshot()))
+}
+
+// UpdateConfig applies a partial config update and persists to KV store.
+func (h *APIHandler) UpdateConfig(c *gin.Context) {
+	var req UpdateConfigRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "invalid request body: " + err.Error()})
+		return
+	}
+
+	current := h.engine.ConfigSnapshot()
+	updated := ApplyUpdateRequest(current, &req)
+
+	if warnings := updated.Validate(); len(warnings) > 0 {
+		for _, w := range warnings {
+			logging.Z().Warn("antivirus config update warning: " + w)
+		}
+	}
+
+	if _, err := h.engine.UpdateConfig(updated); err != nil {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: err.Error()})
+		return
+	}
+
+	if h.kvStore != nil {
+		if err := SaveConfigToKV(c.Request.Context(), h.kvStore, updated); err != nil {
+			logging.Z().Error("antivirus: failed to persist config to KV: " + err.Error())
+		}
+	}
+
+	c.JSON(http.StatusOK, ConfigToResponse(updated))
 }
 
 // redactURL masks sensitive parts of URLs for safe display.

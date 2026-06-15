@@ -30,6 +30,7 @@ import (
 	"axiomnizam.bitbd.net/axiomnizam/internal/platform"
 	platformstore "axiomnizam.bitbd.net/axiomnizam/internal/platform/store"
 	"axiomnizam.bitbd.net/axiomnizam/internal/ratelimit"
+	"axiomnizam.bitbd.net/axiomnizam/internal/scanner"
 	"axiomnizam.bitbd.net/axiomnizam/internal/schemaregistry"
 	"axiomnizam.bitbd.net/axiomnizam/internal/serviceregistry"
 	"axiomnizam.bitbd.net/axiomnizam/internal/slo"
@@ -314,10 +315,32 @@ func WireUnwiredModules(
 	// ====================================
 	if storageSys != nil && storageSys.AVEngine != nil {
 		avHandler := antivirus.NewAPIHandler(storageSys.AVEngine)
-		avHandler.RegisterRoutes(router.Group("/api/v1", authMiddleware))
+		if backendMgr != nil {
+			avHandler.SetKVStore(backendMgr.KV())
+		}
+		avHandler.RegisterRoutes(router.Group("/api/v1", authMiddleware), adminOrSysMiddleware)
 		log.Println("✅ Antivirus management API registered (reusing storage engine)")
 	} else {
 		log.Println("⚠️  Antivirus engine not available — management API skipped")
+	}
+
+	// ====================================
+	// SCANNER CONFIG API (uses existing orchestrator from storage module)
+	// ====================================
+	if storageSys != nil && storageSys.ScanOrch != nil {
+		var kvStore platformstore.KVStore
+		if backendMgr != nil {
+			kvStore = backendMgr.KV()
+		}
+		scannerHandler := scanner.NewScannerConfigHandler(storageSys.ScanOrch, kvStore)
+		scGroup := router.Group("/api/v1/scanner", authMiddleware)
+		adminSc := scGroup.Group("/")
+		adminSc.Use(adminOrSysMiddleware)
+		{
+			adminSc.GET("/config", scannerHandler.GetConfig)
+			adminSc.PUT("/config", scannerHandler.UpdateConfig)
+		}
+		log.Println("✅ Scanner config API registered")
 	}
 
 	// ====================================

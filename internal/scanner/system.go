@@ -2,9 +2,11 @@ package scanner
 
 import (
 	"context"
+	"fmt"
 
 	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
 	platformstore "axiomnizam.bitbd.net/axiomnizam/internal/platform/store"
+	"github.com/gin-gonic/gin"
 )
 
 // System holds the scanner module's orchestrator and provides
@@ -12,6 +14,7 @@ import (
 type System struct {
 	orchestrator *Orchestrator
 	metrics      *Metrics
+	kvStore      platformstore.KVStore
 }
 
 // NewSystem creates a new scanner System with the given orchestrator.
@@ -39,10 +42,42 @@ func (s *System) Stop() error {
 
 // SetKVStore wires the KVStore-backed persistence into the scanner metrics.
 func (s *System) SetKVStore(kv platformstore.KVStore) {
+	s.kvStore = kv
+
 	if s.metrics != nil {
 		s.metrics.ConfigureKVPersistence(kv)
 	}
-	logging.Z().Info("✅ Scanner: KVStore persistence configured (Raft mode)")
+
+	// Load persisted scanner config if available.
+	if kv != nil {
+		if persisted := LoadScannerConfigFromKV(context.Background(), kv); persisted != nil {
+			if err := s.orchestrator.UpdateConfig(*persisted); err != nil {
+				logging.Z().Warn(fmt.Sprintf("scanner: failed to load persisted config: %v", err))
+			} else {
+				logging.Z().Info("✅ Scanner: loaded config from KV store")
+			}
+		}
+	}
+
+	logging.Z().Info("✅ Scanner: KVStore persistence configured")
+}
+
+// RegisterRoutes registers scanner config API routes.
+// sysadminMiddleware is applied to write endpoints.
+func (s *System) RegisterRoutes(rg *gin.RouterGroup, sysadminMiddleware ...gin.HandlerFunc) {
+	handler := NewScannerConfigHandler(s.orchestrator, s.kvStore)
+
+	sc := rg.Group("/scanner")
+	admin := sc.Group("/")
+	for _, mw := range sysadminMiddleware {
+		admin.Use(mw)
+	}
+	{
+		admin.GET("/config", handler.GetConfig)
+		admin.PUT("/config", handler.UpdateConfig)
+	}
+
+	logging.Z().Info("✅ Scanner config routes registered")
 }
 
 // Orchestrator returns the scanner orchestrator.
