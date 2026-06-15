@@ -175,9 +175,9 @@ func (h *Handler) GetBlockedIPs(c *gin.Context) {
 
 // SetRateLimitRequest is the request body for setting a rate limit.
 type SetRateLimitRequest struct {
-	RequestsPerMinute int    `json:"requestsPerMinute" binding:"required"`
-	BurstLimit        int    `json:"burstLimit" binding:"required"`
-	Reason            string `json:"reason"`
+	IP          string `json:"ip" binding:"required"`
+	MaxRequests int    `json:"maxRequests" binding:"required"`
+	Window      string `json:"window"`
 }
 
 // GetRateLimits returns all rate limit configs.
@@ -191,30 +191,33 @@ func (h *Handler) GetRateLimits(c *gin.Context) {
 
 // SetRateLimit sets a per-IP rate limit.
 func (h *Handler) SetRateLimit(c *gin.Context) {
-	ip := c.Param("ip")
-	if ip == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "ip parameter required"})
-		return
-	}
-
 	var req SetRateLimitRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request: " + err.Error()})
 		return
 	}
 
-	cfg := RateLimitConfig{
-		MaxRequests:       req.RequestsPerMinute,
-		RequestsPerMinute: req.RequestsPerMinute,
-		BurstLimit:        req.BurstLimit,
+	ip := req.IP
+	if ip == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ip is required"})
+		return
 	}
-	h.tracker.SetRateLimit(ip, cfg)
+
+	window := req.Window
+	if window == "" {
+		window = "1m"
+	}
+
+	h.tracker.SetRateLimit(ip, RateLimitConfig{
+		MaxRequests: req.MaxRequests,
+		Window:      window,
+	})
 
 	c.JSON(http.StatusOK, gin.H{
-		"message":           "Rate limit set successfully",
-		"ip":                ip,
-		"requestsPerMinute": req.RequestsPerMinute,
-		"burstLimit":        req.BurstLimit,
+		"message":     "Rate limit set successfully",
+		"ip":          ip,
+		"maxRequests": req.MaxRequests,
+		"window":      window,
 	})
 }
 

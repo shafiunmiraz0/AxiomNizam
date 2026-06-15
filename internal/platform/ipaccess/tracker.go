@@ -51,11 +51,13 @@ type EndpointStat struct {
 
 // RateLimitConfig defines per-IP rate limiting.
 type RateLimitConfig struct {
-	MaxRequests int       `json:"maxRequests"` // max requests per window
-	Window      string    `json:"window"`      // e.g. "1m", "5m", "1h"
-	windowDur   time.Duration
-	SetAt       time.Time `json:"setAt"`
-	SetBy       string    `json:"setBy"`
+	MaxRequests       int           `json:"maxRequests"`       // max requests per window
+	RequestsPerMinute int           `json:"requestsPerMinute"` // per-minute limit
+	BurstLimit        int           `json:"burstLimit"`        // burst limit (10s window)
+	Window            string        `json:"window"`            // e.g. "1m", "5m", "1h"
+	windowDur         time.Duration
+	SetAt             time.Time     `json:"setAt"`
+	SetBy             string        `json:"setBy"`
 }
 
 // ipRequestWindow tracks request timestamps for rate limiting.
@@ -305,34 +307,6 @@ func (t *Tracker) GetBlockedIPs() map[string]*BlockInfo {
 	return result
 }
 
-// SetRateLimit configures a per-IP rate limit.
-func (t *Tracker) SetRateLimit(ip string, maxRequests int, window, setBy string) {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-	d, err := time.ParseDuration(window)
-	if err != nil {
-		d = 1 * time.Minute
-		window = "1m"
-	}
-	t.rateLimits[ip] = &RateLimitConfig{
-		MaxRequests: maxRequests,
-		Window:      window,
-		windowDur:   d,
-		SetAt:       time.Now(),
-		SetBy:       setBy,
-	}
-	go t.persistRateLimits()
-}
-
-// RemoveRateLimit removes a per-IP rate limit.
-func (t *Tracker) RemoveRateLimit(ip string) {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-	delete(t.rateLimits, ip)
-	delete(t.ipWindows, ip)
-	go t.persistRateLimits()
-}
-
 // GetRateLimits returns all configured rate limits.
 func (t *Tracker) GetRateLimits() map[string]*RateLimitConfig {
 	t.mu.RLock()
@@ -364,20 +338,20 @@ func (t *Tracker) CheckRateLimit(ip string) (bool, int, int) {
 
 	// Prune timestamps outside the window
 	cutoff := now.Add(-cfg.windowDur)
-	pruned := window.timestamps[:0]
-	for _, ts := range window.timestamps {
+	pruned := window.minuteTimestamps[:0]
+	for _, ts := range window.minuteTimestamps {
 		if ts.After(cutoff) {
 			pruned = append(pruned, ts)
 		}
 	}
-	window.timestamps = pruned
+	window.minuteTimestamps = pruned
 
-	if len(window.timestamps) >= cfg.MaxRequests {
+	if len(window.minuteTimestamps) >= cfg.MaxRequests {
 		return false, cfg.MaxRequests, 0
 	}
 
-	window.timestamps = append(window.timestamps, now)
-	return true, cfg.MaxRequests, cfg.MaxRequests - len(window.timestamps)
+	window.minuteTimestamps = append(window.minuteTimestamps, now)
+	return true, cfg.MaxRequests, cfg.MaxRequests - len(window.minuteTimestamps)
 }
 
 // GetRecentEntries returns the most recent access entries (up to limit).
@@ -535,6 +509,15 @@ func (t *Tracker) RecordRate(ip string) {
 func (t *Tracker) SetRateLimit(ip string, cfg RateLimitConfig) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
+	if cfg.Window != "" {
+		if d, err := time.ParseDuration(cfg.Window); err == nil {
+			cfg.windowDur = d
+		}
+	}
+	if cfg.windowDur == 0 {
+		cfg.windowDur = 1 * time.Minute
+		cfg.Window = "1m"
+	}
 	cfg.SetAt = time.Now()
 	t.rateLimits[ip] = &cfg
 	go t.persistRateLimits()
@@ -578,7 +561,7 @@ func (t *Tracker) GetRateLimitStatus(ip string) map[string]interface{} {
 
 	cfg, exists := t.rateLimits[ip]
 	if !exists {
-		return map[string]interface{}{limited: false, configured: false}
+		return map[string]interface{}{"limited": false, "configured": false}
 	}
 
 	now := time.Now()
@@ -600,13 +583,13 @@ func (t *Tracker) GetRateLimitStatus(ip string) map[string]interface{} {
 	}
 
 	return map[string]interface{}{
-		limited:           t.IsRateLimited(ip),
-		configured:        true,
-		requestsPerMinute: cfg.RequestsPerMinute,
-		burstLimit:        cfg.BurstLimit,
-		minuteUsed:        minuteUsed,
-		burstUsed:         burstUsed,
-		setAt:             cfg.SetAt,
+		"limited":           t.IsRateLimited(ip),
+		"configured":        true,
+		"requestsPerMinute": cfg.RequestsPerMinute,
+		"burstLimit":        cfg.BurstLimit,
+		"minuteUsed":        minuteUsed,
+		"burstUsed":         burstUsed,
+		"setAt":             cfg.SetAt,
 	}
 }
 
