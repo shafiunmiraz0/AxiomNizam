@@ -965,6 +965,51 @@
             </table>
         </div>
     </div>
+
+    <!-- Rate Limiting Section -->
+    <div class="ip-section">
+        <h3>
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+            IP Rate Limiting
+        </h3>
+        <div class="ip-toolbar">
+            <label>IP Address:
+                <input type="text" id="rlIP" placeholder="e.g. 203.0.113.50" style="width:140px;">
+            </label>
+            <label>Max Requests:
+                <input type="number" id="rlMaxReqs" value="60" min="1" style="width:70px;">
+            </label>
+            <label>Window:
+                <select id="rlWindow">
+                    <option value="30s">30 seconds</option>
+                    <option value="1m" selected>1 minute</option>
+                    <option value="5m">5 minutes</option>
+                    <option value="15m">15 minutes</option>
+                    <option value="1h">1 hour</option>
+                </select>
+            </label>
+            <button class="btn-xs btn-view" onclick="setRateLimit()" style="padding:5px 14px;">Set Limit</button>
+            <button class="btn-xs btn-view" onclick="loadRateLimits()" style="padding:5px 12px;">Refresh</button>
+            <span id="rlStatus" style="font-size:0.8em;color:rgba(255,255,255,0.4);margin-left:auto;"></span>
+        </div>
+        <div class="ip-table-wrap" style="max-height:300px;">
+            <table class="ip-table">
+                <thead>
+                    <tr>
+                        <th>IP Address</th>
+                        <th>Max Requests</th>
+                        <th>Window</th>
+                        <th>Set By</th>
+                        <th>Set At</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="rateLimitsBody">
+                    <tr><td colspan="6" style="text-align:center;color:rgba(255,255,255,0.3);padding:20px;">No rate limits configured</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
 
 <!-- IP Detail Modal -->

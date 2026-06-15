@@ -140,7 +140,7 @@ function switchTab(tabName) {
     if (tabName === 'api-testing') { loadAPIs(); loadAdminApiScanReports(); toggleAdminApiScanFields(); }
     if (tabName === 'graphql-studio') { loadAdminGraphQLSchemaInfo(); }
     if (tabName === 'control-plane') { refreshAdminControlPlaneData(); }
-    if (tabName === 'ip-access') { loadIPAccessData(); loadIPList(); loadAccessLog(); startIPAccessAutoRefresh(); }
+    if (tabName === 'ip-access') { loadIPAccessData(); loadIPList(); loadAccessLog(); loadRateLimits(); startIPAccessAutoRefresh(); }
     if (tabName === 'settings') { loadAdminCertificatePanel(); loadAntivirusConfig(); loadScannerConfig(); }
 }
 
@@ -3580,6 +3580,7 @@ function loadIPList() {
             html += '<td>' + blockedBadge + '</td>';
             html += '<td>';
             html += '<button class="btn-xs btn-view" onclick="viewIPDetail(\'' + escapeAttr(ip.ip) + '\')" style="margin-right:4px;">Detail</button>';
+            html += '<button class="btn-xs btn-view" onclick="prefillRateLimit(\'' + escapeAttr(ip.ip) + '\')" style="margin-right:4px;background:rgba(168,85,247,0.15);color:#a855f7;">Limit</button>';
             if (ip.isBlocked) {
                 html += '<button class="btn-xs btn-unblock" onclick="unblockIP(\'' + escapeAttr(ip.ip) + '\')">Unblock</button>';
             } else {
@@ -3799,4 +3800,71 @@ function escapeHTML(str) {
 function escapeAttr(str) {
     if (!str) return '';
     return String(str).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;');
+}
+
+// ===================================================================
+// Rate Limiting
+// ===================================================================
+function prefillRateLimit(ip) {
+    var el = document.getElementById('rlIP');
+    if (el) el.value = ip;
+    // Scroll to rate limit section
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function setRateLimit() {
+    var ip = (document.getElementById('rlIP') || {}).value || '';
+    var maxReqs = parseInt((document.getElementById('rlMaxReqs') || {}).value) || 60;
+    var window = (document.getElementById('rlWindow') || {}).value || '1m';
+    var status = document.getElementById('rlStatus');
+
+    if (!ip.trim()) { alert('Enter an IP address'); return; }
+
+    postJSON('/api/v1/ip-access/rate-limit', { ip: ip.trim(), maxRequests: maxReqs, window: window }).then(function(r) {
+        if (r.error) {
+            if (status) { status.textContent = 'Error: ' + r.error; status.style.color = '#ef4444'; }
+            return;
+        }
+        if (status) { status.textContent = 'Rate limit set for ' + ip; status.style.color = '#22c55e'; }
+        setTimeout(function() { if (status) status.textContent = ''; }, 3000);
+        loadRateLimits();
+    }).catch(function(err) {
+        if (status) { status.textContent = 'Error: ' + err.message; status.style.color = '#ef4444'; }
+    });
+}
+
+function loadRateLimits() {
+    fetchJSON('/api/v1/ip-access/rate-limits').then(function(data) {
+        var limits = data.rateLimits || {};
+        var tbody = document.getElementById('rateLimitsBody');
+        if (!tbody) return;
+
+        var keys = Object.keys(limits);
+        if (keys.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:rgba(255,255,255,0.3);padding:20px;">No rate limits configured</td></tr>';
+            return;
+        }
+
+        var html = '';
+        keys.sort().forEach(function(ip) {
+            var rl = limits[ip];
+            html += '<tr>';
+            html += '<td class="mono">' + escapeHTML(ip) + '</td>';
+            html += '<td>' + (rl.maxRequests || 0) + '</td>';
+            html += '<td>' + escapeHTML(rl.window || '-') + '</td>';
+            html += '<td>' + escapeHTML(rl.setBy || '-') + '</td>';
+            html += '<td>' + (rl.setAt ? formatDateTime(rl.setAt) : '-') + '</td>';
+            html += '<td><button class="btn-xs btn-unblock" onclick="removeRateLimit(\'' + escapeAttr(ip) + '\')">Remove</button></td>';
+            html += '</tr>';
+        });
+        tbody.innerHTML = html;
+    }).catch(function() {});
+}
+
+function removeRateLimit(ip) {
+    if (!confirm('Remove rate limit for ' + ip + '?')) return;
+    deleteJSON('/api/v1/ip-access/rate-limit/' + encodeURIComponent(ip)).then(function(r) {
+        if (r.error) { alert('Error: ' + r.error); return; }
+        loadRateLimits();
+    }).catch(function(err) { alert('Error: ' + err.message); });
 }

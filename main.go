@@ -66,6 +66,7 @@ import (
 	"axiomnizam.bitbd.net/axiomnizam/internal/platform"
 	genericctrl "axiomnizam.bitbd.net/axiomnizam/internal/platform/controller"
 	"axiomnizam.bitbd.net/axiomnizam/internal/platform/gc"
+	"axiomnizam.bitbd.net/axiomnizam/internal/platform/ipaccess"
 	snapshothandler "axiomnizam.bitbd.net/axiomnizam/internal/platform/snapshot"
 	querypkg "axiomnizam.bitbd.net/axiomnizam/internal/query"
 	resourcespkg "axiomnizam.bitbd.net/axiomnizam/internal/resources"
@@ -613,6 +614,11 @@ func main() {
 	router.Use(observability.SecurityHeadersMiddleware())
 	router.Use(observability.RequestValidationMiddleware(observability.DefaultRequestValidationConfig()))
 	router.Use(observability.CSRFMiddleware(observability.CSRFConfigWithTLS(cfg.TLS.Enabled)))
+
+	// ── IP Access Tracker — captures ALL requests for access log & IP blocking ──
+	ipTracker := ipaccess.NewTracker(10000)
+	router.Use(ipaccess.AccessTrackerMiddleware(ipTracker))
+	log.Println("✅ IP access tracker middleware registered (captures all routes)")
 
 	// ── Frontend (merged from separate frontend service) ─────────────────
 	frontendHandler := frontend.NewHandler("")
@@ -3376,7 +3382,7 @@ func main() {
 	}
 
 	// Wire previously-unwired modules (migrations, heartbeat, service registry, etc.)
-	server.WireUnwiredModules(conns, cfg, router, authMiddleware, adminOrSysMiddleware, backendMgr, platformManagers, storageSys)
+	server.WireUnwiredModules(conns, cfg, router, authMiddleware, adminOrSysMiddleware, backendMgr, platformManagers, storageSys, ipTracker)
 
 	// WaitX — service readiness checks (TCP, HTTP, DNS, gRPC, Redis, MySQL, PostgreSQL, MongoDB, Kafka, RabbitMQ)
 	waitxSystem := waitx.NewSystem()

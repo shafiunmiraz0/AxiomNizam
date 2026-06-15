@@ -54,6 +54,7 @@ func WireUnwiredModules(
 	backendMgr *platformstore.BackendManager,
 	platformManagers *platform.Managers,
 	storageSys *storage.System,
+	ipTracker *ipaccess.Tracker,
 ) {
 	// ====================================
 	// MIGRATIONS (previously unwired)
@@ -347,8 +348,10 @@ func WireUnwiredModules(
 	// ====================================
 	// IP ACCESS LOG & BLOCKING
 	// ====================================
-	ipTracker := ipaccess.NewTracker(10000)
-	router.Use(ipaccess.AccessTrackerMiddleware(ipTracker))
+	// Wire KVStore for blocklist persistence
+	if backendMgr != nil {
+		ipTracker.SetKVStore(backendMgr.KV())
+	}
 	ipAccessHandler := ipaccess.NewHandler(ipTracker)
 	ipAccessAPI := router.Group("/api/v1/ip-access", authMiddleware)
 	adminIPA := ipAccessAPI.Group("/")
@@ -361,8 +364,11 @@ func WireUnwiredModules(
 		adminIPA.GET("/blocked", ipAccessHandler.GetBlockedIPs)
 		adminIPA.POST("/block", ipAccessHandler.BlockIP)
 		adminIPA.POST("/unblock", ipAccessHandler.UnblockIP)
+		adminIPA.POST("/rate-limit", ipAccessHandler.SetRateLimit)
+		adminIPA.GET("/rate-limits", ipAccessHandler.GetRateLimits)
+		adminIPA.DELETE("/rate-limit/:ip", ipAccessHandler.RemoveRateLimit)
 	}
-	log.Println("✅ IP Access Log & Blocking registered")
+	log.Println("✅ IP Access Log & Blocking registered (routes + KV persistence)")
 
 	// ====================================
 	// RATE LIMITING (previously unwired)
