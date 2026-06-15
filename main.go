@@ -66,7 +66,6 @@ import (
 	"axiomnizam.bitbd.net/axiomnizam/internal/platform"
 	genericctrl "axiomnizam.bitbd.net/axiomnizam/internal/platform/controller"
 	"axiomnizam.bitbd.net/axiomnizam/internal/platform/gc"
-	"axiomnizam.bitbd.net/axiomnizam/internal/platform/ipaccess"
 	snapshothandler "axiomnizam.bitbd.net/axiomnizam/internal/platform/snapshot"
 	querypkg "axiomnizam.bitbd.net/axiomnizam/internal/query"
 	resourcespkg "axiomnizam.bitbd.net/axiomnizam/internal/resources"
@@ -614,11 +613,6 @@ func main() {
 	router.Use(observability.SecurityHeadersMiddleware())
 	router.Use(observability.RequestValidationMiddleware(observability.DefaultRequestValidationConfig()))
 	router.Use(observability.CSRFMiddleware(observability.CSRFConfigWithTLS(cfg.TLS.Enabled)))
-
-	// ── IP Access Tracker (nginx-style access log + IP blocking) ─────────
-	ipTracker := ipaccess.NewTracker(10000)
-	router.Use(ipaccess.AccessTrackerMiddleware(ipTracker))
-	log.Println("✅ IP access tracker middleware registered")
 
 	// ── Frontend (merged from separate frontend service) ─────────────────
 	frontendHandler := frontend.NewHandler("")
@@ -2772,20 +2766,6 @@ func main() {
 		modules = append(modules, gkSystem)
 		log.Println("✅ Gatekeeper 2FA module registered")
 	}
-
-	// ====================================
-	// IP ACCESS LOG & BLOCKING
-	// ====================================
-	ipAccessAPI := router.Group("/api/v1/ip-access", authMiddleware, adminOrSysMiddleware)
-	ipAccessHandler := ipaccess.NewHandler(ipTracker)
-	ipAccessAPI.GET("/log", ipAccessHandler.GetAccessLog)
-	ipAccessAPI.GET("/ips", ipAccessHandler.GetIPList)
-	ipAccessAPI.GET("/ips/:ip", ipAccessHandler.GetIPDetail)
-	ipAccessAPI.GET("/ips/:ip/log", ipAccessHandler.GetIPLog)
-	ipAccessAPI.POST("/block", ipAccessHandler.BlockIP)
-	ipAccessAPI.POST("/unblock", ipAccessHandler.UnblockIP)
-	ipAccessAPI.GET("/blocked", ipAccessHandler.GetBlockedIPs)
-	log.Println("✅ IP Access log & blocking routes registered (/api/v1/ip-access)")
 
 	// Start all registered modules.
 	for _, m := range modules {
