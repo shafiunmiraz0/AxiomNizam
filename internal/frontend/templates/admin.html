@@ -63,6 +63,9 @@
         <button class="tab-btn" onclick="switchTab('logs')">
             <span class="tab-icon"><svg viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></span> Logs
         </button>
+        <button class="tab-btn" onclick="switchTab('ip-access')">
+            <span class="tab-icon"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/><path d="M12 6v6l4 2" fill="none" stroke="currentColor" stroke-width="2"/></svg></span> IP Access
+        </button>
         <button class="tab-btn" onclick="switchTab('settings')">
             <span class="tab-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/></svg></span> Settings
         </button>
@@ -642,6 +645,7 @@
         </div>
     </div>
 
+    <!-- ===================== IP ACCESS TAB ===================== -->
     <!-- ===================== SETTINGS TAB ===================== -->
     <div id="settings" class="tab-content">
         <div class="settings-section">
@@ -805,6 +809,203 @@
                 <button id="saveScannerBtn" class="btn-primary" onclick="saveScannerConfig()">Save Scanner Settings</button>
                 <span id="scanSaveStatus" style="margin-left:12px;font-size:0.85rem;"></span>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- ===================== IP ACCESS TAB ===================== -->
+<div id="ip-access" class="tab-content">
+    <style>
+        .ip-stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+        .ip-stat-card { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 16px; text-align: center; }
+        .ip-stat-card .stat-num { font-size: 1.8em; font-weight: 700; color: #22c55e; }
+        .ip-stat-card .stat-lbl { font-size: 0.8em; color: rgba(255,255,255,0.6); margin-top: 4px; }
+        .ip-section { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 16px; margin-bottom: 20px; }
+        .ip-section h3 { margin: 0 0 12px 0; font-size: 1em; color: rgba(255,255,255,0.9); display: flex; align-items: center; gap: 8px; }
+        .ip-toolbar { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+        .ip-toolbar select, .ip-toolbar input { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #fff; padding: 6px 10px; border-radius: 6px; font-size: 0.85em; }
+        .ip-toolbar label { font-size: 0.85em; color: rgba(255,255,255,0.7); display: flex; align-items: center; gap: 4px; cursor: pointer; }
+        .ip-table { width: 100%; border-collapse: collapse; font-size: 0.85em; }
+        .ip-table th { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.7); font-weight: 600; text-align: left; padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.1); position: sticky; top: 0; }
+        .ip-table td { padding: 7px 10px; border-bottom: 1px solid rgba(255,255,255,0.04); color: rgba(255,255,255,0.85); }
+        .ip-table tr:hover td { background: rgba(255,255,255,0.04); }
+        .ip-table .mono { font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 0.9em; }
+        .ip-table-wrap { max-height: 400px; overflow-y: auto; border-radius: 8px; }
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.75em; font-weight: 600; }
+        .badge-green { background: rgba(34,197,94,0.15); color: #22c55e; }
+        .badge-red { background: rgba(239,68,68,0.15); color: #ef4444; }
+        .badge-blue { background: rgba(59,130,246,0.15); color: #3b82f6; }
+        .badge-yellow { background: rgba(234,179,8,0.15); color: #eab308; }
+        .badge-gray { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.5); }
+        .btn-xs { padding: 3px 8px; font-size: 0.75em; border-radius: 5px; border: none; cursor: pointer; font-weight: 600; }
+        .btn-block { background: rgba(239,68,68,0.15); color: #ef4444; }
+        .btn-block:hover { background: rgba(239,68,68,0.3); }
+        .btn-unblock { background: rgba(34,197,94,0.15); color: #22c55e; }
+        .btn-unblock:hover { background: rgba(34,197,94,0.3); }
+        .btn-view { background: rgba(59,130,246,0.15); color: #3b82f6; }
+        .btn-view:hover { background: rgba(59,130,246,0.3); }
+        .ip-modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; justify-content: center; align-items: center; }
+        .ip-modal-overlay.active { display: flex; }
+        .ip-modal { background: #1a1a2e; border: 1px solid rgba(255,255,255,0.15); border-radius: 14px; width: 90%; max-width: 900px; max-height: 85vh; overflow-y: auto; padding: 24px; }
+        .ip-modal h2 { margin: 0 0 16px 0; font-size: 1.2em; color: #fff; }
+        .ip-modal .close-btn { position: absolute; top: 12px; right: 16px; background: none; border: none; color: rgba(255,255,255,0.6); font-size: 1.5em; cursor: pointer; }
+        .ip-detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+        .ip-detail-card { background: rgba(255,255,255,0.04); border-radius: 8px; padding: 12px; }
+        .ip-detail-card h4 { margin: 0 0 8px 0; font-size: 0.9em; color: rgba(255,255,255,0.7); }
+        .endpoint-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 0.85em; }
+        .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+        @media (max-width: 768px) {
+            .ip-stats-row { grid-template-columns: repeat(2, 1fr); }
+            .ip-detail-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+
+    <!-- Summary Stats -->
+    <div class="ip-stats-row">
+        <div class="ip-stat-card">
+            <div class="stat-num" id="ipStatTotal">-</div>
+            <div class="stat-lbl">Unique IPs</div>
+        </div>
+        <div class="ip-stat-card">
+            <div class="stat-num" id="ipStatPublic">-</div>
+            <div class="stat-lbl">Public IPs</div>
+        </div>
+        <div class="ip-stat-card">
+            <div class="stat-num" id="ipStatRequests">-</div>
+            <div class="stat-lbl">Total Requests</div>
+        </div>
+        <div class="ip-stat-card">
+            <div class="stat-num" id="ipStatBlocked" style="color:#ef4444;">-</div>
+            <div class="stat-lbl">Blocked IPs</div>
+        </div>
+    </div>
+
+    <!-- IP List Section -->
+    <div class="ip-section">
+        <h3>
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+            IP Activity List
+        </h3>
+        <div class="ip-toolbar">
+            <label>Show:
+                <select id="ipFilterSelect" onchange="loadIPList()">
+                    <option value="all">All IPs</option>
+                    <option value="public" selected>Public Only</option>
+                    <option value="private">Private Only</option>
+                </select>
+            </label>
+            <label>Sort:
+                <select id="ipSortSelect" onchange="loadIPList()">
+                    <option value="requests" selected>Most Requests</option>
+                    <option value="recent">Most Recent</option>
+                </select>
+            </label>
+            <button class="btn-xs btn-view" onclick="loadIPList()" style="padding:5px 12px;">Refresh</button>
+            <span id="ipListStatus" style="font-size:0.8em;color:rgba(255,255,255,0.4);margin-left:auto;"></span>
+        </div>
+        <div class="ip-table-wrap">
+            <table class="ip-table">
+                <thead>
+                    <tr>
+                        <th>IP Address</th>
+                        <th>Requests</th>
+                        <th>Last Seen</th>
+                        <th>Last Path</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="ipListBody">
+                    <tr><td colspan="6" style="text-align:center;color:rgba(255,255,255,0.3);padding:30px;">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Access Log Section -->
+    <div class="ip-section">
+        <h3>
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></svg>
+            Access Log (nginx-style)
+        </h3>
+        <div class="ip-toolbar">
+            <label>Filter IP:
+                <input type="text" id="logIPFilter" placeholder="e.g. 203.0.113.50" style="width:140px;" oninput="filterAccessLog()">
+            </label>
+            <label>Limit:
+                <select id="logLimitSelect">
+                    <option value="100">100</option>
+                    <option value="200" selected>200</option>
+                    <option value="500">500</option>
+                    <option value="1000">1000</option>
+                </select>
+            </label>
+            <button class="btn-xs btn-view" onclick="loadAccessLog()" style="padding:5px 12px;">Refresh</button>
+            <label style="margin-left:8px;">
+                <input type="checkbox" id="logAutoRefresh" checked> Auto-refresh (10s)
+            </label>
+            <span id="logStatus" style="font-size:0.8em;color:rgba(255,255,255,0.4);margin-left:auto;"></span>
+        </div>
+        <div class="ip-table-wrap" style="max-height:500px;">
+            <table class="ip-table">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>IP</th>
+                        <th>Method</th>
+                        <th>Path</th>
+                        <th>Status</th>
+                        <th>Duration</th>
+                        <th>User Agent</th>
+                    </tr>
+                </thead>
+                <tbody id="accessLogBody">
+                    <tr><td colspan="7" style="text-align:center;color:rgba(255,255,255,0.3);padding:30px;">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- IP Detail Modal -->
+<div id="ipDetailModal" class="ip-modal-overlay" onclick="if(event.target===this)closeIPDetailModal()">
+    <div class="ip-modal" style="position:relative;">
+        <button class="close-btn" onclick="closeIPDetailModal()">&times;</button>
+        <h2 id="ipDetailTitle">IP Detail</h2>
+        <div class="ip-detail-grid">
+            <div class="ip-detail-card">
+                <h4>Summary</h4>
+                <div id="ipDetailSummary" style="font-size:0.85em;">Loading...</div>
+            </div>
+            <div class="ip-detail-card">
+                <h4>Status Codes</h4>
+                <div id="ipDetailStatusCodes" style="font-size:0.85em;">Loading...</div>
+            </div>
+            <div class="ip-detail-card">
+                <h4>Top Endpoints</h4>
+                <div id="ipDetailEndpoints" style="font-size:0.85em;">Loading...</div>
+            </div>
+            <div class="ip-detail-card">
+                <h4>User Agents</h4>
+                <div id="ipDetailAgents" style="font-size:0.85em;">Loading...</div>
+            </div>
+        </div>
+        <div class="ip-detail-card" style="margin-bottom:12px;">
+            <h4>Recent Requests from this IP</h4>
+            <div class="ip-table-wrap" style="max-height:250px;">
+                <table class="ip-table">
+                    <thead>
+                        <tr><th>Time</th><th>Method</th><th>Path</th><th>Status</th><th>Duration</th></tr>
+                    </thead>
+                    <tbody id="ipDetailLogBody">
+                        <tr><td colspan="5" style="text-align:center;color:rgba(255,255,255,0.3);">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;">
+            <button id="ipDetailBlockBtn" class="btn-xs btn-block" style="padding:6px 16px;font-size:0.85em;" onclick="blockIPFromDetail()">Block This IP</button>
+            <button id="ipDetailUnblockBtn" class="btn-xs btn-unblock" style="padding:6px 16px;font-size:0.85em;display:none;" onclick="unblockIPFromDetail()">Unblock This IP</button>
         </div>
     </div>
 </div>

@@ -28,6 +28,7 @@ import (
 	"axiomnizam.bitbd.net/axiomnizam/internal/migrations"
 	"axiomnizam.bitbd.net/axiomnizam/internal/mlpipeline"
 	"axiomnizam.bitbd.net/axiomnizam/internal/platform"
+	"axiomnizam.bitbd.net/axiomnizam/internal/platform/ipaccess"
 	platformstore "axiomnizam.bitbd.net/axiomnizam/internal/platform/store"
 	"axiomnizam.bitbd.net/axiomnizam/internal/ratelimit"
 	"axiomnizam.bitbd.net/axiomnizam/internal/scanner"
@@ -342,6 +343,26 @@ func WireUnwiredModules(
 		}
 		log.Println("✅ Scanner config API registered")
 	}
+
+	// ====================================
+	// IP ACCESS LOG & BLOCKING
+	// ====================================
+	ipTracker := ipaccess.NewTracker(10000)
+	router.Use(ipaccess.AccessTrackerMiddleware(ipTracker))
+	ipAccessHandler := ipaccess.NewHandler(ipTracker)
+	ipAccessAPI := router.Group("/api/v1/ip-access", authMiddleware)
+	adminIPA := ipAccessAPI.Group("/")
+	adminIPA.Use(adminOrSysMiddleware)
+	{
+		adminIPA.GET("/log", ipAccessHandler.GetAccessLog)
+		adminIPA.GET("/ips", ipAccessHandler.GetIPList)
+		adminIPA.GET("/ips/:ip", ipAccessHandler.GetIPDetail)
+		adminIPA.GET("/ips/:ip/log", ipAccessHandler.GetIPLog)
+		adminIPA.GET("/blocked", ipAccessHandler.GetBlockedIPs)
+		adminIPA.POST("/block", ipAccessHandler.BlockIP)
+		adminIPA.POST("/unblock", ipAccessHandler.UnblockIP)
+	}
+	log.Println("✅ IP Access Log & Blocking registered")
 
 	// ====================================
 	// RATE LIMITING (previously unwired)
