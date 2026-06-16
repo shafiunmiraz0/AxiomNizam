@@ -388,33 +388,31 @@
         <p>Add an extra layer of security to your account with TOTP-based two-factor authentication.</p>
     </div>
 
-    <!-- Tabs -->
-    <div class="tfa-tabs" id="tfaTabs">
-        <button class="tfa-tab active" onclick="tfaSwitch('status')">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-            Status
-        </button>
-        <button class="tfa-tab" onclick="tfaSwitch('setup')">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-            Setup 2FA
-        </button>
-        <button class="tfa-tab" onclick="tfaSwitch('verify')">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-            Verify Code
-        </button>
-        <button class="tfa-tab" onclick="tfaSwitch('backup')">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M12 12h.01"/></svg>
-            Backup Codes
-        </button>
-        <button class="tfa-tab" onclick="tfaSwitch('devices')">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg>
-            Trusted Devices
-        </button>
-        <button class="tfa-tab" onclick="tfaSwitch('metrics')">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
-            Metrics
-        </button>
-    </div>
+    <!-- Sidebar Navigation -->
+    <div class="admin-sidebar-layout">
+        <nav class="admin-sidebar" id="adminSidebar">
+            <button class="sidebar-item active" onclick="tfaSwitch('status', this)">
+                <span class="tab-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></span> Status
+            </button>
+            <button class="sidebar-item" onclick="tfaSwitch('setup', this)">
+                <span class="tab-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span> Setup 2FA
+            </button>
+            <button class="sidebar-item" onclick="tfaSwitch('verify', this)">
+                <span class="tab-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span> Verify Code
+            </button>
+            <button class="sidebar-item" onclick="tfaSwitch('backup', this)">
+                <span class="tab-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M12 12h.01"/></svg></span> Backup Codes
+            </button>
+            <button class="sidebar-item" onclick="tfaSwitch('devices', this)">
+                <span class="tab-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg></span> Trusted Devices
+            </button>
+            <button class="sidebar-item" onclick="tfaSwitch('metrics', this)">
+                <span class="tab-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg></span> Metrics
+            </button>
+        </nav>
+        <button class="sidebar-toggle" id="sidebarToggle" onclick="toggleAdminSidebar()">☰</button>
+        <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeAdminSidebar()"></div>
+        <div class="admin-sidebar-content">
 
     <!-- Status Panel -->
     <div class="tfa-panel active" id="tfa-panel-status">
@@ -623,6 +621,8 @@
             <div style="text-align:center;padding:20px;color:var(--text-muted,#888)">Loading metrics...</div>
         </div>
     </div>
+    </div><!-- /admin-sidebar-content -->
+    </div><!-- /admin-sidebar-layout -->
 </div>
 
 <script src="/static/lib/qrcode.js"></script>

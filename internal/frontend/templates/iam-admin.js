@@ -208,19 +208,24 @@ function formatDate(iso) {
 
 // ── Tab Switching ────────────────────────────────────────────────────────────
 
-function switchIAMTab(tabId) {
+function switchIAMTab(tabId, btnEl) {
     document.querySelectorAll('.admin-container .tab-content').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.admin-container .tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.admin-container .sidebar-item').forEach(b => b.classList.remove('active'));
 
     const target = document.getElementById(tabId);
     if (target) target.classList.add('active');
 
-    const tabs = document.querySelectorAll('.admin-container .tab-btn');
-    tabs.forEach(b => {
-        if (b.getAttribute('onclick') && b.getAttribute('onclick').includes(tabId)) {
-            b.classList.add('active');
-        }
-    });
+    if (btnEl) {
+        btnEl.classList.add('active');
+    } else {
+        document.querySelectorAll('.admin-container .sidebar-item').forEach(b => {
+            if (b.getAttribute('onclick') && b.getAttribute('onclick').includes(tabId)) {
+                b.classList.add('active');
+            }
+        });
+    }
+
+    closeAdminSidebar();
 
     // Lazy-load data on tab switch
     if (tabId === 'iam-users') loadIAMUsers();
@@ -237,6 +242,20 @@ function switchIAMTab(tabId) {
     if (tabId === 'iam-idps') { populateRealmDropdowns(); loadIdentityProviders(); }
     if (tabId === 'iam-scopes') { populateRealmDropdowns(); loadClientScopes(); }
     if (tabId === 'iam-events') { populateRealmDropdowns(); loadEvents(); }
+}
+
+function toggleAdminSidebar() {
+    var sidebar = document.getElementById('adminSidebar');
+    var overlay = document.getElementById('sidebarOverlay');
+    if (sidebar) sidebar.classList.toggle('open');
+    if (overlay) overlay.classList.toggle('open');
+}
+
+function closeAdminSidebar() {
+    var sidebar = document.getElementById('adminSidebar');
+    var overlay = document.getElementById('sidebarOverlay');
+    if (sidebar) sidebar.classList.remove('open');
+    if (overlay) overlay.classList.remove('open');
 }
 
 // ── Modal helpers ────────────────────────────────────────────────────────────

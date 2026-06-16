@@ -123,14 +123,21 @@ window.addEventListener('DOMContentLoaded', function() {
     initAdminCertificateActions();
 });
 
-function switchTab(tabName) {
+function switchTab(tabName, btnEl) {
     var tabs = document.querySelectorAll('.tab-content');
     tabs.forEach(function(t) { t.classList.remove('active'); });
-    var btns = document.querySelectorAll('.tab-btn');
+    var btns = document.querySelectorAll('.sidebar-item');
     btns.forEach(function(b) { b.classList.remove('active'); });
     var sel = document.getElementById(tabName);
     if (sel) sel.classList.add('active');
-    if (event && event.currentTarget) event.currentTarget.classList.add('active');
+    if (btnEl) {
+        btnEl.classList.add('active');
+    } else if (event && event.currentTarget) {
+        event.currentTarget.classList.add('active');
+    }
+
+    // Close mobile sidebar after navigation
+    closeAdminSidebar();
 
     if (tabName === 'api-builder') { loadBuilderSummary(); loadCustomAPIs(); initSQLAssistantPanel(); }
     if (tabName === 'graphql-api-builder') { loadGraphQLBuilderSummary(); loadGraphQLCustomAPIs(); }
@@ -142,6 +149,20 @@ function switchTab(tabName) {
     if (tabName === 'control-plane') { refreshAdminControlPlaneData(); }
     if (tabName === 'ip-access') { loadIPAccessData(); loadIPList(); loadAccessLog(); loadRateLimits(); startIPAccessAutoRefresh(); }
     if (tabName === 'settings') { loadAdminCertificatePanel(); loadAntivirusConfig(); loadScannerConfig(); }
+}
+
+function toggleAdminSidebar() {
+    var sidebar = document.getElementById('adminSidebar');
+    var overlay = document.getElementById('sidebarOverlay');
+    if (sidebar) sidebar.classList.toggle('open');
+    if (overlay) overlay.classList.toggle('open');
+}
+
+function closeAdminSidebar() {
+    var sidebar = document.getElementById('adminSidebar');
+    var overlay = document.getElementById('sidebarOverlay');
+    if (sidebar) sidebar.classList.remove('open');
+    if (overlay) overlay.classList.remove('open');
 }
 
 // ===================================================================
