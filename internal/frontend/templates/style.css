@@ -4874,3 +4874,316 @@ button .ax-icon,
 .conductor-tabs {
     display: none !important;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   SIDEBAR ENHANCEMENTS
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── 1. Smooth collapse transition ─────────────────────────────────── */
+.persistent-sidebar {
+    transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+                min-width 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+                padding 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── 2. Active state indicator (left border bar) ───────────────────── */
+.psb-item.active {
+    position: relative;
+    border-left: 3px solid var(--primary-color);
+    padding-left: 9px;
+}
+
+.psb-section.expanded > .psb-item.active {
+    border-left: 3px solid var(--primary-color);
+    padding-left: 9px;
+}
+
+/* ── 3. Collapsed: icon-only mode ──────────────────────────────────── */
+.persistent-sidebar.collapsed .psb-label,
+.persistent-sidebar.collapsed .psb-arrow,
+.persistent-sidebar.collapsed .psb-subitems,
+.persistent-sidebar.collapsed .psb-divider {
+    display: none;
+}
+
+.persistent-sidebar.collapsed .psb-item {
+    justify-content: center;
+    padding: 10px;
+    gap: 0;
+}
+
+.persistent-sidebar.collapsed .psb-section > .psb-item {
+    padding: 10px;
+}
+
+/* ── 4. Collapsed: tooltip on hover ────────────────────────────────── */
+.persistent-sidebar.collapsed .psb-item {
+    position: relative;
+}
+
+.persistent-sidebar.collapsed .psb-item::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    left: calc(100% + 12px);
+    top: 50%;
+    transform: translateY(-50%);
+    background: var(--dark-bg);
+    color: var(--text-primary);
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+    z-index: 1100;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    border: 1px solid var(--border-color);
+    max-width: 200px;
+}
+
+.persistent-sidebar.collapsed .psb-item:hover::after {
+    opacity: 1;
+    transform: translateY(-50%) translateX(0);
+}
+
+/* Tooltip arrow */
+.persistent-sidebar.collapsed .psb-item::before {
+    content: '';
+    position: absolute;
+    left: calc(100% + 6px);
+    top: 50%;
+    transform: translateY(-50%);
+    border: 5px solid transparent;
+    border-right-color: var(--border-color);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    z-index: 1101;
+}
+
+.persistent-sidebar.collapsed .psb-item:hover::before {
+    opacity: 1;
+}
+
+/* ── 5. Collapsed: expand on hover (flyout) ────────────────────────── */
+.persistent-sidebar.collapsed:hover {
+    width: 280px;
+    min-width: 280px;
+    padding: 12px 10px;
+    overflow: visible;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.5);
+}
+
+.persistent-sidebar.collapsed:hover .psb-label {
+    display: inline;
+}
+
+.persistent-sidebar.collapsed:hover .psb-arrow {
+    display: flex;
+}
+
+.persistent-sidebar.collapsed:hover .psb-item {
+    justify-content: flex-start;
+    padding: 9px 12px;
+    gap: 10px;
+}
+
+.persistent-sidebar.collapsed:hover .psb-section > .psb-item {
+    padding: 9px 12px;
+}
+
+/* Restore tooltips only when NOT hovered */
+.persistent-sidebar.collapsed:hover .psb-item::after,
+.persistent-sidebar.collapsed:hover .psb-item::before {
+    opacity: 0 !important;
+    pointer-events: none;
+}
+
+/* ── 6. Badge counters ─────────────────────────────────────────────── */
+.psb-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 9px;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1;
+    margin-left: auto;
+    background: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+    flex-shrink: 0;
+}
+
+.psb-badge.psb-badge-green {
+    background: rgba(16, 185, 129, 0.2);
+    color: #10b981;
+}
+
+.psb-badge.psb-badge-amber {
+    background: rgba(245, 158, 11, 0.2);
+    color: #f59e0b;
+}
+
+.psb-badge.psb-badge-blue {
+    background: rgba(59, 130, 246, 0.2);
+    color: #3b82f6;
+}
+
+/* Hide badges when collapsed (flyout shows them) */
+.persistent-sidebar.collapsed .psb-badge {
+    display: none;
+}
+
+/* ── 7. Keyboard shortcut hint ─────────────────────────────────────── */
+.psb-shortcut {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    margin-left: auto;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+
+.psb-item:hover .psb-shortcut {
+    opacity: 0.5;
+}
+
+.psb-shortcut kbd {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 18px;
+    padding: 0 4px;
+    border-radius: 3px;
+    font-size: 10px;
+    font-family: var(--font-mono);
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: var(--text-muted);
+}
+
+/* ── 8. Command palette (Ctrl+K) ──────────────────────────────────── */
+.cmd-palette-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 2000;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 15vh;
+    backdrop-filter: blur(4px);
+}
+
+.cmd-palette-overlay.open {
+    display: flex;
+}
+
+.cmd-palette {
+    width: 520px;
+    max-width: 90vw;
+    background: var(--dark-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6);
+    overflow: hidden;
+    animation: cmdPaletteIn 0.15s ease;
+}
+
+@keyframes cmdPaletteIn {
+    from { opacity: 0; transform: scale(0.96) translateY(-8px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.cmd-palette-input {
+    width: 100%;
+    padding: 16px 20px;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-primary);
+    font-size: 16px;
+    font-family: var(--font-body);
+    outline: none;
+}
+
+.cmd-palette-input::placeholder {
+    color: var(--text-muted);
+}
+
+.cmd-palette-results {
+    max-height: 340px;
+    overflow-y: auto;
+    padding: 6px;
+}
+
+.cmd-palette-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    transition: all 0.1s ease;
+}
+
+.cmd-palette-item:hover,
+.cmd-palette-item.active {
+    background: rgba(var(--primary-rgb), 0.12);
+    color: var(--text-primary);
+}
+
+.cmd-palette-item .psb-icon svg {
+    width: 16px;
+    height: 16px;
+}
+
+.cmd-palette-item-label {
+    flex: 1;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.cmd-palette-item-path {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+}
+
+.cmd-palette-hint {
+    padding: 10px 16px;
+    border-top: 1px solid var(--border-color);
+    font-size: 12px;
+    color: var(--text-muted);
+    display: flex;
+    gap: 16px;
+}
+
+.cmd-palette-hint kbd {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 18px;
+    padding: 0 4px;
+    border-radius: 3px;
+    font-size: 10px;
+    font-family: var(--font-mono);
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: var(--text-muted);
+    margin-right: 4px;
+}
+
+/* Hide collapsed items inside sidebar when collapsed */
+.persistent-sidebar.collapsed .psb-badge,
+.persistent-sidebar.collapsed .psb-shortcut {
+    display: none;
+}

@@ -155,12 +155,12 @@
             {{ if and (not .embedded) (not .hideChrome) }}
             <aside class="persistent-sidebar" id="persistentSidebar">
                 <div class="persistent-sidebar-inner">
-                    <a href="/" class="psb-item {{ if eq .page "public-dashboard" }}active{{ end }}">
+                    <a href="/" class="psb-item {{ if eq .page "public-dashboard" }}active{{ end }}" data-tooltip="Dashboard">
                         <span class="psb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span>
                         <span class="psb-label">Dashboard</span>
                     </a>
                     <div class="psb-section {{ if eq .page "gis-dashboard" }}expanded{{ end }}">
-                        <a href="/gis" class="psb-item">
+                        <a href="/gis" class="psb-item" data-tooltip="GIS">
                             <span class="psb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/></svg></span>
                             <span class="psb-label">GIS</span>
                             <span class="psb-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span>
@@ -173,7 +173,7 @@
                         </div>
                     </div>
                     <div class="psb-section {{ if eq .page "analytics-dashboard" }}expanded{{ end }}">
-                        <a href="/analytics" class="psb-item">
+                        <a href="/analytics" class="psb-item" data-tooltip="Analytics">
                             <span class="psb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg></span>
                             <span class="psb-label">Analytics</span>
                             <span class="psb-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span>
@@ -186,7 +186,7 @@
                         </div>
                     </div>
                     <div class="psb-section {{ if eq .page "cdc-etl-dashboard" }}expanded{{ end }}">
-                        <a href="/cdc-etl" class="psb-item">
+                        <a href="/cdc-etl" class="psb-item" data-tooltip="CDC/ETL">
                             <span class="psb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></span>
                             <span class="psb-label">CDC/ETL</span>
                             <span class="psb-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span>
@@ -200,9 +200,10 @@
                         </div>
                     </div>
                     <div class="psb-section {{ if eq .page "netintel-dashboard" }}expanded{{ end }}">
-                        <a href="/netintel" class="psb-item">
+                        <a href="/netintel" class="psb-item" data-tooltip="NetIntel">
                             <span class="psb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></span>
                             <span class="psb-label">NetIntel</span>
+                            <span class="psb-badge" id="psb-netintel-alerts" style="display:none">0</span>
                             <span class="psb-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span>
                         </a>
                         <div class="psb-subitems">
@@ -217,9 +218,10 @@
                         </div>
                     </div>
                     <div class="psb-section {{ if eq .page "conductor-dashboard" }}expanded{{ end }}">
-                        <a href="/conductor" class="psb-item">
+                        <a href="/conductor" class="psb-item" data-tooltip="Conductor">
                             <span class="psb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></span>
                             <span class="psb-label">Conductor</span>
+                            <span class="psb-badge psb-badge-amber" id="psb-conductor-dlq" style="display:none">0</span>
                             <span class="psb-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span>
                         </a>
                         <div class="psb-subitems">
@@ -233,7 +235,7 @@
                         </div>
                     </div>
                     <div class="psb-section {{ if eq .page "governance-dashboard" }}expanded{{ end }}" id="psb-governance-section" style="display:none">
-                        <a href="/governance" class="psb-item" id="psb-governance">
+                        <a href="/governance" class="psb-item" id="psb-governance" data-tooltip="Governance">
                             <span class="psb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span>
                             <span class="psb-label">Governance</span>
                             <span class="psb-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span>
@@ -245,7 +247,7 @@
                         </div>
                     </div>
                     <div class="psb-section {{ if eq .page "operations-center" }}expanded{{ end }}" id="psb-ops-section" style="display:none">
-                        <a href="/operations-center" class="psb-item" id="psb-ops">
+                        <a href="/operations-center" class="psb-item" id="psb-ops" data-tooltip="Operations">
                             <span class="psb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></span>
                             <span class="psb-label">Operations</span>
                             <span class="psb-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span>
@@ -260,7 +262,7 @@
                         </div>
                     </div>
                     <div class="psb-section {{ if eq .page "version-lineage-dashboard" }}expanded{{ end }}" id="psb-lineage-section" style="display:none">
-                        <a href="/lineage-version" class="psb-item" id="psb-lineage">
+                        <a href="/lineage-version" class="psb-item" id="psb-lineage" data-tooltip="Lineage">
                             <span class="psb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg></span>
                             <span class="psb-label">Lineage</span>
                             <span class="psb-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span>
@@ -276,7 +278,7 @@
                     {{ if .isAuth }}
                     <div class="psb-divider"></div>
                     <div class="psb-section {{ if eq .page "admin" }}expanded{{ end }}" id="psb-admin-section">
-                        <a href="/admin" class="psb-item" id="psb-admin">
+                        <a href="/admin" class="psb-item" id="psb-admin" data-tooltip="Admin">
                             <span class="psb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
                             <span class="psb-label">Admin</span>
                             <span class="psb-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span>
@@ -296,7 +298,7 @@
                         </div>
                     </div>
                     <div class="psb-section {{ if eq .page "system-manager" }}expanded{{ end }}" id="psb-sysmanager-section">
-                        <a href="/system-manager" class="psb-item" id="psb-sysmanager">
+                        <a href="/system-manager" class="psb-item" id="psb-sysmanager" data-tooltip="System Manager">
                             <span class="psb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></span>
                             <span class="psb-label">System Manager</span>
                             <span class="psb-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span>
@@ -313,13 +315,13 @@
                         </div>
                     </div>
                     <div class="psb-section {{ if eq .page "manager" }}expanded{{ end }}" id="psb-manager-section">
-                        <a href="/manager" class="psb-item" id="psb-manager">
+                        <a href="/manager" class="psb-item" id="psb-manager" data-tooltip="Manager">
                             <span class="psb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
                             <span class="psb-label">Manager</span>
                         </a>
                     </div>
                     <div class="psb-section {{ if eq .page "iam-admin" }}expanded{{ end }}" id="psb-iam-admin-section">
-                        <a href="/iam-admin" class="psb-item" id="psb-iam-admin">
+                        <a href="/iam-admin" class="psb-item" id="psb-iam-admin" data-tooltip="IAM Console">
                             <span class="psb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span>
                             <span class="psb-label">IAM Console</span>
                             <span class="psb-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span>
@@ -340,7 +342,7 @@
                         </div>
                     </div>
                     <div class="psb-section {{ if eq .page "object-storage" }}expanded{{ end }}" id="psb-object-storage-section">
-                        <a href="/object-storage" class="psb-item" id="psb-object-storage">
+                        <a href="/object-storage" class="psb-item" id="psb-object-storage" data-tooltip="Object Storage">
                             <span class="psb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg></span>
                             <span class="psb-label">Object Storage</span>
                             <span class="psb-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span>
@@ -358,7 +360,7 @@
                         </div>
                     </div>
                     <div class="psb-section {{ if eq .page "two-factor" }}expanded{{ end }}" id="psb-two-factor-section">
-                        <a href="/two-factor" class="psb-item" id="psb-two-factor">
+                        <a href="/two-factor" class="psb-item" id="psb-two-factor" data-tooltip="Two-Factor Auth">
                             <span class="psb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
                             <span class="psb-label">Two-Factor Auth</span>
                             <span class="psb-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span>
@@ -377,6 +379,19 @@
             </aside>
             <div class="persistent-sidebar-overlay" id="persistentSidebarOverlay" onclick="closePersistentSidebar()"></div>
             {{ end }}
+
+            <!-- Command Palette (Ctrl+K) -->
+            <div class="cmd-palette-overlay" id="cmdPaletteOverlay" onclick="if(event.target===this)closeCmdPalette()">
+                <div class="cmd-palette">
+                    <input type="text" class="cmd-palette-input" id="cmdPaletteInput" placeholder="Type a page name..." oninput="cmdPaletteActiveIdx=0;renderCmdPaletteResults(this.value)" />
+                    <div class="cmd-palette-results" id="cmdPaletteResults"></div>
+                    <div class="cmd-palette-hint">
+                        <span><kbd>&uarr;</kbd><kbd>&darr;</kbd> navigate</span>
+                        <span><kbd>Enter</kbd> open</span>
+                        <span><kbd>Esc</kbd> close</span>
+                    </div>
+                </div>
+            </div>
 
             <!-- Main Content -->
             <main class="main-content{{ if .hideChrome }} login-main-content{{ end }}{{ if eq .pageName "public-dashboard" }} landing-main-content{{ end }}{{ if eq .pageName "gis-dashboard" }} gis-main-content{{ end }}">
@@ -937,8 +952,244 @@
         window.addEventListener('keydown', function(event) {
             if (event.key === 'Escape') {
                 closePersistentSidebar();
+                closeCmdPalette();
+                /* Also collapse any expanded sidebar sections */
+                document.querySelectorAll('.psb-section.expanded').forEach(function(s) {
+                    if (!s.classList.contains('{{ if eq .page "admin" }}expanded{{ end }}'.replace('expanded','').trim()) ||
+                        !window.location.pathname.startsWith(s.querySelector('a')?.getAttribute('href') || '')) {
+                        s.classList.remove('expanded');
+                    }
+                });
             }
         });
+
+        /* ═══════════════════════════════════════════════════════════════
+           KEYBOARD SHORTCUTS
+           ═══════════════════════════════════════════════════════════════ */
+
+        /* Ctrl+K / Cmd+K: Command Palette */
+        document.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                e.preventDefault();
+                toggleCmdPalette();
+            }
+        });
+
+        /* Number keys 1-9: Jump to sidebar sections (only when not in input) */
+        var sidebarSections = [
+            { key: '1', href: '/', label: 'Dashboard' },
+            { key: '2', href: '/gis', label: 'GIS' },
+            { key: '3', href: '/analytics', label: 'Analytics' },
+            { key: '4', href: '/cdc-etl', label: 'CDC/ETL' },
+            { key: '5', href: '/netintel', label: 'NetIntel' },
+            { key: '6', href: '/conductor', label: 'Conductor' },
+            { key: '7', href: '/governance', label: 'Governance' },
+            { key: '8', href: '/operations-center', label: 'Operations' },
+            { key: '9', href: '/lineage-version', label: 'Lineage' }
+        ];
+
+        document.addEventListener('keydown', function(e) {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
+            if (e.ctrlKey || e.metaKey || e.altKey) return;
+            var section = sidebarSections.find(function(s) { return s.key === e.key; });
+            if (section) {
+                e.preventDefault();
+                window.location.href = section.href;
+            }
+        });
+
+        /* ═══════════════════════════════════════════════════════════════
+           COMMAND PALETTE
+           ═══════════════════════════════════════════════════════════════ */
+
+        var cmdPaletteItems = [
+            { href: '/', label: 'Dashboard', icon: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>' },
+            { href: '/gis', label: 'GIS', icon: '<circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/>' },
+            { href: '/analytics', label: 'Analytics', icon: '<path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/>' },
+            { href: '/cdc-etl', label: 'CDC/ETL', icon: '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>' },
+            { href: '/netintel', label: 'NetIntel', icon: '<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>' },
+            { href: '/conductor', label: 'Conductor', icon: '<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>' },
+            { href: '/governance', label: 'Governance', icon: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>' },
+            { href: '/operations-center', label: 'Operations', icon: '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>' },
+            { href: '/lineage-version', label: 'Lineage', icon: '<polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>' },
+            { href: '/admin', label: 'Admin', icon: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>' },
+            { href: '/system-manager', label: 'System Manager', icon: '<rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>' },
+            { href: '/iam-admin', label: 'IAM Console', icon: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>' },
+            { href: '/object-storage', label: 'Object Storage', icon: '<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>' },
+            { href: '/two-factor', label: 'Two-Factor Auth', icon: '<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>' }
+        ];
+
+        var cmdPaletteActiveIdx = 0;
+
+        function toggleCmdPalette() {
+            var overlay = document.getElementById('cmdPaletteOverlay');
+            if (!overlay) return;
+            if (overlay.classList.contains('open')) {
+                closeCmdPalette();
+            } else {
+                openCmdPalette();
+            }
+        }
+
+        function openCmdPalette() {
+            var overlay = document.getElementById('cmdPaletteOverlay');
+            var input = document.getElementById('cmdPaletteInput');
+            if (!overlay || !input) return;
+            overlay.classList.add('open');
+            input.value = '';
+            input.focus();
+            cmdPaletteActiveIdx = 0;
+            renderCmdPaletteResults('');
+        }
+
+        function closeCmdPalette() {
+            var overlay = document.getElementById('cmdPaletteOverlay');
+            if (overlay) overlay.classList.remove('open');
+        }
+
+        function renderCmdPaletteResults(query) {
+            var container = document.getElementById('cmdPaletteResults');
+            if (!container) return;
+            var q = query.toLowerCase().trim();
+            var filtered = q ? cmdPaletteItems.filter(function(item) {
+                return item.label.toLowerCase().indexOf(q) !== -1;
+            }) : cmdPaletteItems;
+
+            if (filtered.length === 0) {
+                container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted)">No results found</div>';
+                return;
+            }
+
+            var html = '';
+            filtered.forEach(function(item, i) {
+                var activeClass = i === cmdPaletteActiveIdx ? ' active' : '';
+                html += '<div class="cmd-palette-item' + activeClass + '" data-href="' + item.href + '" onclick="window.location.href=\'' + item.href + '\'">' +
+                    '<span class="psb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + item.icon + '</svg></span>' +
+                    '<span class="cmd-palette-item-label">' + item.label + '</span>' +
+                    '<span class="cmd-palette-item-path">' + item.href + '</span>' +
+                    '</div>';
+            });
+            container.innerHTML = html;
+        }
+
+        /* Command palette keyboard navigation */
+        document.addEventListener('keydown', function(e) {
+            var overlay = document.getElementById('cmdPaletteOverlay');
+            if (!overlay || !overlay.classList.contains('open')) return;
+
+            var items = overlay.querySelectorAll('.cmd-palette-item');
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                cmdPaletteActiveIdx = Math.min(cmdPaletteActiveIdx + 1, items.length - 1);
+                updateCmdPaletteActive(items);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                cmdPaletteActiveIdx = Math.max(cmdPaletteActiveIdx - 1, 0);
+                updateCmdPaletteActive(items);
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                if (items[cmdPaletteActiveIdx]) {
+                    window.location.href = items[cmdPaletteActiveIdx].getAttribute('data-href');
+                }
+            }
+        });
+
+        function updateCmdPaletteActive(items) {
+            items.forEach(function(item, i) {
+                item.classList.toggle('active', i === cmdPaletteActiveIdx);
+                if (i === cmdPaletteActiveIdx) item.scrollIntoView({ block: 'nearest' });
+            });
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           MOBILE GESTURE SUPPORT (swipe open/close)
+           ═══════════════════════════════════════════════════════════════ */
+
+        (function initSwipeGesture() {
+            var touchStartX = 0;
+            var touchStartY = 0;
+            var touchMoved = false;
+            var sidebar = document.getElementById('persistentSidebar');
+            if (!sidebar) return;
+
+            document.addEventListener('touchstart', function(e) {
+                touchStartX = e.touches[0].clientX;
+                touchStartY = e.touches[0].clientY;
+                touchMoved = false;
+            }, { passive: true });
+
+            document.addEventListener('touchmove', function(e) {
+                if (!touchMoved) {
+                    var dx = Math.abs(e.touches[0].clientX - touchStartX);
+                    var dy = Math.abs(e.touches[0].clientY - touchStartY);
+                    if (dx > 10 || dy > 10) touchMoved = true;
+                }
+            }, { passive: true });
+
+            document.addEventListener('touchend', function(e) {
+                if (!touchMoved) return;
+                var touchEndX = e.changedTouches[0].clientX;
+                var dx = touchEndX - touchStartX;
+                var threshold = 80;
+
+                if (!isMobileViewport()) return;
+
+                if (dx > threshold && touchStartX < 30) {
+                    /* Swipe right from left edge: open sidebar */
+                    var sidebar = document.getElementById('persistentSidebar');
+                    var overlay = document.getElementById('persistentSidebarOverlay');
+                    if (sidebar) sidebar.classList.add('open');
+                    if (overlay) overlay.classList.add('open');
+                    document.body.classList.add('mobile-sidebar-open');
+                } else if (dx < -threshold && sidebar.classList.contains('open')) {
+                    /* Swipe left: close sidebar */
+                    closePersistentSidebar();
+                }
+            }, { passive: true });
+        })();
+
+        /* ═══════════════════════════════════════════════════════════════
+           REMEMBER SCROLL POSITION
+           ═══════════════════════════════════════════════════════════════ */
+
+        (function initScrollMemory() {
+            var scrollKey = 'sidebarScrollTop';
+            var sidebar = document.getElementById('persistentSidebar');
+            if (!sidebar) return;
+
+            /* Restore scroll position */
+            var saved = localStorage.getItem(scrollKey);
+            if (saved) {
+                setTimeout(function() { sidebar.scrollTop = parseInt(saved, 10) || 0; }, 50);
+            }
+
+            /* Save scroll position on scroll (debounced) */
+            var scrollTimer = null;
+            sidebar.addEventListener('scroll', function() {
+                if (scrollTimer) clearTimeout(scrollTimer);
+                scrollTimer = setTimeout(function() {
+                    localStorage.setItem(scrollKey, String(sidebar.scrollTop));
+                }, 200);
+            });
+        })();
+
+        /* ═══════════════════════════════════════════════════════════════
+           BADGE COUNTER UPDATES
+           ═══════════════════════════════════════════════════════════════ */
+
+        function updateSidebarBadge(id, count) {
+            var badge = document.getElementById(id);
+            if (!badge) return;
+            if (count > 0) {
+                badge.textContent = count > 99 ? '99+' : String(count);
+                badge.style.display = '';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+
+        /* Make badge update function globally accessible */
+        window.updateSidebarBadge = updateSidebarBadge;
     </script>
 </body>
 </html>
