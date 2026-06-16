@@ -112,114 +112,29 @@
 </head>
 <body>
     <div class="app-container">
-        <!-- Navigation Bar -->
+        <!-- Top Bar (logo + user only) -->
         {{ if and (not .embedded) (not .hideChrome) }}
         <nav class="navbar">
             <div class="nav-container">
+                <button type="button" class="mobile-sidebar-toggle" id="mobileSidebarToggle" onclick="togglePersistentSidebar()" aria-label="Toggle sidebar">
+                    <span class="mobile-nav-toggle-line"></span>
+                    <span class="mobile-nav-toggle-line"></span>
+                    <span class="mobile-nav-toggle-line"></span>
+                </button>
                 <div class="nav-logo">
                     <span class="logo-icon">
                         <img src="/static/axiomnizam-logo-minimal.svg?v=20260318-11" alt="AxiomNizam logo">
                     </span>
                     <span class="logo-text">AxiomNizam</span>
                 </div>
-
-                <button
-                    type="button"
-                    class="mobile-nav-toggle"
-                    id="mobileNavToggle"
-                    aria-label="Toggle navigation"
-                    aria-expanded="false"
-                    aria-controls="primary-navigation"
-                    onclick="toggleMobileNav(event)">
-                    <span class="mobile-nav-toggle-line"></span>
-                    <span class="mobile-nav-toggle-line"></span>
-                    <span class="mobile-nav-toggle-line"></span>
+                <button type="button" class="sidebar-collapse-toggle" id="sidebarCollapseToggle" onclick="togglePersistentSidebarCollapse()" title="Toggle sidebar">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
                 </button>
-                
-                <div class="nav-center" id="primary-navigation">
-                    <a href="/" class="nav-link {{ if eq .page "public-dashboard" }}active{{ end }}">
-                        <span class="nav-icon"><svg viewBox="0 0 24 24"><rect x="18" y="3" width="4" height="18" rx="1"/><rect x="10" y="8" width="4" height="13" rx="1"/><rect x="2" y="13" width="4" height="8" rx="1"/></svg></span>
-                        <span>Dashboard</span>
-                    </a>
-                    <a href="/gis" class="nav-link {{ if eq .page "gis-dashboard" }}active{{ end }}">
-                        <span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/></svg></span>
-                        <span>GIS</span>
-                    </a>
-                    <a href="/analytics" class="nav-link {{ if eq .page "analytics-dashboard" }}active{{ end }}">
-                        <span class="nav-icon"><svg viewBox="0 0 24 24"><rect x="18" y="3" width="4" height="18" rx="1"/><rect x="10" y="8" width="4" height="13" rx="1"/><rect x="2" y="13" width="4" height="8" rx="1"/></svg></span>
-                        <span>Analytics</span>
-                    </a>
-                    <a href="/cdc-etl" class="nav-link {{ if eq .page "cdc-etl-dashboard" }}active{{ end }}">
-                        <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></span>
-                        <span>CDC/ETL</span>
-                    </a>
-                    <a href="/netintel" class="nav-link {{ if eq .page "netintel-dashboard" }}active{{ end }}">
-                        <span class="nav-icon"><svg viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></span>
-                        <span>NetIntel</span>
-                    </a>
-                    <a href="/conductor" class="nav-link {{ if eq .page "conductor-dashboard" }}active{{ end }}">
-                        <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></span>
-                        <span>Conductor</span>
-                    </a>
-
-                    <div class="nav-dropdown" id="nav-more-wrap">
-                        <button
-                            class="nav-more-btn {{ if or (eq .page "governance-dashboard") (eq .page "operations-center") (eq .page "version-lineage-dashboard") (eq .page "admin") (eq .page "system-manager") (eq .page "manager") (eq .page "iam-admin") (eq .page "object-storage") (eq .page "two-factor") }}active{{ end }}"
-                            id="navMoreBtn"
-                            onclick="toggleNavMoreMenu(event)">
-                            <span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
-                            <span class="nav-more-label">More</span>
-                            <span class="nav-more-caret">▾</span>
-                        </button>
-
-                        <div class="nav-dropdown-menu" id="navMoreMenu">
-                            <a href="/governance" class="nav-dropdown-link {{ if eq .page "governance-dashboard" }}active{{ end }}" id="nav-governance" style="display:none">
-                                <span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
-                                <span>Governance</span>
-                            </a>
-                            <a href="/operations-center" class="nav-dropdown-link {{ if eq .page "operations-center" }}active{{ end }}" id="nav-ops" style="display:none">
-                                <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></span>
-                                <span>Operations</span>
-                            </a>
-                            <a href="/lineage-version" class="nav-dropdown-link {{ if eq .page "version-lineage-dashboard" }}active{{ end }}" id="nav-lineage" style="display:none">
-                                <span class="nav-icon"><svg viewBox="0 0 24 24"><rect x="18" y="3" width="4" height="18" rx="1"/><rect x="10" y="8" width="4" height="13" rx="1"/><rect x="2" y="13" width="4" height="8" rx="1"/></svg></span>
-                                <span>Lineage</span>
-                            </a>
-                            {{ if .isAuth }}
-                            <a href="/admin" class="nav-dropdown-link {{ if eq .page "admin" }}active{{ end }}" id="nav-admin" style="display:none">
-                                <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></span>
-                                <span>Admin</span>
-                            </a>
-                            <a href="/system-manager" class="nav-dropdown-link {{ if eq .page "system-manager" }}active{{ end }}" id="nav-sysmanager" style="display:none">
-                                <span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/></svg></span>
-                                <span>System Manager</span>
-                            </a>
-                            <a href="/manager" class="nav-dropdown-link {{ if eq .page "manager" }}active{{ end }}" id="nav-manager" style="display:none">
-                                <span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/></svg></span>
-                                <span>Manager</span>
-                            </a>
-                            <a href="/iam-admin" class="nav-dropdown-link {{ if eq .page "iam-admin" }}active{{ end }}" id="nav-iam-admin" style="display:none">
-                                <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span>
-                                <span>IAM Console</span>
-                            </a>
-                            <a href="/object-storage" class="nav-dropdown-link {{ if eq .page "object-storage" }}active{{ end }}" id="nav-object-storage" style="display:none">
-                                <span class="nav-icon"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg></span>
-                                <span>Object Storage</span>
-                            </a>
-                            <a href="/two-factor" class="nav-dropdown-link {{ if eq .page "two-factor" }}active{{ end }}" id="nav-two-factor" style="display:none">
-                                <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span>
-                                <span>Two-Factor Auth</span>
-                            </a>
-                            {{ end }}
-                        </div>
-                    </div>
-                </div>
-                
                 <div class="nav-right" id="primary-actions">
                     {{ if .isAuth }}
                     <div class="user-info">
                         <span class="user-icon">
-                            <svg viewBox="0 0 24 24" width="22" height="22" fill="#757575" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
                                 <circle cx="12" cy="7" r="4"></circle>
                             </svg>
@@ -235,8 +150,81 @@
         </nav>
         {{ end }}
 
-        <!-- Main Content -->
-        <main class="main-content{{ if .hideChrome }} login-main-content{{ end }}{{ if eq .pageName "public-dashboard" }} landing-main-content{{ end }}{{ if eq .pageName "gis-dashboard" }} gis-main-content{{ end }}">
+        <div class="app-body">
+            <!-- Persistent Left Sidebar -->
+            {{ if and (not .embedded) (not .hideChrome) }}
+            <aside class="persistent-sidebar" id="persistentSidebar">
+                <div class="persistent-sidebar-inner">
+                    <a href="/" class="psb-item {{ if eq .page "public-dashboard" }}active{{ end }}">
+                        <span class="psb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span>
+                        <span class="psb-label">Dashboard</span>
+                    </a>
+                    <a href="/gis" class="psb-item {{ if eq .page "gis-dashboard" }}active{{ end }}">
+                        <span class="psb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/></svg></span>
+                        <span class="psb-label">GIS</span>
+                    </a>
+                    <a href="/analytics" class="psb-item {{ if eq .page "analytics-dashboard" }}active{{ end }}">
+                        <span class="psb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg></span>
+                        <span class="psb-label">Analytics</span>
+                    </a>
+                    <a href="/cdc-etl" class="psb-item {{ if eq .page "cdc-etl-dashboard" }}active{{ end }}">
+                        <span class="psb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></span>
+                        <span class="psb-label">CDC/ETL</span>
+                    </a>
+                    <a href="/netintel" class="psb-item {{ if eq .page "netintel-dashboard" }}active{{ end }}">
+                        <span class="psb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></span>
+                        <span class="psb-label">NetIntel</span>
+                    </a>
+                    <a href="/conductor" class="psb-item {{ if eq .page "conductor-dashboard" }}active{{ end }}">
+                        <span class="psb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></span>
+                        <span class="psb-label">Conductor</span>
+                    </a>
+                    <a href="/governance" class="psb-item {{ if eq .page "governance-dashboard" }}active{{ end }}" id="psb-governance" style="display:none">
+                        <span class="psb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span>
+                        <span class="psb-label">Governance</span>
+                    </a>
+                    <a href="/operations-center" class="psb-item {{ if eq .page "operations-center" }}active{{ end }}" id="psb-ops" style="display:none">
+                        <span class="psb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></span>
+                        <span class="psb-label">Operations</span>
+                    </a>
+                    <a href="/lineage-version" class="psb-item {{ if eq .page "version-lineage-dashboard" }}active{{ end }}" id="psb-lineage" style="display:none">
+                        <span class="psb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg></span>
+                        <span class="psb-label">Lineage</span>
+                    </a>
+                    {{ if .isAuth }}
+                    <div class="psb-divider"></div>
+                    <a href="/admin" class="psb-item {{ if eq .page "admin" }}active{{ end }}" id="psb-admin" style="display:none">
+                        <span class="psb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
+                        <span class="psb-label">Admin</span>
+                    </a>
+                    <a href="/system-manager" class="psb-item {{ if eq .page "system-manager" }}active{{ end }}" id="psb-sysmanager" style="display:none">
+                        <span class="psb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></span>
+                        <span class="psb-label">System Manager</span>
+                    </a>
+                    <a href="/manager" class="psb-item {{ if eq .page "manager" }}active{{ end }}" id="psb-manager" style="display:none">
+                        <span class="psb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
+                        <span class="psb-label">Manager</span>
+                    </a>
+                    <a href="/iam-admin" class="psb-item {{ if eq .page "iam-admin" }}active{{ end }}" id="psb-iam-admin" style="display:none">
+                        <span class="psb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span>
+                        <span class="psb-label">IAM Console</span>
+                    </a>
+                    <a href="/object-storage" class="psb-item {{ if eq .page "object-storage" }}active{{ end }}" id="psb-object-storage" style="display:none">
+                        <span class="psb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg></span>
+                        <span class="psb-label">Object Storage</span>
+                    </a>
+                    <a href="/two-factor" class="psb-item {{ if eq .page "two-factor" }}active{{ end }}" id="psb-two-factor" style="display:none">
+                        <span class="psb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+                        <span class="psb-label">Two-Factor Auth</span>
+                    </a>
+                    {{ end }}
+                </div>
+            </aside>
+            <div class="persistent-sidebar-overlay" id="persistentSidebarOverlay" onclick="closePersistentSidebar()"></div>
+            {{ end }}
+
+            <!-- Main Content -->
+            <main class="main-content{{ if .hideChrome }} login-main-content{{ end }}{{ if eq .pageName "public-dashboard" }} landing-main-content{{ end }}{{ if eq .pageName "gis-dashboard" }} gis-main-content{{ end }}">
             {{ if eq .pageName "login" }}
                 {{ template "login" . }}
             {{ else if eq .pageName "signup" }}
@@ -273,6 +261,7 @@
                 {{ template "conductor-dashboard" . }}
             {{ end }}
         </main>
+        </div><!-- /app-body -->
 
         <!-- Footer -->
         {{ if and (not .embedded) (not .hideChrome) }}
@@ -308,69 +297,8 @@
         // Permanent dark theme
         document.documentElement.setAttribute('data-theme', 'dark');
 
-        function isMobileNavViewport() {
+        function isMobileViewport() {
             return window.matchMedia('(max-width: 1200px)').matches;
-        }
-
-        function syncMobileNavState(shouldOpen) {
-            const navbar = document.querySelector('.navbar');
-            const toggle = document.getElementById('mobileNavToggle');
-            if (!navbar || !toggle) return;
-
-            const open = !!shouldOpen && isMobileNavViewport();
-            navbar.classList.toggle('mobile-open', open);
-            document.body.classList.toggle('mobile-nav-open', open);
-            toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-        }
-
-        function closeMobileNav() {
-            syncMobileNavState(false);
-        }
-
-        function toggleMobileNav(event) {
-            if (event) {
-                event.preventDefault();
-                event.stopPropagation();
-            }
-            const navbar = document.querySelector('.navbar');
-            if (!navbar) return;
-            syncMobileNavState(!navbar.classList.contains('mobile-open'));
-        }
-
-        function initMobileNavInteractions() {
-            const toggle = document.getElementById('mobileNavToggle');
-            if (toggle) {
-                toggle.setAttribute('aria-expanded', 'false');
-            }
-
-            document.querySelectorAll('.nav-link, .nav-dropdown-link').forEach(function(link) {
-                if (link.dataset.mobileNavInit === '1') {
-                    return;
-                }
-                link.dataset.mobileNavInit = '1';
-                link.addEventListener('click', function() {
-                    closeMobileNav();
-                    closeNavMoreMenu();
-                });
-            });
-        }
-
-
-        function toggleNavMoreMenu(event) {
-            if (event) {
-                event.preventDefault();
-                event.stopPropagation();
-            }
-            const wrap = document.getElementById('nav-more-wrap');
-            if (!wrap) return;
-            wrap.classList.toggle('open');
-        }
-
-        function closeNavMoreMenu() {
-            const wrap = document.getElementById('nav-more-wrap');
-            if (wrap) {
-                wrap.classList.remove('open');
-            }
         }
 
         function normalizeUserRole(rawRole) {
@@ -417,14 +345,14 @@
                 role = roleFromAlias(storedName) || role;
             }
 
-            const navAdmin = document.getElementById('nav-admin');
-            const navSysManager = document.getElementById('nav-sysmanager');
-            const navManager = document.getElementById('nav-manager');
-            const navGovernance = document.getElementById('nav-governance');
-            const navOps = document.getElementById('nav-ops');
-            const navLineage = document.getElementById('nav-lineage');
-            const navIAM = document.getElementById('nav-iam-admin');
-            const navObjectStorage = document.getElementById('nav-object-storage');
+            const navAdmin = document.getElementById('psb-admin');
+            const navSysManager = document.getElementById('psb-sysmanager');
+            const navManager = document.getElementById('psb-manager');
+            const navGovernance = document.getElementById('psb-governance');
+            const navOps = document.getElementById('psb-ops');
+            const navLineage = document.getElementById('psb-lineage');
+            const navIAM = document.getElementById('psb-iam-admin');
+            const navObjectStorage = document.getElementById('psb-object-storage');
 
             const isAdmin = role === 'admin';
             const isSystemManager = role === 'system-manager';
@@ -439,27 +367,43 @@
             if (navIAM) navIAM.style.display = isSystemManager ? '' : 'none';
             if (navObjectStorage) navObjectStorage.style.display = isSystemManager ? '' : 'none';
 
-            var navTwoFactor = document.getElementById('nav-two-factor');
+            var navTwoFactor = document.getElementById('psb-two-factor');
             if (navTwoFactor) navTwoFactor.style.display = hasAuthToken ? '' : 'none';
-
-            const navMoreWrap = document.getElementById('nav-more-wrap');
-            const navMoreMenu = document.getElementById('navMoreMenu');
-            if (navMoreWrap && navMoreMenu) {
-                let hasVisibleMoreItems = Array.from(navMoreMenu.querySelectorAll('.nav-dropdown-link'))
-                    .some((link) => link.style.display !== 'none');
-
-                // Keep More menu useful if auth is present but role propagation is delayed.
-                if (!hasVisibleMoreItems && hasAuthToken && navOps) {
-                    navOps.style.display = '';
-                    hasVisibleMoreItems = true;
-                }
-
-                navMoreWrap.style.display = hasVisibleMoreItems ? '' : 'none';
-                if (!hasVisibleMoreItems) {
-                    navMoreWrap.classList.remove('open');
-                }
-            }
         }
+
+        function togglePersistentSidebar() {
+            var sidebar = document.getElementById('persistentSidebar');
+            var overlay = document.getElementById('persistentSidebarOverlay');
+            if (sidebar) sidebar.classList.toggle('open');
+            if (overlay) overlay.classList.toggle('open');
+            document.body.classList.toggle('mobile-sidebar-open');
+        }
+
+        function closePersistentSidebar() {
+            var sidebar = document.getElementById('persistentSidebar');
+            var overlay = document.getElementById('persistentSidebarOverlay');
+            if (sidebar) sidebar.classList.remove('open');
+            if (overlay) overlay.classList.remove('open');
+            document.body.classList.remove('mobile-sidebar-open');
+        }
+
+        function togglePersistentSidebarCollapse() {
+            var sidebar = document.getElementById('persistentSidebar');
+            var body = document.body;
+            if (!sidebar) return;
+            var isCollapsed = sidebar.classList.toggle('collapsed');
+            body.classList.toggle('sidebar-collapsed', isCollapsed);
+            localStorage.setItem('sidebarCollapsed', isCollapsed ? '1' : '0');
+        }
+
+        (function restoreSidebarState() {
+            var collapsed = localStorage.getItem('sidebarCollapsed') === '1';
+            if (collapsed) {
+                document.body.classList.add('sidebar-collapsed');
+                var sidebar = document.getElementById('persistentSidebar');
+                if (sidebar) sidebar.classList.add('collapsed');
+            }
+        })();
 
         function initTabNavigationScrollUX() {
             const tabBars = document.querySelectorAll('.tab-navigation');
@@ -573,12 +517,11 @@
             setTimeout(applyRoleNavVisibility, 1200);
             window.addEventListener('focus', applyRoleNavVisibility);
             window.addEventListener('resize', function() {
-                if (!isMobileNavViewport()) {
-                    closeMobileNav();
+                if (!isMobileViewport()) {
+                    closePersistentSidebar();
                 }
             });
 
-            initMobileNavInteractions();
             initTabNavigationScrollUX();
 
             if (document.getElementById('idpButtonsContainer')) {
@@ -772,20 +715,14 @@
         }
 
         window.onclick = function(event) {
-            if (!event.target.closest('#nav-more-wrap')) {
-                closeNavMoreMenu();
+            if (isMobileViewport() && !event.target.closest('.persistent-sidebar') && !event.target.closest('.mobile-sidebar-toggle')) {
+                closePersistentSidebar();
             }
-
-            if (isMobileNavViewport() && !event.target.closest('.navbar')) {
-                closeMobileNav();
-            }
-
         };
 
         window.addEventListener('keydown', function(event) {
             if (event.key === 'Escape') {
-                closeNavMoreMenu();
-                closeMobileNav();
+                closePersistentSidebar();
             }
         });
     </script>
