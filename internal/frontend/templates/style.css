@@ -4866,3 +4866,10 @@ button .ax-icon,
     background: rgba(var(--primary-rgb), 0.3);
     color: var(--primary-light);
 }
+
+/* Hide top tab bars — sidebar handles navigation */
+.cdc-etl-tabs,
+.ni-tab-nav,
+.conductor-tabs {
+    display: none !important;
+}

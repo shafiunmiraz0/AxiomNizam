@@ -199,10 +199,23 @@
                             <a href="/cdc-etl#orchestration" class="psb-subitem"><span class="psb-subicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z"/></svg></span>Orchestration</a>
                         </div>
                     </div>
-                    <a href="/netintel" class="psb-item {{ if eq .page "netintel-dashboard" }}active{{ end }}">
-                        <span class="psb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></span>
-                        <span class="psb-label">NetIntel</span>
-                    </a>
+                    <div class="psb-section {{ if eq .page "netintel-dashboard" }}expanded{{ end }}">
+                        <a href="/netintel" class="psb-item">
+                            <span class="psb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></span>
+                            <span class="psb-label">NetIntel</span>
+                            <span class="psb-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span>
+                        </a>
+                        <div class="psb-subitems">
+                            <a href="/netintel#overview" class="psb-subitem"><span class="psb-subicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></span>Overview</a>
+                            <a href="/netintel#logs" class="psb-subitem"><span class="psb-subicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="18" y="3" width="4" height="18" rx="1"/><rect x="10" y="8" width="4" height="13" rx="1"/><rect x="2" y="13" width="4" height="8" rx="1"/></svg></span>Log Explorer</a>
+                            <a href="/netintel#topology" class="psb-subitem"><span class="psb-subicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12a10 10 0 0 1 10-10"/><path d="M2 16a6 6 0 0 1 6-6"/><path d="M2 20a2 2 0 0 1 2-2"/><path d="M19 19m-3 0a3 3 0 1 0 6 0 3 3 0 1 0-6 0"/><path d="M16 16l-4-4"/></svg></span>Topology</a>
+                            <a href="/netintel#heatmap" class="psb-subitem"><span class="psb-subicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg></span>Heatmaps</a>
+                            <a href="/netintel#trends" class="psb-subitem"><span class="psb-subicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="18" y="3" width="4" height="18" rx="1"/><rect x="10" y="8" width="4" height="13" rx="1"/><rect x="2" y="13" width="4" height="8" rx="1"/></svg></span>Trends</a>
+                            <a href="/netintel#alerts" class="psb-subitem"><span class="psb-subicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></span>Alerts</a>
+                            <a href="/netintel#predictions" class="psb-subitem"><span class="psb-subicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></span>Predictions</a>
+                            <a href="/netintel#parsers" class="psb-subitem"><span class="psb-subicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></span>Parsers</a>
+                        </div>
+                    </div>
                     <div class="psb-section {{ if eq .page "conductor-dashboard" }}expanded{{ end }}">
                         <a href="/conductor" class="psb-item">
                             <span class="psb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></span>
@@ -575,6 +588,8 @@
                     switchTab(hash);
                 } else if (pagePath === '/conductor' && typeof switchTab === 'function') {
                     switchTab(hash);
+                } else if (pagePath === '/netintel' && typeof NI !== 'undefined' && typeof NI.switchTab === 'function') {
+                    NI.switchTab(hash);
                 }
 
                 // Scroll to section if element with matching ID exists
