@@ -132,8 +132,6 @@ function switchTab(tabName, btnEl) {
     if (sel) sel.classList.add('active');
     if (btnEl) {
         btnEl.classList.add('active');
-    } else if (event && event.currentTarget) {
-        event.currentTarget.classList.add('active');
     }
 
     // Close mobile sidebar after navigation

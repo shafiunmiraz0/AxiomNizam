@@ -214,8 +214,6 @@ function switchManagerTab(tabName, btnEl) {
     
     if (btnEl) {
         btnEl.classList.add('active');
-    } else if (event && event.currentTarget) {
-        event.currentTarget.classList.add('active');
     }
     
     closeAdminSidebar();
