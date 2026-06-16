@@ -6,7 +6,7 @@
     </div>
 
     <div class="platform-grid">
-        <section class="platform-card platform-col-12">
+        <section class="platform-card platform-col-12" id="snapshot">
             <h3>Incident Snapshot</h3>
             <div class="platform-metrics">
                 <div class="metric"><span class="label">Alerts</span><span class="value" id="metricAlerts">0</span></div>
@@ -19,7 +19,7 @@
             </div>
         </section>
 
-        <section class="platform-card platform-col-6">
+        <section class="platform-card platform-col-6" id="webhooks">
             <h3>Webhooks</h3>
             <form class="platform-form" id="webhookCreateForm">
                 <input id="webhookName" type="text" placeholder="Webhook name" required>
@@ -29,7 +29,7 @@
             <div class="platform-list" id="opsWebhookList"></div>
         </section>
 
-        <section class="platform-card platform-col-6">
+        <section class="platform-card platform-col-6" id="streams">
             <h3>Streams</h3>
             <form class="platform-form" id="streamCreateForm">
                 <input id="streamTenantId" type="text" placeholder="Tenant ID">
@@ -39,17 +39,17 @@
             <div class="platform-list" id="opsStreamList"></div>
         </section>
 
-        <section class="platform-card platform-col-6">
+        <section class="platform-card platform-col-6" id="exports">
             <h3>Exports</h3>
             <div class="platform-list" id="opsExportList"></div>
         </section>
 
-        <section class="platform-card platform-col-6">
+        <section class="platform-card platform-col-6" id="bulk">
             <h3>Bulk Operations</h3>
             <div class="platform-list" id="opsBulkList"></div>
         </section>
 
-        <section class="platform-card platform-col-12">
+        <section class="platform-card platform-col-12" id="feed">
             <h3>Raw Incident Feed</h3>
             <pre class="platform-json" id="operationsResponse">No data yet.</pre>
         </section>
