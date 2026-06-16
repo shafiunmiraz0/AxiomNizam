@@ -80,21 +80,21 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Persistent Left Sidebar */
 .persistent-sidebar {
-    width: 220px;
-    min-width: 220px;
+    width: 260px;
+    min-width: 260px;
     background: var(--darker-bg);
     border-right: 1px solid var(--border-color);
     display: flex;
     flex-direction: column;
-    position: sticky;
+    position: fixed;
     top: 56px;
-    align-self: flex-start;
+    left: 0;
     height: calc(100vh - 56px);
     overflow-y: auto;
     scrollbar-width: thin;
     scrollbar-color: rgba(var(--primary-rgb), 0.3) transparent;
     z-index: 900;
-    padding: 12px 8px;
+    padding: 12px 10px;
 }
 
 .persistent-sidebar-inner {
@@ -311,6 +311,7 @@ h1, h2, h3, h4, h5, h6 {
 
 body.sidebar-collapsed .main-content {
     margin-left: 0;
+    width: 100%;
 }
 
 /* Mobile sidebar toggle button in navbar */
@@ -500,9 +501,9 @@ body.sidebar-collapsed .main-content {
 .main-content {
     flex: 1;
     max-width: 100%;
-    margin: 0;
+    margin-left: 260px;
     padding: 40px 20px;
-    width: 100%;
+    width: calc(100% - 260px);
 }
 
 .main-content.landing-main-content {
