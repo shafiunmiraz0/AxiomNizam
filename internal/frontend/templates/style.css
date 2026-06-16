@@ -169,6 +169,69 @@ h1, h2, h3, h4, h5, h6 {
     margin: 6px 4px;
 }
 
+/* Expandable sidebar sections */
+.psb-section .psb-item {
+    position: relative;
+}
+
+.psb-arrow {
+    display: flex;
+    align-items: center;
+    margin-left: auto;
+    transition: transform 0.2s ease;
+    opacity: 0.5;
+}
+
+.psb-arrow svg {
+    width: 14px;
+    height: 14px;
+    stroke: currentColor;
+    stroke-width: 2;
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.psb-section.expanded .psb-arrow {
+    transform: rotate(180deg);
+}
+
+.psb-subitems {
+    display: none;
+    flex-direction: column;
+    gap: 1px;
+    padding: 2px 0 4px 0;
+}
+
+.psb-section.expanded .psb-subitems {
+    display: flex;
+}
+
+.psb-subitem {
+    display: block;
+    padding: 6px 12px 6px 40px;
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 12px;
+    font-weight: 500;
+    border-radius: 5px;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.psb-subitem:hover {
+    color: var(--text-primary);
+    background: rgba(var(--primary-rgb), 0.08);
+}
+
+.psb-subitem.active {
+    color: var(--primary-color);
+    background: rgba(var(--primary-rgb), 0.12);
+    font-weight: 600;
+}
+
 /* Mobile sidebar overlay */
 .persistent-sidebar-overlay {
     display: none;

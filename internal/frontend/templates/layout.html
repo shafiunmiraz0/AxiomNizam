@@ -193,30 +193,103 @@
                     </a>
                     {{ if .isAuth }}
                     <div class="psb-divider"></div>
-                    <a href="/admin" class="psb-item {{ if eq .page "admin" }}active{{ end }}" id="psb-admin" style="display:none">
-                        <span class="psb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
-                        <span class="psb-label">Admin</span>
-                    </a>
-                    <a href="/system-manager" class="psb-item {{ if eq .page "system-manager" }}active{{ end }}" id="psb-sysmanager" style="display:none">
-                        <span class="psb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></span>
-                        <span class="psb-label">System Manager</span>
-                    </a>
-                    <a href="/manager" class="psb-item {{ if eq .page "manager" }}active{{ end }}" id="psb-manager" style="display:none">
-                        <span class="psb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
-                        <span class="psb-label">Manager</span>
-                    </a>
-                    <a href="/iam-admin" class="psb-item {{ if eq .page "iam-admin" }}active{{ end }}" id="psb-iam-admin" style="display:none">
-                        <span class="psb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span>
-                        <span class="psb-label">IAM Console</span>
-                    </a>
-                    <a href="/object-storage" class="psb-item {{ if eq .page "object-storage" }}active{{ end }}" id="psb-object-storage" style="display:none">
-                        <span class="psb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg></span>
-                        <span class="psb-label">Object Storage</span>
-                    </a>
-                    <a href="/two-factor" class="psb-item {{ if eq .page "two-factor" }}active{{ end }}" id="psb-two-factor" style="display:none">
-                        <span class="psb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
-                        <span class="psb-label">Two-Factor Auth</span>
-                    </a>
+                    <div class="psb-section {{ if eq .page "admin" }}expanded{{ end }}" id="psb-admin-section">
+                        <a href="/admin" class="psb-item" id="psb-admin">
+                            <span class="psb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
+                            <span class="psb-label">Admin</span>
+                            <span class="psb-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span>
+                        </a>
+                        <div class="psb-subitems">
+                            <a href="/admin#api-builder" class="psb-subitem">API Builder</a>
+                            <a href="/admin#graphql-api-builder" class="psb-subitem">GraphQL API</a>
+                            <a href="/admin#csv-upload" class="psb-subitem">File → Dashboard</a>
+                            <a href="/admin#converter" class="psb-subitem">Dashboard ↔ GIS</a>
+                            <a href="/admin#file-scanner" class="psb-subitem">File Scanner</a>
+                            <a href="/admin#api-testing" class="psb-subitem">API Testing</a>
+                            <a href="/admin#graphql-studio" class="psb-subitem">GraphQL Studio</a>
+                            <a href="/admin#control-plane" class="psb-subitem">Control Plane</a>
+                            <a href="/admin#logs" class="psb-subitem">Logs</a>
+                            <a href="/admin#ip-access" class="psb-subitem">IP Access</a>
+                            <a href="/admin#settings" class="psb-subitem">Settings</a>
+                        </div>
+                    </div>
+                    <div class="psb-section {{ if eq .page "system-manager" }}expanded{{ end }}" id="psb-sysmanager-section">
+                        <a href="/system-manager" class="psb-item" id="psb-sysmanager">
+                            <span class="psb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></span>
+                            <span class="psb-label">System Manager</span>
+                            <span class="psb-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span>
+                        </a>
+                        <div class="psb-subitems">
+                            <a href="/system-manager#overview" class="psb-subitem">Overview</a>
+                            <a href="/system-manager#databases" class="psb-subitem">Databases</a>
+                            <a href="/system-manager#users" class="psb-subitem">Users</a>
+                            <a href="/system-manager#monitoring" class="psb-subitem">Monitoring</a>
+                            <a href="/system-manager#operations" class="psb-subitem">Operations</a>
+                            <a href="/system-manager#admin-console" class="psb-subitem">Admin Console</a>
+                            <a href="/system-manager#graphql-studio" class="psb-subitem">GraphQL Studio</a>
+                            <a href="/system-manager#control-plane" class="psb-subitem">Control Plane</a>
+                        </div>
+                    </div>
+                    <div class="psb-section {{ if eq .page "manager" }}expanded{{ end }}" id="psb-manager-section">
+                        <a href="/manager" class="psb-item" id="psb-manager">
+                            <span class="psb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
+                            <span class="psb-label">Manager</span>
+                        </a>
+                    </div>
+                    <div class="psb-section {{ if eq .page "iam-admin" }}expanded{{ end }}" id="psb-iam-admin-section">
+                        <a href="/iam-admin" class="psb-item" id="psb-iam-admin">
+                            <span class="psb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span>
+                            <span class="psb-label">IAM Console</span>
+                            <span class="psb-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span>
+                        </a>
+                        <div class="psb-subitems">
+                            <a href="/iam-admin#iam-dashboard" class="psb-subitem">Dashboard</a>
+                            <a href="/iam-admin#iam-users" class="psb-subitem">Users</a>
+                            <a href="/iam-admin#iam-clients" class="psb-subitem">OAuth Clients</a>
+                            <a href="/iam-admin#iam-roles" class="psb-subitem">Roles</a>
+                            <a href="/iam-admin#iam-bindings" class="psb-subitem">Role Bindings</a>
+                            <a href="/iam-admin#iam-tokens" class="psb-subitem">Token Management</a>
+                            <a href="/iam-admin#iam-oidc" class="psb-subitem">OIDC / JWKS</a>
+                            <a href="/iam-admin#iam-realms" class="psb-subitem">Realms</a>
+                            <a href="/iam-admin#iam-groups" class="psb-subitem">Groups</a>
+                            <a href="/iam-admin#iam-idps" class="psb-subitem">Identity Providers</a>
+                            <a href="/iam-admin#iam-scopes" class="psb-subitem">Scopes</a>
+                            <a href="/iam-admin#iam-events" class="psb-subitem">Events</a>
+                        </div>
+                    </div>
+                    <div class="psb-section {{ if eq .page "object-storage" }}expanded{{ end }}" id="psb-object-storage-section">
+                        <a href="/object-storage" class="psb-item" id="psb-object-storage">
+                            <span class="psb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg></span>
+                            <span class="psb-label">Object Storage</span>
+                            <span class="psb-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span>
+                        </a>
+                        <div class="psb-subitems">
+                            <a href="/object-storage#os-dashboard" class="psb-subitem">Dashboard</a>
+                            <a href="/object-storage#os-buckets" class="psb-subitem">Buckets</a>
+                            <a href="/object-storage#os-browser" class="psb-subitem">Object Browser</a>
+                            <a href="/object-storage#os-upload" class="psb-subitem">Upload</a>
+                            <a href="/object-storage#os-policies" class="psb-subitem">Access Policies</a>
+                            <a href="/object-storage#os-access-keys" class="psb-subitem">Access Keys</a>
+                            <a href="/object-storage#os-metrics" class="psb-subitem">Metrics</a>
+                            <a href="/object-storage#os-events" class="psb-subitem">Audit Events</a>
+                            <a href="/object-storage#os-settings" class="psb-subitem">Bucket Settings</a>
+                        </div>
+                    </div>
+                    <div class="psb-section {{ if eq .page "two-factor" }}expanded{{ end }}" id="psb-two-factor-section">
+                        <a href="/two-factor" class="psb-item" id="psb-two-factor">
+                            <span class="psb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+                            <span class="psb-label">Two-Factor Auth</span>
+                            <span class="psb-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span>
+                        </a>
+                        <div class="psb-subitems">
+                            <a href="/two-factor#status" class="psb-subitem">Status</a>
+                            <a href="/two-factor#setup" class="psb-subitem">Setup 2FA</a>
+                            <a href="/two-factor#verify" class="psb-subitem">Verify Code</a>
+                            <a href="/two-factor#backup" class="psb-subitem">Backup Codes</a>
+                            <a href="/two-factor#devices" class="psb-subitem">Trusted Devices</a>
+                            <a href="/two-factor#metrics" class="psb-subitem">Metrics</a>
+                        </div>
+                    </div>
                     {{ end }}
                 </div>
             </aside>
@@ -345,14 +418,14 @@
                 role = roleFromAlias(storedName) || role;
             }
 
-            const navAdmin = document.getElementById('psb-admin');
-            const navSysManager = document.getElementById('psb-sysmanager');
-            const navManager = document.getElementById('psb-manager');
+            const navAdmin = document.getElementById('psb-admin-section');
+            const navSysManager = document.getElementById('psb-sysmanager-section');
+            const navManager = document.getElementById('psb-manager-section');
             const navGovernance = document.getElementById('psb-governance');
             const navOps = document.getElementById('psb-ops');
             const navLineage = document.getElementById('psb-lineage');
-            const navIAM = document.getElementById('psb-iam-admin');
-            const navObjectStorage = document.getElementById('psb-object-storage');
+            const navIAM = document.getElementById('psb-iam-admin-section');
+            const navObjectStorage = document.getElementById('psb-object-storage-section');
 
             const isAdmin = role === 'admin';
             const isSystemManager = role === 'system-manager';
@@ -367,7 +440,7 @@
             if (navIAM) navIAM.style.display = isSystemManager ? '' : 'none';
             if (navObjectStorage) navObjectStorage.style.display = isSystemManager ? '' : 'none';
 
-            var navTwoFactor = document.getElementById('psb-two-factor');
+            var navTwoFactor = document.getElementById('psb-two-factor-section');
             if (navTwoFactor) navTwoFactor.style.display = hasAuthToken ? '' : 'none';
         }
 
@@ -405,7 +478,49 @@
             }
         })();
 
-        function initTabNavigationScrollUX() {
+        function initSidebarHashNav() {
+            function activateHashTab() {
+                var hash = window.location.hash.replace('#', '');
+                if (!hash) return;
+
+                // Highlight active sub-item in sidebar
+                document.querySelectorAll('.psb-subitem').forEach(function(el) { el.classList.remove('active'); });
+                var subitem = document.querySelector('.psb-subitem[href*="#' + hash + '"]');
+                if (subitem) subitem.classList.add('active');
+
+                // Auto-switch tab on page if function exists
+                var pagePath = window.location.pathname;
+                if (pagePath === '/admin' && typeof switchTab === 'function') {
+                    switchTab(hash);
+                } else if (pagePath === '/system-manager' && typeof switchManagerTab === 'function') {
+                    switchManagerTab(hash);
+                } else if (pagePath === '/iam-admin' && typeof switchIAMTab === 'function') {
+                    switchIAMTab(hash);
+                } else if (pagePath === '/object-storage' && typeof osSwitch === 'function') {
+                    osSwitch(hash);
+                } else if (pagePath === '/two-factor' && typeof tfaSwitch === 'function') {
+                    tfaSwitch(hash);
+                }
+            }
+
+            activateHashTab();
+            window.addEventListener('hashchange', activateHashTab);
+
+            // Sub-item clicks: prevent reload if on same page, just switch tab
+            document.querySelectorAll('.psb-subitem').forEach(function(el) {
+                el.addEventListener('click', function(e) {
+                    var href = this.getAttribute('href');
+                    var parts = href.split('#');
+                    var targetPath = parts[0];
+                    var targetHash = parts[1];
+                    if (window.location.pathname === targetPath && targetHash) {
+                        e.preventDefault();
+                        history.pushState(null, '', '#' + targetHash);
+                        activateHashTab();
+                    }
+                });
+            });
+        }
             const tabBars = document.querySelectorAll('.tab-navigation');
             tabBars.forEach(function(tabBar) {
                 if (tabBar.dataset.scrollUxInit === '1') {
@@ -523,6 +638,7 @@
             });
 
             initTabNavigationScrollUX();
+            initSidebarHashNav();
 
             if (document.getElementById('idpButtonsContainer')) {
                 loadIdentityProviderButtons();
