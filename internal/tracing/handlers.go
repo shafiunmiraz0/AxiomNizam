@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"axiomnizam.bitbd.net/axiomnizam/internal/auth"
+	"axiomnizam.bitbd.net/axiomnizam/internal/utils"
 	"github.com/gin-gonic/gin"
 )
 
@@ -45,7 +46,7 @@ func (h *TracingHandler) writeIngestionAudit(c *gin.Context, audit *TraceIngesti
 	}
 
 	if audit.SourceIP == "" {
-		audit.SourceIP = strings.TrimSpace(c.ClientIP())
+		audit.SourceIP = strings.TrimSpace(utils.RealIP(c))
 	}
 	if audit.UserAgent == "" && c.Request != nil {
 		audit.UserAgent = strings.TrimSpace(c.Request.UserAgent())

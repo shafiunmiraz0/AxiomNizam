@@ -71,19 +71,38 @@
 
     // ── Tab Switching ────────────────────────────────────────────────────
 
-    window.tfaSwitch = function (tab) {
+    window.tfaSwitch = function (tab, btnEl) {
         document.querySelectorAll('.tfa-panel').forEach(function (p) { p.classList.remove('active'); });
-        document.querySelectorAll('.tfa-tab').forEach(function (t) { t.classList.remove('active'); });
+        document.querySelectorAll('.sidebar-item').forEach(function (t) { t.classList.remove('active'); });
         var panel = document.getElementById('tfa-panel-' + tab);
         if (panel) panel.classList.add('active');
-        var tabs = document.querySelectorAll('.tfa-tab');
-        var tabMap = { status: 0, setup: 1, verify: 2, backup: 3, devices: 4, metrics: 5 };
-        if (tabs[tabMap[tab]]) tabs[tabMap[tab]].classList.add('active');
+        if (btnEl) {
+            btnEl.classList.add('active');
+        } else {
+            var tabs = document.querySelectorAll('.sidebar-item');
+            var tabMap = { status: 0, setup: 1, verify: 2, backup: 3, devices: 4, metrics: 5 };
+            if (tabs[tabMap[tab]]) tabs[tabMap[tab]].classList.add('active');
+        }
+        closeAdminSidebar();
         if (tab === 'status') tfaLoadStatus();
         if (tab === 'verify') tfaPopulateFactorSelects();
         if (tab === 'backup') tfaPopulateFactorSelects();
         if (tab === 'devices') tfaLoadTrustedDevices();
         if (tab === 'metrics') tfaLoadMetrics();
+    };
+
+    window.toggleAdminSidebar = function() {
+        var sidebar = document.getElementById('adminSidebar');
+        var overlay = document.getElementById('sidebarOverlay');
+        if (sidebar) sidebar.classList.toggle('open');
+        if (overlay) overlay.classList.toggle('open');
+    };
+
+    window.closeAdminSidebar = function() {
+        var sidebar = document.getElementById('adminSidebar');
+        var overlay = document.getElementById('sidebarOverlay');
+        if (sidebar) sidebar.classList.remove('open');
+        if (overlay) overlay.classList.remove('open');
     };
 
     // ── Status Panel ─────────────────────────────────────────────────────

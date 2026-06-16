@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"axiomnizam.bitbd.net/axiomnizam/internal/audit"
+	"axiomnizam.bitbd.net/axiomnizam/internal/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -72,7 +73,7 @@ func (h *EncryptionHandler) CreateKey(c *gin.Context) {
 	}
 
 	// Phase 7: Forward encryption key creation to central audit system.
-	h.logAuditEvent(audit.ActionCreate, key.ID, key.TenantID, c.ClientIP())
+	h.logAuditEvent(audit.ActionCreate, key.ID, key.TenantID, utils.RealIP(c))
 
 	c.JSON(http.StatusCreated, key)
 }
@@ -118,7 +119,7 @@ func (h *EncryptionHandler) RotateKey(c *gin.Context) {
 	}
 
 	// Phase 7: Forward encryption key rotation to central audit system.
-	h.logAuditEvent(audit.ActionUpdate, id, "system", c.ClientIP())
+	h.logAuditEvent(audit.ActionUpdate, id, "system", utils.RealIP(c))
 
 	c.JSON(http.StatusOK, rotated)
 }
@@ -132,7 +133,7 @@ func (h *EncryptionHandler) DeleteKey(c *gin.Context) {
 	}
 
 	// Phase 7: Forward encryption key deletion to central audit system.
-	h.logAuditEvent(audit.ActionDelete, id, "system", c.ClientIP())
+	h.logAuditEvent(audit.ActionDelete, id, "system", utils.RealIP(c))
 
 	c.JSON(http.StatusOK, MessageResponse{Message: "key revoked"})
 }

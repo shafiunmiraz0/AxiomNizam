@@ -11,6 +11,7 @@ import (
 
 	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
 	"axiomnizam.bitbd.net/axiomnizam/internal/sqlfilter"
+	"axiomnizam.bitbd.net/axiomnizam/internal/utils"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -1069,7 +1070,7 @@ func enforceCustomAPIRateLimit(c *gin.Context, api *CustomAPI) (bool, int) {
 
 	callerKey := strings.TrimSpace(c.GetString("token"))
 	if callerKey == "" {
-		callerKey = "ip:" + strings.TrimSpace(c.ClientIP())
+		callerKey = "ip:" + strings.TrimSpace(utils.RealIP(c))
 	}
 
 	now := time.Now().UTC()

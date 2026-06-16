@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
+	"axiomnizam.bitbd.net/axiomnizam/internal/utils"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -71,7 +72,7 @@ func AccessLogMiddleware() gin.HandlerFunc {
 			zap.String("path", path),
 			zap.Int("status", status),
 			zap.Duration("latency", latency),
-			zap.String("client_ip", c.ClientIP()),
+			zap.String("client_ip", utils.RealIP(c)),
 			zap.Int("body_size", c.Writer.Size()),
 		}
 		if query != "" {

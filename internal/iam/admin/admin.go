@@ -20,6 +20,7 @@ import (
 	"axiomnizam.bitbd.net/axiomnizam/internal/iam/oauth"
 	"axiomnizam.bitbd.net/axiomnizam/internal/iam/storage"
 	"axiomnizam.bitbd.net/axiomnizam/internal/iam/token"
+	"axiomnizam.bitbd.net/axiomnizam/internal/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -588,7 +589,7 @@ func (h *Handler) Login(c *gin.Context) {
 		sessionTTL = h.issuer.AccessTokenTTL + time.Hour
 	}
 
-	session, err := h.authn.CreateSession(user.ID, c.ClientIP(), c.GetHeader("User-Agent"), sessionTTL)
+	session, err := h.authn.CreateSession(user.ID, utils.RealIP(c), c.GetHeader("User-Agent"), sessionTTL)
 	if err != nil || session == nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create login session"})
 		return

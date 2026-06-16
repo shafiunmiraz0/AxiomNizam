@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"axiomnizam.bitbd.net/axiomnizam/internal/models"
+	"axiomnizam.bitbd.net/axiomnizam/internal/utils"
 	"github.com/gin-gonic/gin"
 )
 
@@ -26,7 +27,7 @@ func (rlm *RateLimitMiddleware) Handler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		userID := c.GetString("user_id")
 		if userID == "" {
-			userID = c.ClientIP()
+			userID = utils.RealIP(c)
 		}
 
 		contentLength := int64(0)

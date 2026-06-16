@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"axiomnizam.bitbd.net/axiomnizam/internal/utils"
 	"github.com/gin-gonic/gin"
 )
 
@@ -296,18 +297,18 @@ func envDuration(key string, defaultVal time.Duration) time.Duration {
 func RateLimitKey(c *gin.Context, keyBy string) string {
 	switch keyBy {
 	case "ip":
-		return c.ClientIP()
+		return utils.RealIP(c)
 	case "token":
 		if token, exists := c.Get("token"); exists {
 			if s, ok := token.(string); ok {
 				return s
 			}
 		}
-		return c.ClientIP()
+		return utils.RealIP(c)
 	case "apikey":
 		return c.GetHeader("X-API-Key")
 	default:
-		return c.ClientIP()
+		return utils.RealIP(c)
 	}
 }
 

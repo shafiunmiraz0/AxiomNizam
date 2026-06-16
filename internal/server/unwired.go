@@ -28,6 +28,7 @@ import (
 	"axiomnizam.bitbd.net/axiomnizam/internal/migrations"
 	"axiomnizam.bitbd.net/axiomnizam/internal/mlpipeline"
 	"axiomnizam.bitbd.net/axiomnizam/internal/platform"
+	"axiomnizam.bitbd.net/axiomnizam/internal/platform/ipaccess"
 	platformstore "axiomnizam.bitbd.net/axiomnizam/internal/platform/store"
 	"axiomnizam.bitbd.net/axiomnizam/internal/ratelimit"
 	"axiomnizam.bitbd.net/axiomnizam/internal/scanner"
@@ -53,6 +54,7 @@ func WireUnwiredModules(
 	backendMgr *platformstore.BackendManager,
 	platformManagers *platform.Managers,
 	storageSys *storage.System,
+	ipTracker *ipaccess.Tracker,
 ) {
 	// ====================================
 	// MIGRATIONS (previously unwired)
@@ -342,6 +344,31 @@ func WireUnwiredModules(
 		}
 		log.Println("✅ Scanner config API registered")
 	}
+
+	// ====================================
+	// IP ACCESS LOG & BLOCKING
+	// ====================================
+	// Wire KVStore for blocklist persistence
+	if backendMgr != nil {
+		ipTracker.SetKVStore(backendMgr.KV())
+	}
+	ipAccessHandler := ipaccess.NewHandler(ipTracker)
+	ipAccessAPI := router.Group("/api/v1/ip-access", authMiddleware)
+	adminIPA := ipAccessAPI.Group("/")
+	adminIPA.Use(adminOrSysMiddleware)
+	{
+		adminIPA.GET("/log", ipAccessHandler.GetAccessLog)
+		adminIPA.GET("/ips", ipAccessHandler.GetIPList)
+		adminIPA.GET("/ips/:ip", ipAccessHandler.GetIPDetail)
+		adminIPA.GET("/ips/:ip/log", ipAccessHandler.GetIPLog)
+		adminIPA.GET("/blocked", ipAccessHandler.GetBlockedIPs)
+		adminIPA.POST("/block", ipAccessHandler.BlockIP)
+		adminIPA.POST("/unblock", ipAccessHandler.UnblockIP)
+		adminIPA.POST("/rate-limit", ipAccessHandler.SetRateLimit)
+		adminIPA.GET("/rate-limits", ipAccessHandler.GetRateLimits)
+		adminIPA.DELETE("/rate-limit/:ip", ipAccessHandler.RemoveRateLimit)
+	}
+	log.Println("✅ IP Access Log & Blocking registered (routes + KV persistence)")
 
 	// ====================================
 	// RATE LIMITING (previously unwired)

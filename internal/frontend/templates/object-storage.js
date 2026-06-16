@@ -526,7 +526,7 @@
     }
 
     // ===== Tab Switching =====
-    window.osSwitch = function(tabId) {
+    window.osSwitch = function(tabId, btnEl) {
         if (typeof window.osHideBucketHoverMetrics === 'function') {
             window.osHideBucketHoverMetrics(true);
         }
@@ -534,12 +534,17 @@
             window.osResetCreatedAccessKeyResult();
         }
         document.querySelectorAll('.os-panel').forEach(p => p.classList.remove('active'));
-        document.querySelectorAll('.os-tab').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.sidebar-item').forEach(b => b.classList.remove('active'));
         const panel = document.getElementById(tabId);
         if (panel) panel.classList.add('active');
-        document.querySelectorAll('.os-tab').forEach(b => {
-            if (b.getAttribute('onclick') && b.getAttribute('onclick').indexOf(tabId) !== -1) b.classList.add('active');
-        });
+        if (btnEl) {
+            btnEl.classList.add('active');
+        } else {
+            document.querySelectorAll('.sidebar-item').forEach(b => {
+                if (b.getAttribute('onclick') && b.getAttribute('onclick').indexOf(tabId) !== -1) b.classList.add('active');
+            });
+        }
+        closeAdminSidebar();
         if (tabId === 'os-dashboard') osLoadDashboard();
         if (tabId === 'os-buckets') osLoadBuckets();
         if (tabId === 'os-browser') osPopulateBucketSelects();
@@ -552,6 +557,20 @@
             osPopulateSettingsBuckets();
             osLoadBucketSettings();
         }
+    };
+
+    window.toggleAdminSidebar = function() {
+        var sidebar = document.getElementById('adminSidebar');
+        var overlay = document.getElementById('sidebarOverlay');
+        if (sidebar) sidebar.classList.toggle('open');
+        if (overlay) overlay.classList.toggle('open');
+    };
+
+    window.closeAdminSidebar = function() {
+        var sidebar = document.getElementById('adminSidebar');
+        var overlay = document.getElementById('sidebarOverlay');
+        if (sidebar) sidebar.classList.remove('open');
+        if (overlay) overlay.classList.remove('open');
     };
 
     // ===== Modals =====

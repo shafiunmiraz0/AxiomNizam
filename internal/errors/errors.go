@@ -175,3 +175,27 @@ func WrapPrecondition(msg string) error {
 func WrapUnavailable(msg string) error {
 	return fmt.Errorf("%s: %w", msg, ErrUnavailable)
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Format helpers — concise error creation with formatted messages
+// ─────────────────────────────────────────────────────────────────────────────
+
+// NotFoundf wraps ErrNotFound with a formatted message.
+func NotFoundf(format string, a ...any) error {
+	return fmt.Errorf("%s: %w", fmt.Sprintf(format, a...), ErrNotFound)
+}
+
+// AlreadyExistsf wraps ErrAlreadyExists with a formatted message.
+func AlreadyExistsf(format string, a ...any) error {
+	return fmt.Errorf("%s: %w", fmt.Sprintf(format, a...), ErrAlreadyExists)
+}
+
+// Conflictf wraps ErrConflict with a formatted message.
+func Conflictf(format string, a ...any) error {
+	return fmt.Errorf("%s: %w", fmt.Sprintf(format, a...), ErrConflict)
+}
+
+// InvalidInputf wraps ErrInvalidInput with a formatted message.
+func InvalidInputf(format string, a ...any) error {
+	return fmt.Errorf("%s: %w", fmt.Sprintf(format, a...), ErrInvalidInput)
+}

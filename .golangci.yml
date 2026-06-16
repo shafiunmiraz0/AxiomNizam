@@ -1,0 +1,54 @@
+run:
+  timeout: 5m
+  modules-download-mode: readonly
+
+linters:
+  enable:
+    - govet
+    - staticcheck
+    - errcheck
+    - gosimple
+    - ineffassign
+    - unused
+    - gocritic
+    - gofmt
+    - goimports
+    - misspell
+    - unconvert
+
+linters-settings:
+  errcheck:
+    check-blank: false
+    exclude-functions:
+      - (*encoding/json.Decoder).Decode
+      - (io.Closer).Close
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - style
+    disabled-checks:
+      - ifElseChain
+      - assignOp
+  misspell:
+    locale: US
+
+issues:
+  max-issues-per-linter: 50
+  max-same-issues: 5
+
+  exclude-rules:
+    # Test files can be more relaxed.
+    - path: _test\.go
+      linters:
+        - errcheck
+        - gocritic
+
+    # Generated files.
+    - path: \.gen\.go
+      linters:
+        - all
+
+    # Main.go can have more complex initialization.
+    - path: main\.go
+      linters:
+        - gocritic

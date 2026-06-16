@@ -6,7 +6,7 @@
     </div>
 
     <div class="platform-grid">
-        <section class="platform-card platform-col-6">
+        <section class="platform-card platform-col-6" id="version-history">
             <h3>Version History</h3>
             <form id="versionHistoryForm" class="platform-form">
                 <input id="vhType" type="text" placeholder="Resource type (api|workflow|dataset)" required>
@@ -24,7 +24,7 @@
             </form>
         </section>
 
-        <section class="platform-card platform-col-6">
+        <section class="platform-card platform-col-6" id="lineage-graph">
             <h3>Lineage Graph</h3>
             <form id="lineageGraphForm" class="platform-form">
                 <input id="lgType" type="text" placeholder="Resource type" required>
@@ -40,7 +40,7 @@
             </form>
         </section>
 
-        <section class="platform-card platform-col-12">
+        <section class="platform-card platform-col-12" id="trace-search">
             <h3>Trace Search</h3>
             <form id="traceSearchForm" class="platform-form" style="grid-template-columns: 2fr 1fr auto; align-items:center;">
                 <input id="tsService" type="text" placeholder="Service name">

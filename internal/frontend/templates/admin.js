@@ -123,14 +123,19 @@ window.addEventListener('DOMContentLoaded', function() {
     initAdminCertificateActions();
 });
 
-function switchTab(tabName) {
+function switchTab(tabName, btnEl) {
     var tabs = document.querySelectorAll('.tab-content');
     tabs.forEach(function(t) { t.classList.remove('active'); });
-    var btns = document.querySelectorAll('.tab-btn');
+    var btns = document.querySelectorAll('.sidebar-item');
     btns.forEach(function(b) { b.classList.remove('active'); });
     var sel = document.getElementById(tabName);
     if (sel) sel.classList.add('active');
-    if (event && event.currentTarget) event.currentTarget.classList.add('active');
+    if (btnEl) {
+        btnEl.classList.add('active');
+    }
+
+    // Close mobile sidebar after navigation
+    closeAdminSidebar();
 
     if (tabName === 'api-builder') { loadBuilderSummary(); loadCustomAPIs(); initSQLAssistantPanel(); }
     if (tabName === 'graphql-api-builder') { loadGraphQLBuilderSummary(); loadGraphQLCustomAPIs(); }
@@ -140,7 +145,22 @@ function switchTab(tabName) {
     if (tabName === 'api-testing') { loadAPIs(); loadAdminApiScanReports(); toggleAdminApiScanFields(); }
     if (tabName === 'graphql-studio') { loadAdminGraphQLSchemaInfo(); }
     if (tabName === 'control-plane') { refreshAdminControlPlaneData(); }
+    if (tabName === 'ip-access') { loadIPAccessData(); loadIPList(); loadAccessLog(); loadRateLimits(); startIPAccessAutoRefresh(); }
     if (tabName === 'settings') { loadAdminCertificatePanel(); loadAntivirusConfig(); loadScannerConfig(); }
+}
+
+function toggleAdminSidebar() {
+    var sidebar = document.getElementById('adminSidebar');
+    var overlay = document.getElementById('sidebarOverlay');
+    if (sidebar) sidebar.classList.toggle('open');
+    if (overlay) overlay.classList.toggle('open');
+}
+
+function closeAdminSidebar() {
+    var sidebar = document.getElementById('adminSidebar');
+    var overlay = document.getElementById('sidebarOverlay');
+    if (sidebar) sidebar.classList.remove('open');
+    if (overlay) overlay.classList.remove('open');
 }
 
 // ===================================================================
@@ -3501,3 +3521,369 @@ function saveScannerConfig() {
     });
 }
 
+// ===================================================================
+// IP Access Log & Blocking
+// ===================================================================
+var _ipAccessRefreshTimer = null;
+var _ipDetailCurrentIP = null;
+var _allAccessEntries = [];
+
+function startIPAccessAutoRefresh() {
+    stopIPAccessAutoRefresh();
+    _ipAccessRefreshTimer = setInterval(function() {
+        var cb = document.getElementById('logAutoRefresh');
+        if (cb && cb.checked) {
+            loadAccessLog();
+        }
+    }, 10000);
+}
+function stopIPAccessAutoRefresh() {
+    if (_ipAccessRefreshTimer) { clearInterval(_ipAccessRefreshTimer); _ipAccessRefreshTimer = null; }
+}
+
+function loadIPAccessData() {
+    fetchJSON('/api/v1/ip-access/ips?filter=all').then(function(data) {
+        var ips = data.ips || [];
+        var total = ips.length;
+        var publicCount = 0;
+        var blockedCount = 0;
+        var totalReqs = 0;
+        ips.forEach(function(ip) {
+            if (!ip.isPrivate) publicCount++;
+            if (ip.isBlocked) blockedCount++;
+            totalReqs += ip.totalRequests || 0;
+        });
+        var el;
+        el = document.getElementById('ipStatTotal'); if (el) el.textContent = total;
+        el = document.getElementById('ipStatPublic'); if (el) el.textContent = publicCount;
+        el = document.getElementById('ipStatRequests'); if (el) el.textContent = totalReqs.toLocaleString();
+        el = document.getElementById('ipStatBlocked'); if (el) el.textContent = blockedCount;
+    }).catch(function() {});
+}
+
+function loadIPList() {
+    var filter = (document.getElementById('ipFilterSelect') || {}).value || 'public';
+    var sort = (document.getElementById('ipSortSelect') || {}).value || 'requests';
+    var status = document.getElementById('ipListStatus');
+    if (status) status.textContent = 'Loading...';
+
+    fetchJSON('/api/v1/ip-access/ips?filter=' + filter).then(function(data) {
+        var ips = data.ips || [];
+        if (sort === 'recent') {
+            ips.sort(function(a, b) { return new Date(b.lastSeen) - new Date(a.lastSeen); });
+        } else {
+            ips.sort(function(a, b) { return (b.totalRequests || 0) - (a.totalRequests || 0); });
+        }
+
+        var tbody = document.getElementById('ipListBody');
+        if (!tbody) return;
+        if (ips.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:rgba(255,255,255,0.3);padding:30px;">No IPs found</td></tr>';
+            if (status) status.textContent = '0 IPs';
+            return;
+        }
+
+        var html = '';
+        ips.forEach(function(ip) {
+            var blockedBadge = ip.isBlocked ? '<span class="badge badge-red">BLOCKED</span>' : '<span class="badge badge-green">Active</span>';
+            var lastSeen = ip.lastSeen ? timeAgo(ip.lastSeen) : '-';
+            var topEp = (ip.topEndpoints && ip.topEndpoints.length > 0) ? ip.topEndpoints[0] : null;
+            var lastPath = topEp ? topEp.path : '-';
+            var lastMethod = topEp ? topEp.method : '';
+
+            html += '<tr>';
+            html += '<td class="mono">' + escapeHTML(ip.ip) + '</td>';
+            html += '<td>' + (ip.totalRequests || 0) + '</td>';
+            html += '<td>' + lastSeen + '</td>';
+            html += '<td class="mono">' + (lastMethod ? escapeHTML(lastMethod) + ' ' : '') + escapeHTML(lastPath) + '</td>';
+            html += '<td>' + blockedBadge + '</td>';
+            html += '<td>';
+            html += '<button class="btn-xs btn-view" onclick="viewIPDetail(\'' + escapeAttr(ip.ip) + '\')" style="margin-right:4px;">Detail</button>';
+            html += '<button class="btn-xs btn-view" onclick="prefillRateLimit(\'' + escapeAttr(ip.ip) + '\')" style="margin-right:4px;background:rgba(168,85,247,0.15);color:#a855f7;">Limit</button>';
+            if (ip.isBlocked) {
+                html += '<button class="btn-xs btn-unblock" onclick="unblockIP(\'' + escapeAttr(ip.ip) + '\')">Unblock</button>';
+            } else {
+                html += '<button class="btn-xs btn-block" onclick="blockIP(\'' + escapeAttr(ip.ip) + '\')">Block</button>';
+            }
+            html += '</td>';
+            html += '</tr>';
+        });
+        tbody.innerHTML = html;
+        if (status) status.textContent = ips.length + ' IPs';
+    }).catch(function(err) {
+        if (status) status.textContent = 'Error: ' + err.message;
+    });
+}
+
+function loadAccessLog() {
+    var limit = parseInt((document.getElementById('logLimitSelect') || {}).value) || 200;
+    var ipFilter = (document.getElementById('logIPFilter') || {}).value || '';
+    var status = document.getElementById('logStatus');
+    if (status) status.textContent = 'Loading...';
+
+    var url = '/api/v1/ip-access/log?limit=' + limit;
+    if (ipFilter) url += '&ip=' + encodeURIComponent(ipFilter);
+
+    fetchJSON(url).then(function(data) {
+        _allAccessEntries = data.entries || [];
+        var entries = _allAccessEntries;
+        var tbody = document.getElementById('accessLogBody');
+        if (!tbody) return;
+        if (entries.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:rgba(255,255,255,0.3);padding:30px;">No entries</td></tr>';
+            if (status) status.textContent = '0 entries';
+            return;
+        }
+
+        var html = '';
+        entries.forEach(function(e) {
+            var ts = e.timestamp ? formatTime(e.timestamp) : '-';
+            var statusClass = getStatusBadgeClass(e.statusCode);
+            var ua = e.userAgent || '-';
+            if (ua.length > 50) ua = ua.substring(0, 47) + '...';
+
+            html += '<tr>';
+            html += '<td class="mono" style="white-space:nowrap;font-size:0.8em;">' + ts + '</td>';
+            html += '<td class="mono"><a href="#" onclick="viewIPDetail(\'' + escapeAttr(e.ip) + '\');return false;" style="color:#3b82f6;text-decoration:none;">' + escapeHTML(e.ip) + '</a></td>';
+            html += '<td><span class="badge ' + getMethodBadgeClass(e.method) + '">' + escapeHTML(e.method) + '</span></td>';
+            html += '<td class="mono" style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHTML(e.path) + '</td>';
+            html += '<td><span class="badge ' + statusClass + '">' + e.statusCode + '</span></td>';
+            html += '<td style="white-space:nowrap;">' + escapeHTML(e.duration || '-') + '</td>';
+            html += '<td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:0.8em;color:rgba(255,255,255,0.5);" title="' + escapeAttr(e.userAgent || '') + '">' + escapeHTML(ua) + '</td>';
+            html += '</tr>';
+        });
+        tbody.innerHTML = html;
+        if (status) status.textContent = entries.length + ' entries';
+
+        fetchJSON('/api/v1/ip-access/blocked').then(function(bd) {
+            var el = document.getElementById('ipStatBlocked');
+            if (el) el.textContent = (bd.ips || []).length;
+        }).catch(function() {});
+    }).catch(function(err) {
+        if (status) status.textContent = 'Error: ' + err.message;
+    });
+}
+
+function viewIPDetail(ip) {
+    _ipDetailCurrentIP = ip;
+    var modal = document.getElementById('ipDetailModal');
+    if (modal) modal.classList.add('active');
+
+    var title = document.getElementById('ipDetailTitle');
+    if (title) title.textContent = 'IP Detail: ' + ip;
+
+    fetchJSON('/api/v1/ip-access/ips/' + encodeURIComponent(ip)).then(function(data) {
+        var s = data.summary || data;
+        var summaryHTML = '';
+        summaryHTML += '<div><strong>Total Requests:</strong> ' + (s.totalRequests || 0) + '</div>';
+        summaryHTML += '<div><strong>First Seen:</strong> ' + (s.firstSeen ? formatDateTime(s.firstSeen) : '-') + '</div>';
+        summaryHTML += '<div><strong>Last Seen:</strong> ' + (s.lastSeen ? formatDateTime(s.lastSeen) : '-') + '</div>';
+        summaryHTML += '<div><strong>Blocked:</strong> ' + (s.isBlocked ? '<span class="badge badge-red">YES</span>' : '<span class="badge badge-green">No</span>') + '</div>';
+        if (s.blockedReason) summaryHTML += '<div><strong>Reason:</strong> ' + escapeHTML(s.blockedReason) + '</div>';
+        var el = document.getElementById('ipDetailSummary');
+        if (el) el.innerHTML = summaryHTML;
+
+        var scHTML = '';
+        var sc = s.statusCounts || {};
+        var keys = Object.keys(sc).sort();
+        keys.forEach(function(code) {
+            var cls = getStatusBadgeClass(parseInt(code));
+            scHTML += '<div class="endpoint-row"><span class="badge ' + cls + '">' + code + '</span><span>' + sc[code] + ' hits</span></div>';
+        });
+        if (!keys.length) scHTML = '<div style="color:rgba(255,255,255,0.3);">No data</div>';
+        var el2 = document.getElementById('ipDetailStatusCodes');
+        if (el2) el2.innerHTML = scHTML;
+
+        var epHTML = '';
+        var eps = s.topEndpoints || [];
+        eps.slice(0, 10).forEach(function(ep) {
+            epHTML += '<div class="endpoint-row"><span class="mono" style="font-size:0.85em;">' + escapeHTML(ep.method) + ' ' + escapeHTML(ep.path) + '</span><span>' + ep.count + '</span></div>';
+        });
+        if (!eps.length) epHTML = '<div style="color:rgba(255,255,255,0.3);">No data</div>';
+        var el3 = document.getElementById('ipDetailEndpoints');
+        if (el3) el3.innerHTML = epHTML;
+
+        var uaHTML = '';
+        var uas = s.userAgents || [];
+        uas.slice(0, 5).forEach(function(ua) {
+            uaHTML += '<div style="padding:3px 0;font-size:0.8em;color:rgba(255,255,255,0.6);word-break:break-all;">' + escapeHTML(ua) + '</div>';
+        });
+        if (!uas.length) uaHTML = '<div style="color:rgba(255,255,255,0.3);">No data</div>';
+        var el4 = document.getElementById('ipDetailAgents');
+        if (el4) el4.innerHTML = uaHTML;
+
+        var blockBtn = document.getElementById('ipDetailBlockBtn');
+        var unblockBtn = document.getElementById('ipDetailUnblockBtn');
+        if (blockBtn) blockBtn.style.display = s.isBlocked ? 'none' : '';
+        if (unblockBtn) unblockBtn.style.display = s.isBlocked ? '' : 'none';
+    }).catch(function() {});
+
+    fetchJSON('/api/v1/ip-access/ips/' + encodeURIComponent(ip) + '/log?limit=50').then(function(data) {
+        var entries = data.entries || [];
+        var tbody = document.getElementById('ipDetailLogBody');
+        if (!tbody) return;
+        if (!entries.length) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:rgba(255,255,255,0.3);">No entries</td></tr>';
+            return;
+        }
+        var html = '';
+        entries.forEach(function(e) {
+            html += '<tr>';
+            html += '<td class="mono" style="font-size:0.8em;white-space:nowrap;">' + (e.timestamp ? formatTime(e.timestamp) : '-') + '</td>';
+            html += '<td><span class="badge ' + getMethodBadgeClass(e.method) + '">' + escapeHTML(e.method) + '</span></td>';
+            html += '<td class="mono" style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHTML(e.path) + '</td>';
+            html += '<td><span class="badge ' + getStatusBadgeClass(e.statusCode) + '">' + e.statusCode + '</span></td>';
+            html += '<td>' + escapeHTML(e.duration || '-') + '</td>';
+            html += '</tr>';
+        });
+        tbody.innerHTML = html;
+    }).catch(function() {});
+}
+
+function closeIPDetailModal() {
+    var modal = document.getElementById('ipDetailModal');
+    if (modal) modal.classList.remove('active');
+    _ipDetailCurrentIP = null;
+}
+
+function blockIP(ip) {
+    var reason = prompt('Reason for blocking ' + ip + ':', 'Blocked by admin');
+    if (reason === null) return;
+    postJSON('/api/v1/ip-access/block', { ip: ip, reason: reason || 'Blocked by admin' }).then(function(r) {
+        if (r.error) { alert('Error: ' + r.error); return; }
+        loadIPList();
+        loadIPAccessData();
+        loadAccessLog();
+    }).catch(function(err) { alert('Error: ' + err.message); });
+}
+
+function unblockIP(ip) {
+    if (!confirm('Unblock ' + ip + '?')) return;
+    postJSON('/api/v1/ip-access/unblock', { ip: ip }).then(function(r) {
+        if (r.error) { alert('Error: ' + r.error); return; }
+        loadIPList();
+        loadIPAccessData();
+        loadAccessLog();
+    }).catch(function(err) { alert('Error: ' + err.message); });
+}
+
+function blockIPFromDetail() {
+    if (_ipDetailCurrentIP) { blockIP(_ipDetailCurrentIP); closeIPDetailModal(); }
+}
+function unblockIPFromDetail() {
+    if (_ipDetailCurrentIP) { unblockIP(_ipDetailCurrentIP); closeIPDetailModal(); }
+}
+
+function getStatusBadgeClass(code) {
+    if (!code) return 'badge-gray';
+    if (code >= 200 && code < 300) return 'badge-green';
+    if (code >= 300 && code < 400) return 'badge-blue';
+    if (code >= 400 && code < 500) return 'badge-yellow';
+    return 'badge-red';
+}
+function getMethodBadgeClass(method) {
+    switch ((method || '').toUpperCase()) {
+        case 'GET': return 'badge-green';
+        case 'POST': return 'badge-blue';
+        case 'PUT': return 'badge-yellow';
+        case 'DELETE': return 'badge-red';
+        default: return 'badge-gray';
+    }
+}
+function formatTime(iso) {
+    try {
+        var d = new Date(iso);
+        var pad = function(n) { return n < 10 ? '0' + n : '' + n; };
+        return pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+    } catch(e) { return iso; }
+}
+function formatDateTime(iso) {
+    try {
+        var d = new Date(iso);
+        return d.toLocaleDateString() + ' ' + d.toLocaleTimeString();
+    } catch(e) { return iso; }
+}
+function timeAgo(iso) {
+    try {
+        var diff = (Date.now() - new Date(iso).getTime()) / 1000;
+        if (diff < 60) return Math.floor(diff) + 's ago';
+        if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+        if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+        return Math.floor(diff / 86400) + 'd ago';
+    } catch(e) { return iso; }
+}
+function escapeHTML(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function escapeAttr(str) {
+    if (!str) return '';
+    return String(str).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;');
+}
+
+// ===================================================================
+// Rate Limiting
+// ===================================================================
+function prefillRateLimit(ip) {
+    var el = document.getElementById('rlIP');
+    if (el) el.value = ip;
+    // Scroll to rate limit section
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function setRateLimit() {
+    var ip = (document.getElementById('rlIP') || {}).value || '';
+    var maxReqs = parseInt((document.getElementById('rlMaxReqs') || {}).value) || 60;
+    var window = (document.getElementById('rlWindow') || {}).value || '1m';
+    var status = document.getElementById('rlStatus');
+
+    if (!ip.trim()) { alert('Enter an IP address'); return; }
+
+    postJSON('/api/v1/ip-access/rate-limit', { ip: ip.trim(), maxRequests: maxReqs, window: window }).then(function(r) {
+        if (r.error) {
+            if (status) { status.textContent = 'Error: ' + r.error; status.style.color = '#ef4444'; }
+            return;
+        }
+        if (status) { status.textContent = 'Rate limit set for ' + ip; status.style.color = '#22c55e'; }
+        setTimeout(function() { if (status) status.textContent = ''; }, 3000);
+        loadRateLimits();
+    }).catch(function(err) {
+        if (status) { status.textContent = 'Error: ' + err.message; status.style.color = '#ef4444'; }
+    });
+}
+
+function loadRateLimits() {
+    fetchJSON('/api/v1/ip-access/rate-limits').then(function(data) {
+        var limits = data.rateLimits || {};
+        var tbody = document.getElementById('rateLimitsBody');
+        if (!tbody) return;
+
+        var keys = Object.keys(limits);
+        if (keys.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:rgba(255,255,255,0.3);padding:20px;">No rate limits configured</td></tr>';
+            return;
+        }
+
+        var html = '';
+        keys.sort().forEach(function(ip) {
+            var rl = limits[ip];
+            html += '<tr>';
+            html += '<td class="mono">' + escapeHTML(ip) + '</td>';
+            html += '<td>' + (rl.maxRequests || 0) + '</td>';
+            html += '<td>' + escapeHTML(rl.window || '-') + '</td>';
+            html += '<td>' + escapeHTML(rl.setBy || '-') + '</td>';
+            html += '<td>' + (rl.setAt ? formatDateTime(rl.setAt) : '-') + '</td>';
+            html += '<td><button class="btn-xs btn-unblock" onclick="removeRateLimit(\'' + escapeAttr(ip) + '\')">Remove</button></td>';
+            html += '</tr>';
+        });
+        tbody.innerHTML = html;
+    }).catch(function() {});
+}
+
+function removeRateLimit(ip) {
+    if (!confirm('Remove rate limit for ' + ip + '?')) return;
+    deleteJSON('/api/v1/ip-access/rate-limit/' + encodeURIComponent(ip)).then(function(r) {
+        if (r.error) { alert('Error: ' + r.error); return; }
+        loadRateLimits();
+    }).catch(function(err) { alert('Error: ' + err.message); });
+}
