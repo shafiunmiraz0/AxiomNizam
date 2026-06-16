@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"time"
 
+	"axiomnizam.bitbd.net/axiomnizam/internal/utils"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -12,7 +14,7 @@ import (
 // returns 403 for blocked IPs, and 429 for rate-limited IPs.
 func AccessTrackerMiddleware(tracker *Tracker) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		ip := c.ClientIP()
+		ip := utils.RealIP(c)
 
 		// Check if IP is blocked.
 		if tracker.IsBlocked(ip) {

@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"time"
 
+	"axiomnizam.bitbd.net/axiomnizam/internal/utils"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -20,7 +22,7 @@ func AccessLogCaptureMiddleware(store *Store) gin.HandlerFunc {
 		}
 
 		entry := Entry{
-			IP:         c.ClientIP(),
+			IP:         utils.RealIP(c),
 			Method:     c.Request.Method,
 			Path:       c.FullPath(),
 			StatusCode: c.Writer.Status(),
@@ -37,7 +39,7 @@ func AccessLogCaptureMiddleware(store *Store) gin.HandlerFunc {
 // Should be placed early in the middleware chain (before auth).
 func IPBlockMiddleware(store *Store) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		ip := c.ClientIP()
+		ip := utils.RealIP(c)
 		if store.IsBlocked(ip) {
 			c.JSON(http.StatusForbidden, gin.H{
 				"error":   "Your IP address has been blocked",

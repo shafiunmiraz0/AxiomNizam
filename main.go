@@ -92,6 +92,7 @@ import (
 	"axiomnizam.bitbd.net/axiomnizam/internal/secretmanager"
 	"axiomnizam.bitbd.net/axiomnizam/internal/federation"
 	"axiomnizam.bitbd.net/axiomnizam/internal/securitymon"
+	"axiomnizam.bitbd.net/axiomnizam/internal/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/joho/godotenv"
@@ -506,6 +507,10 @@ func main() {
 		c.Next()
 	})
 
+	// Resolve real client IP from proxy headers (X-Forwarded-For / X-Real-IP).
+	// Must run before any middleware that reads client IPs.
+	router.Use(utils.RealIPMiddleware())
+
 	// HTTPS redirect middleware (Phase 4).
 	// When TLS is enabled, redirect plain HTTP requests to HTTPS.
 	// Skips redirect for health checks and internal probes.
@@ -835,7 +840,7 @@ func main() {
 		// Phase 13: Record request for anomaly detection
 		secMetrics.RecordTotalRequest()
 		securitymon.PromTotalRequests.Inc()
-		secDetector.RecordRequest(c.ClientIP(), "") // user ID set after auth succeeds
+		secDetector.RecordRequest(utils.RealIP(c), "") // user ID set after auth succeeds
 
 		// Phase 18: Track auth failures and export to SIEM
 		authFailed := false
@@ -847,7 +852,7 @@ func main() {
 					Timestamp: time.Now().UTC(),
 					EventType: "auth_failure",
 					Severity:  "warning",
-					IPAddress: c.ClientIP(),
+					IPAddress: utils.RealIP(c),
 					Outcome:   "failure",
 					Message:   "authentication failed",
 					Source:    "axiomnizam",
@@ -995,7 +1000,7 @@ func main() {
 		// 5. If risk >= 90 → revoke session and all tokens
 
 		riskScore := 0
-		currentIP := c.ClientIP()
+		currentIP := utils.RealIP(c)
 		currentFP := c.GetHeader("X-Device-Fingerprint")
 
 		if gkSystem != nil && gkSystem.RiskService != nil {
@@ -1272,7 +1277,7 @@ func main() {
 
 		if riskScore >= 90 {
 			log.Printf("🚫 Critical risk — %d for user %s from %s — requiring MFA challenge",
-				riskScore, principal, c.ClientIP())
+				riskScore, principal, utils.RealIP(c))
 			secMetrics.RecordHighRisk()
 			securitymon.PromHighRiskRequests.Inc()
 			secMetrics.RecordMFAChallenge("totp")
@@ -1308,7 +1313,7 @@ func main() {
 								c.Request.Context(), deviceUserID, deviceFingerprint, deviceToken,
 							); verified {
 								log.Printf("✅ Trusted device bypass — user %s from %s (risk: %d)",
-									principal, c.ClientIP(), riskScore)
+									principal, utils.RealIP(c), riskScore)
 								mfaSkippedByDevice = true
 							}
 						}
@@ -1319,7 +1324,7 @@ func main() {
 			if !mfaSkippedByDevice {
 				mfaToken := strings.TrimSpace(c.GetHeader("X-MFA-Token"))
 				if mfaToken == "" {
-					log.Printf("⚠️  MFA required — risk score %d for user %s from %s", riskScore, principal, c.ClientIP())
+					log.Printf("⚠️  MFA required — risk score %d for user %s from %s", riskScore, principal, utils.RealIP(c))
 					c.JSON(http.StatusForbidden, gin.H{
 						"error":        "mfa verification required",
 						"risk_score":   riskScore,
@@ -1338,7 +1343,7 @@ func main() {
 					mfaUserID = strings.TrimSpace(legacyClaims.Sub)
 				}
 				if !validateTOTPForUser(c, mfaUserID, mfaToken) {
-					log.Printf("🚫 MFA verification failed — risk score %d for user %s from %s", riskScore, principal, c.ClientIP())
+					log.Printf("🚫 MFA verification failed — risk score %d for user %s from %s", riskScore, principal, utils.RealIP(c))
 					secMetrics.RecordMFAFailure()
 					securitymon.PromMFAFailures.Inc()
 					c.JSON(http.StatusForbidden, gin.H{
@@ -1455,7 +1460,7 @@ func main() {
 			EventType: "auth_success",
 			Severity:  "info",
 			UserID:    principal,
-			IPAddress: c.ClientIP(),
+			IPAddress: utils.RealIP(c),
 			Outcome:   "success",
 			Message:   fmt.Sprintf("User %s authenticated successfully", principal),
 		})
@@ -1632,7 +1637,7 @@ func main() {
 
 		// Inject request metadata for condition evaluation (IP restrictions, time windows)
 		meta := &rbac.RequestMetadata{
-			IPAddress:   c.ClientIP(),
+			IPAddress:   utils.RealIP(c),
 			RequestTime: time.Now(),
 			UserAgent:   c.GetHeader("User-Agent"),
 		}
@@ -1653,7 +1658,7 @@ func main() {
 				UserID:       userIDStr,
 				ResourceType: resource,
 				ResourcePath: c.Request.URL.Path,
-				IPAddress:    c.ClientIP(),
+				IPAddress:    utils.RealIP(c),
 				RiskScore:    riskScore,
 			}
 			policyResult, polErr := gkSystem.PolicyService.EvaluateHTTPRequest(ctx, policyReq)

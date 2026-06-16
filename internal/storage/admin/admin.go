@@ -24,6 +24,7 @@ import (
 	"axiomnizam.bitbd.net/axiomnizam/internal/storage/models"
 	"axiomnizam.bitbd.net/axiomnizam/internal/storage/store"
 	"axiomnizam.bitbd.net/axiomnizam/internal/storage/tenant"
+	"axiomnizam.bitbd.net/axiomnizam/internal/utils"
 	"github.com/gin-gonic/gin"
 )
 
@@ -409,7 +410,7 @@ func (h *Handler) CreateBucket(c *gin.Context) {
 		UserID:   sc.UserID,
 		Bucket:   req.Name,
 		Details:  fmt.Sprintf("bucket %q created by %s", req.Name, sc.UserID),
-		SourceIP: c.ClientIP(),
+		SourceIP: utils.RealIP(c),
 	})
 
 	logging.Z().Info(fmt.Sprintf("Storage: bucket %q created for tenant %q by %s", req.Name, sc.TenantID, sc.UserID))
@@ -470,7 +471,7 @@ func (h *Handler) DeleteBucket(c *gin.Context) {
 		TenantID: sc.TenantID,
 		UserID:   sc.UserID,
 		Bucket:   name,
-		SourceIP: c.ClientIP(),
+		SourceIP: utils.RealIP(c),
 	})
 
 	c.JSON(http.StatusOK, gin.H{"deleted": name})
@@ -576,7 +577,7 @@ func (h *Handler) SetBucketEncryption(c *gin.Context) {
 	}
 	h.audit.Record(models.StorageEvent{
 		Type: "bucket.encryption.set", TenantID: sc.TenantID, UserID: sc.UserID, Bucket: bucket,
-		Details: fmt.Sprintf("encryption %s enabled=%v", req.Algorithm, req.Enabled), SourceIP: c.ClientIP(),
+		Details: fmt.Sprintf("encryption %s enabled=%v", req.Algorithm, req.Enabled), SourceIP: utils.RealIP(c),
 	})
 	c.JSON(http.StatusOK, gin.H{"bucket": bucket, "encryption": req})
 }
@@ -643,7 +644,7 @@ func (h *Handler) SetObjectLockConfig(c *gin.Context) {
 	}
 	h.audit.Record(models.StorageEvent{
 		Type: "bucket.objectlock.set", TenantID: sc.TenantID, UserID: sc.UserID, Bucket: bucket,
-		Details: fmt.Sprintf("object lock mode=%s enabled=%v", req.Mode, req.Enabled), SourceIP: c.ClientIP(),
+		Details: fmt.Sprintf("object lock mode=%s enabled=%v", req.Mode, req.Enabled), SourceIP: utils.RealIP(c),
 	})
 	c.JSON(http.StatusOK, gin.H{"bucket": bucket, "objectLock": req})
 }
@@ -849,7 +850,7 @@ func (h *Handler) SetBucketNotifications(c *gin.Context) {
 	}
 	h.audit.Record(models.StorageEvent{
 		Type: "bucket.notifications.set", TenantID: sc.TenantID, UserID: sc.UserID, Bucket: bucket,
-		Details: fmt.Sprintf("%d notification rules", len(req.Rules)), SourceIP: c.ClientIP(),
+		Details: fmt.Sprintf("%d notification rules", len(req.Rules)), SourceIP: utils.RealIP(c),
 	})
 	c.JSON(http.StatusOK, gin.H{"bucket": bucket, "notifications": req})
 }
@@ -893,7 +894,7 @@ func (h *Handler) SetBucketPolicy(c *gin.Context) {
 	}
 	h.audit.Record(models.StorageEvent{
 		Type: "bucket.policy.set", TenantID: sc.TenantID, UserID: sc.UserID, Bucket: bucket,
-		SourceIP: c.ClientIP(),
+		SourceIP: utils.RealIP(c),
 	})
 	c.JSON(http.StatusOK, gin.H{"bucket": bucket, "policy": req})
 }
@@ -992,7 +993,7 @@ func (h *Handler) SetBucketRateLimit(c *gin.Context) {
 		UserID:   sc.UserID,
 		Bucket:   bucket,
 		Details:  fmt.Sprintf("read=%d/min write=%d/min", req.ReadOpsPerMinute, req.WriteOpsPerMinute),
-		SourceIP: c.ClientIP(),
+		SourceIP: utils.RealIP(c),
 	})
 
 	c.JSON(http.StatusOK, models.BucketRateLimitInfo{
@@ -1161,7 +1162,7 @@ func (h *Handler) PutObject(c *gin.Context) {
 				Bucket:   bucket,
 				Key:      key,
 				Size:     int64(len(content)),
-				SourceIP: c.ClientIP(),
+				SourceIP: utils.RealIP(c),
 				Details:  fmt.Sprintf("UPLOAD BLOCKED: %s (sha256=%s, %dms)", threatStr, hashHex, scanResult.DurationMs),
 			})
 
@@ -1198,7 +1199,7 @@ func (h *Handler) PutObject(c *gin.Context) {
 			Bucket:   bucket,
 			Key:      key,
 			Size:     int64(len(content)),
-			SourceIP: c.ClientIP(),
+			SourceIP: utils.RealIP(c),
 			Details:  fmt.Sprintf("clean (sha256=%s, %dms, scanners=%d)", hashHex, scanResult.DurationMs, len(scanResult.Scanners)),
 		})
 
@@ -1235,7 +1236,7 @@ func (h *Handler) PutObject(c *gin.Context) {
 		Bucket:   bucket,
 		Key:      key,
 		Size:     c.Request.ContentLength,
-		SourceIP: c.ClientIP(),
+		SourceIP: utils.RealIP(c),
 		Details:  fmt.Sprintf("uploaded %d bytes (no scanner)", c.Request.ContentLength),
 	})
 
@@ -1325,7 +1326,7 @@ func (h *Handler) GetObject(c *gin.Context) {
 		Bucket:   bucket,
 		Key:      key,
 		Size:     n,
-		SourceIP: c.ClientIP(),
+		SourceIP: utils.RealIP(c),
 	})
 }
 
@@ -1403,7 +1404,7 @@ func (h *Handler) DeleteObject(c *gin.Context) {
 		UserID:   sc.UserID,
 		Bucket:   bucket,
 		Key:      key,
-		SourceIP: c.ClientIP(),
+		SourceIP: utils.RealIP(c),
 	})
 
 	c.JSON(http.StatusOK, gin.H{"deleted": key, "bucket": bucket})
@@ -1526,7 +1527,7 @@ func (h *Handler) MultiDeleteObjects(c *gin.Context) {
 		UserID:   sc.UserID,
 		Bucket:   bucket,
 		Details:  fmt.Sprintf("deleted %d objects, %d errors", deleted, len(errors)),
-		SourceIP: c.ClientIP(),
+		SourceIP: utils.RealIP(c),
 	})
 
 	c.JSON(http.StatusOK, gin.H{
@@ -1571,7 +1572,7 @@ func (h *Handler) CopyObject(c *gin.Context) {
 		Bucket:   req.SourceBucket,
 		Key:      req.SourceKey,
 		Details:  fmt.Sprintf("to %s/%s", req.DestBucket, req.DestKey),
-		SourceIP: c.ClientIP(),
+		SourceIP: utils.RealIP(c),
 	})
 
 	c.JSON(http.StatusOK, gin.H{
@@ -1651,7 +1652,7 @@ func (h *Handler) PresignURL(c *gin.Context) {
 		Bucket:   bucket,
 		Key:      req.Key,
 		Details:  fmt.Sprintf("method=%s expires=%v accessKey=%s", method, expires, ak.AccessKeyID),
-		SourceIP: c.ClientIP(),
+		SourceIP: utils.RealIP(c),
 	})
 
 	c.JSON(http.StatusOK, models.PreSignedURLResponse{
@@ -1864,7 +1865,7 @@ func (h *Handler) CreatePolicy(c *gin.Context) {
 		UserID:   sc.UserID,
 		Bucket:   req.BucketName,
 		Details:  fmt.Sprintf("role=%s for user=%s", req.Role, req.UserID),
-		SourceIP: c.ClientIP(),
+		SourceIP: utils.RealIP(c),
 	})
 
 	c.JSON(http.StatusCreated, req)
@@ -1915,7 +1916,7 @@ func (h *Handler) DeletePolicy(c *gin.Context) {
 		TenantID: tenantID,
 		UserID:   sc.UserID,
 		Bucket:   bucket,
-		SourceIP: c.ClientIP(),
+		SourceIP: utils.RealIP(c),
 	})
 
 	c.JSON(http.StatusOK, gin.H{"deleted": true})
@@ -1985,7 +1986,7 @@ func (h *Handler) ShareObject(c *gin.Context) {
 		Bucket:   bucket,
 		Key:      req.Key,
 		Details:  fmt.Sprintf("expires=%v accessKey=%s", expires, ak.AccessKeyID),
-		SourceIP: c.ClientIP(),
+		SourceIP: utils.RealIP(c),
 	})
 
 	c.JSON(http.StatusOK, gin.H{
