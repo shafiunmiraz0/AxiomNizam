@@ -4667,7 +4667,7 @@ button:active:not(:disabled),
    ═══════════════════════════════════════════════════════════════════════ */
 
 .persistent-sidebar {
-    contain: layout style;
+    contain: style paint;
 }
 
 .modal {
