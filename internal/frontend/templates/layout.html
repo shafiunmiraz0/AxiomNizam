@@ -135,7 +135,7 @@
                 </button>
                 <div class="nav-right" id="primary-actions">
                     {{ if .isAuth }}
-                    <div class="nav-notification-bell" id="notificationBell" onclick="toggleNotificationDropdown()" title="Notifications">
+                    <div class="nav-notification-bell" id="notificationBell" role="button" tabindex="0" aria-expanded="false" aria-haspopup="true" aria-label="Notifications" onclick="toggleNotificationDropdown()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleNotificationDropdown();}">
                         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
                             <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
@@ -1181,6 +1181,7 @@
             if (event.key === 'Escape') {
                 closePersistentSidebar();
                 closeCmdPalette();
+                closeNotificationDropdown();
                 /* Collapse any expanded sidebar sections, except the one matching the current page */
                 document.querySelectorAll('.psb-section.expanded').forEach(function(s) {
                     var sectionLink = s.querySelector('a');
@@ -1641,7 +1642,18 @@
 
         function toggleNotificationDropdown() {
             var dropdown = document.getElementById('notificationDropdown');
-            if (dropdown) dropdown.classList.toggle('open');
+            var bell = document.getElementById('notificationBell');
+            if (dropdown) {
+                var isOpen = dropdown.classList.toggle('open');
+                if (bell) bell.setAttribute('aria-expanded', String(isOpen));
+            }
+        }
+
+        function closeNotificationDropdown() {
+            var dropdown = document.getElementById('notificationDropdown');
+            var bell = document.getElementById('notificationBell');
+            if (dropdown) dropdown.classList.remove('open');
+            if (bell) bell.setAttribute('aria-expanded', 'false');
         }
 
         function updateNotificationBadge(count) {
@@ -1678,13 +1690,13 @@
         window.updateNotificationBadge = updateNotificationBadge;
         window.addNotification = addNotification;
         window.toggleNotificationDropdown = toggleNotificationDropdown;
+        window.closeNotificationDropdown = closeNotificationDropdown;
 
         // Close dropdown when clicking outside
         document.addEventListener('click', function(e) {
             var bell = document.getElementById('notificationBell');
-            var dropdown = document.getElementById('notificationDropdown');
-            if (bell && dropdown && !bell.contains(e.target)) {
-                dropdown.classList.remove('open');
+            if (bell && !bell.contains(e.target)) {
+                closeNotificationDropdown();
             }
         });
 
