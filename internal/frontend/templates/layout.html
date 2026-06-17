@@ -169,6 +169,7 @@
             {{ if and (not .embedded) (not .hideChrome) }}
             <aside class="persistent-sidebar" id="persistentSidebar">
                 <div class="persistent-sidebar-inner">
+                    <div class="psb-section-label">Navigation</div>
                     <a href="/" class="psb-item {{ if eq .page "public-dashboard" }}active{{ end }}" data-tooltip="Dashboard">
                         <span class="psb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span>
                         <span class="psb-label">Dashboard</span>
@@ -290,6 +291,7 @@
                         </div>
                     </div>
                     {{ if .isAuth }}
+                    <div class="psb-section-label">Administration</div>
                     <div class="psb-divider"></div>
                     <div class="psb-section {{ if eq .page "admin" }}expanded{{ end }}" id="psb-admin-section">
                         <a href="/admin" class="psb-item" id="psb-admin" data-tooltip="Admin">
@@ -453,10 +455,11 @@
             <div class="footer-content">
                 <p>&copy; 2026 AxiomNizam - All Rights Reserved</p>
                 <div class="footer-links">
-                    <a href="#">Documentation</a>
-                    <a href="#">Support</a>
-                    <a href="#">Status</a>
+                    <a href="/static/documentation" target="_blank">Documentation</a>
+                    <a href="mailto:support@axiomnizam.io">Support</a>
+                    <a href="/api/v1/health">Status</a>
                 </div>
+                <span class="footer-version">v{{ .appVersion }}</span>
             </div>
         </footer>
         {{ end }}
@@ -952,8 +955,18 @@
 
             // Role can be populated asynchronously after auth bootstrap.
             applyRoleNavVisibility();
-            setTimeout(applyRoleNavVisibility, 350);
-            setTimeout(applyRoleNavVisibility, 1200);
+
+            /* Watch for role changes in localStorage (same-tab) via Proxy on Storage.prototype */
+            (function() {
+                var origSetItem = Storage.prototype.setItem;
+                Storage.prototype.setItem = function(key, value) {
+                    origSetItem.call(this, key, value);
+                    if (key === 'userRole' || key === 'role' || key === 'authToken' || key === 'userName') {
+                        window.dispatchEvent(new Event('auth-state-changed'));
+                    }
+                };
+            })();
+            window.addEventListener('auth-state-changed', applyRoleNavVisibility);
             window.addEventListener('focus', applyRoleNavVisibility);
             window.addEventListener('resize', function() {
                 if (!isMobileViewport()) {
@@ -1168,12 +1181,14 @@
             if (event.key === 'Escape') {
                 closePersistentSidebar();
                 closeCmdPalette();
-                /* Also collapse any expanded sidebar sections */
+                /* Collapse any expanded sidebar sections, except the one matching the current page */
                 document.querySelectorAll('.psb-section.expanded').forEach(function(s) {
-                    if (!s.classList.contains('{{ if eq .page "admin" }}expanded{{ end }}'.replace('expanded','').trim()) ||
-                        !window.location.pathname.startsWith(s.querySelector('a')?.getAttribute('href') || '')) {
-                        s.classList.remove('expanded');
+                    var sectionLink = s.querySelector('a');
+                    var href = sectionLink ? sectionLink.getAttribute('href') : '';
+                    if (href && window.location.pathname.startsWith(href)) {
+                        return;
                     }
+                    s.classList.remove('expanded');
                 });
             }
         });

@@ -2987,8 +2987,8 @@ code {
 .method-delete { background: #ef4444; }
 .method-patch { background: #8b5cf6; }
 
-/* Status & Analysis badges */
-.status-badge, .badge {
+/* Status badges */
+.status-badge {
     display: inline-block;
     padding: 4px 10px;
     border-radius: 20px;
@@ -2998,22 +2998,22 @@ code {
     letter-spacing: 0.5px;
     white-space: nowrap;
 }
-.status-active, .status-completed, .status-success, .badge-success {
+.status-active, .status-completed, .status-success {
     background: rgba(var(--primary-rgb), 0.15);
     color: var(--success-color);
     border: 1px solid rgba(var(--primary-rgb), 0.3);
 }
-.status-draft, .status-pending, .badge-warning {
+.status-draft, .status-pending {
     background: rgba(245, 158, 11, 0.15);
     color: #fbbf24;
     border: 1px solid rgba(245, 158, 11, 0.3);
 }
-.status-archived, .status-failed, .status-inactive, .badge-danger {
+.status-archived, .status-failed, .status-inactive {
     background: rgba(var(--secondary-rgb), 0.15);
     color: #f87171;
     border: 1px solid rgba(var(--secondary-rgb), 0.3);
 }
-.status-analyzed, .badge-default {
+.status-analyzed {
     background: rgba(255, 255, 255, 0.1);
     color: var(--text-secondary);
     border: 1px solid var(--border-color);
@@ -3057,24 +3057,34 @@ code {
 /* General badges */
 .badge {
     display: inline-block;
-    padding: 3px 10px;
-    border-radius: 12px;
-    font-size: 0.8rem;
-    font-weight: 500;
-    background: var(--darker-bg);
-    color: var(--text-secondary);
-    border: 1px solid var(--border-color);
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.75em;
+    font-weight: 600;
     max-width: 100%;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     vertical-align: middle;
     box-sizing: border-box;
+    background: var(--darker-bg);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
 }
 .badge-success {
     background: rgba(16, 185, 129, 0.15);
     color: #10b981;
     border-color: rgba(16, 185, 129, 0.3);
+}
+.badge-warning {
+    background: rgba(245, 158, 11, 0.15);
+    color: #fbbf24;
+    border-color: rgba(245, 158, 11, 0.3);
+}
+.badge-danger {
+    background: rgba(239, 68, 68, 0.15);
+    color: #f87171;
+    border-color: rgba(239, 68, 68, 0.3);
 }
 .badge-default {
     background: rgba(148, 163, 184, 0.15);
@@ -4577,6 +4587,79 @@ button .ax-icon,
     top: 0;
     outline: 2px solid var(--primary-light);
     outline-offset: 2px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   SIDEBAR SECTION HEADERS
+   ═══════════════════════════════════════════════════════════════════════ */
+.psb-section-label {
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    padding: 16px 12px 6px;
+    opacity: 0.6;
+}
+.persistent-sidebar.collapsed .psb-section-label {
+    text-align: center;
+    padding: 12px 0 4px;
+    font-size: 0;
+    opacity: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   MICRO-INTERACTIONS
+   ═══════════════════════════════════════════════════════════════════════ */
+.psb-item:active,
+.btn:active,
+button:active:not(:disabled),
+.psb-subitem:active {
+    transform: scale(0.97);
+    transition: transform 0.1s ease;
+}
+.flash-success {
+    animation: flashSuccess 0.6s ease;
+}
+@keyframes flashSuccess {
+    0%   { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5); }
+    50%  { box-shadow: 0 0 12px 4px rgba(16, 185, 129, 0.25); }
+    100% { box-shadow: none; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   DARK SCROLLBAR ENHANCEMENT (expand on hover)
+   ═══════════════════════════════════════════════════════════════════════ */
+.persistent-sidebar::-webkit-scrollbar {
+    width: 6px;
+}
+.persistent-sidebar::-webkit-scrollbar-track {
+    background: transparent;
+}
+.persistent-sidebar::-webkit-scrollbar-thumb {
+    background: rgba(var(--primary-rgb), 0.3);
+    border-radius: 3px;
+    transition: width 0.2s ease, background 0.2s ease;
+}
+.persistent-sidebar:hover::-webkit-scrollbar-thumb {
+    width: 8px;
+    background: rgba(var(--primary-rgb), 0.5);
+}
+.persistent-sidebar {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(var(--primary-rgb), 0.3) transparent;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   FOOTER VERSION
+   ═══════════════════════════════════════════════════════════════════════ */
+.footer-version {
+    display: inline-block;
+    margin-top: 8px;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    opacity: 0.5;
+    letter-spacing: 0.5px;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════

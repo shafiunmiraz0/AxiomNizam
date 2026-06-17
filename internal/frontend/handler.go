@@ -126,6 +126,14 @@ func (h *Handler) backendURLFromRequest(c *gin.Context) string {
 	return scheme + "://" + c.Request.Host
 }
 
+// appVersion returns the application version string.
+func appVersion() string {
+	if v := os.Getenv("APP_VERSION"); v != "" {
+		return v
+	}
+	return "1.0.0"
+}
+
 // templateData builds the common template data map.
 func (h *Handler) templateData(c *gin.Context, title, pageName string, extra gin.H) gin.H {
 	authToken := c.GetHeader("Authorization")
@@ -146,6 +154,7 @@ func (h *Handler) templateData(c *gin.Context, title, pageName string, extra gin
 		"isAuth":     isAuth,
 		"userName":   userName,
 		"backendURL": h.backendURLFromRequest(c),
+		"appVersion": appVersion(),
 	}
 	for k, v := range extra {
 		data[k] = v
