@@ -850,23 +850,22 @@
         }
 
         function initMobileBottomSheetTriggers() {
-            if (!isMobileViewport()) return;
+            var sidebar = document.getElementById('persistentSidebar');
+            if (!sidebar) return;
 
-            document.querySelectorAll('.psb-section').forEach(function(section) {
+            sidebar.addEventListener('click', function(e) {
+                if (!isMobileViewport()) return;
+                var mainItem = e.target.closest('.psb-section > .psb-item');
+                if (!mainItem) return;
+                var section = mainItem.closest('.psb-section');
+                if (!section) return;
                 var subitems = section.querySelector(':scope > .psb-subitems');
                 if (!subitems) return;
-
-                var mainItem = section.querySelector(':scope > .psb-item');
-                if (!mainItem) return;
-
-                mainItem.addEventListener('click', function(e) {
-                    if (!isMobileViewport()) return;
-                    var href = mainItem.getAttribute('href');
-                    if (href && window.location.pathname === href.split('#')[0]) {
-                        e.preventDefault();
-                        openMobileBottomSheet(section);
-                    }
-                });
+                var href = mainItem.getAttribute('href');
+                if (href && window.location.pathname === href.split('#')[0]) {
+                    e.preventDefault();
+                    openMobileBottomSheet(section);
+                }
             });
         }
 
@@ -1498,10 +1497,15 @@
             document.addEventListener('touchend', function(e) {
                 if (!touchMoved) return;
                 var touchEndX = e.changedTouches[0].clientX;
+                var touchEndY = e.changedTouches[0].clientY;
                 var dx = touchEndX - touchStartX;
+                var dy = Math.abs(touchEndY - touchStartY);
                 var threshold = 80;
 
                 if (!isMobileViewport()) return;
+
+                /* Only trigger if gesture is primarily horizontal */
+                if (Math.abs(dx) <= dy) return;
 
                 if (dx > threshold && touchStartX < 30) {
                     /* Swipe right from left edge: open sidebar */
