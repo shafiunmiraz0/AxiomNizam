@@ -1057,6 +1057,33 @@
         }
 
         /* ═══════════════════════════════════════════════════════════════
+           MICRO-INTERACTIONS: FLASH SUCCESS
+           ═══════════════════════════════════════════════════════════════ */
+
+        function flashSuccess(el) {
+            if (!el) return;
+            el.classList.remove('flash-success');
+            void el.offsetWidth;
+            el.classList.add('flash-success');
+            el.addEventListener('animationend', function handler() {
+                el.classList.remove('flash-success');
+                el.removeEventListener('animationend', handler);
+            });
+        }
+
+        /* Auto-trigger: forms with data-flash-success flash the named target (default: submit button) */
+        document.addEventListener('submit', function(e) {
+            var form = e.target;
+            if (!form.dataset.flashSuccess) return;
+            setTimeout(function() {
+                var selector = form.dataset.flashSuccess;
+                var target = selector ? form.querySelector(selector) : form.querySelector('[type="submit"]');
+                if (!target) target = form;
+                flashSuccess(target);
+            }, 50);
+        }, true);
+
+        /* ═══════════════════════════════════════════════════════════════
            ACCESSIBILITY: FOCUS TRAP IN COMMAND PALETTE
            ═══════════════════════════════════════════════════════════════ */
 

@@ -1386,6 +1386,7 @@ function submitEditDbServer(event) {
         resultDiv.style.display = 'block';
 
         if (result.ok) {
+            flashSuccess(resultDiv);
             resultDiv.style.background = 'rgba(16,185,129,0.15)';
             resultDiv.style.color = '#10b981';
             resultDiv.textContent = 'Server updated successfully';
@@ -1470,6 +1471,7 @@ function submitCreateDatabase(event) {
         btn.textContent = 'Create Database';
         resultDiv.style.display = 'block';
         if (result.ok) {
+            flashSuccess(resultDiv);
             resultDiv.style.background = 'rgba(16,185,129,0.15)';
             resultDiv.style.color = '#10b981';
             var serverLabel = result.data.server_name || result.data.db_server || 'default';
@@ -1611,6 +1613,7 @@ function submitConnectDbServer(event) {
         resultDiv.style.display = 'block';
 
         if (result.ok) {
+            flashSuccess(resultDiv);
             resultDiv.style.background = 'rgba(16,185,129,0.15)';
             resultDiv.style.color = '#10b981';
             resultDiv.textContent = 'Server connected: ' + (result.data.server && result.data.server.name ? result.data.server.name : payload.server_name);
@@ -2062,6 +2065,7 @@ function submitCreateIAMUser(event) {
         createBtn.textContent = 'Create User';
 
         resultDiv.style.display = 'block';
+        flashSuccess(resultDiv);
         resultDiv.style.background = 'rgba(16,185,129,0.15)';
         resultDiv.style.color = '#10b981';
         resultDiv.textContent = 'IAM user created successfully: ' + (payload.email || email);

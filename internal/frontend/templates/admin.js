@@ -933,6 +933,7 @@ function submitCreateAPI(e) {
 
     postJSON('/api/v1/builder/apis', body).then(function(d) {
         if (d.status === 'success') {
+            flashSuccess(document.getElementById('createAPIForm'));
             closeCreateAPIModal();
             loadBuilderSummary();
             loadCustomAPIs();
@@ -1252,6 +1253,7 @@ function submitCreateGraphQLAPI(e) {
 
     req.then(function(d) {
         if (d.status === 'success') {
+            flashSuccess(document.getElementById('createGraphQLAPIForm'));
             closeCreateGraphQLAPIModal();
             loadGraphQLBuilderSummary();
             loadGraphQLCustomAPIs();
@@ -1445,6 +1447,7 @@ function submitEditAPI(e) {
 
     putJSON('/api/v1/builder/apis/' + encodeURIComponent(id), body).then(function(d) {
         if (d.status === 'success' || d.status === 'ok') {
+            flashSuccess(document.getElementById('editAPIForm'));
             closeEditAPIModal();
             loadBuilderSummary();
             loadCustomAPIs();
