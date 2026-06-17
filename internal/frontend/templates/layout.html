@@ -1431,6 +1431,16 @@
                 return;
             }
 
+            /* "Go to URL..." action when query looks like a path */
+            if (q && (q.startsWith('/') || q.startsWith('#') || q.indexOf('.') !== -1)) {
+                var goToHref = q.startsWith('/') ? q : q.startsWith('#') ? window.location.pathname + q : '/' + q;
+                html += '<div class="cmd-palette-section">Actions</div>';
+                html += '<div class="cmd-palette-item" data-href="' + goToHref + '" onclick="window.location.href=\'' + goToHref + '\'">' +
+                    '<span class="psb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></span>' +
+                    '<span class="cmd-palette-item-label">Go to <strong>' + escapeHTML(goToHref) + '</strong></span>' +
+                    '</div>';
+            }
+
             /* Group by category */
             var categoryOrder = ['Core', 'Admin', 'Security'];
             var grouped = {};
