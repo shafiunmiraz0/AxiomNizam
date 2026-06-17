@@ -135,13 +135,24 @@
                 </button>
                 <div class="nav-right" id="primary-actions">
                     {{ if .isAuth }}
+                    <div class="nav-notification-bell" id="notificationBell" onclick="toggleNotificationDropdown()" title="Notifications">
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                        </svg>
+                        <span class="notification-badge" id="notificationBadge" style="display:none">0</span>
+                        <div class="notification-dropdown" id="notificationDropdown">
+                            <div class="notification-dropdown-header">Notifications</div>
+                            <div class="notification-dropdown-body" id="notificationDropdownBody">
+                                <div class="notification-empty">No new notifications</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="nav-page-title" id="navPageTitle">
+                        <span class="page-title-text">{{ .title }}</span>
+                    </div>
                     <div class="user-info">
-                        <span class="user-icon">
-                            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                                <circle cx="12" cy="7" r="4"></circle>
-                            </svg>
-                        </span>
+                        <span class="user-avatar" id="userAvatar"></span>
                         <span class="user-name">{{ .userName }}</span>
                     </div>
                     <button class="btn-logout" onclick="logout()">Logout</button>
@@ -629,7 +640,15 @@
                 // Highlight active sub-item in sidebar
                 document.querySelectorAll('.psb-subitem').forEach(function(el) { el.classList.remove('active'); });
                 var subitem = document.querySelector('.psb-subitem[href*="#' + hash + '"]');
-                if (subitem) subitem.classList.add('active');
+                if (subitem) {
+                    subitem.classList.add('active');
+
+                    // Auto-expand parent section when hash changes
+                    var parentSection = subitem.closest('.psb-section');
+                    if (parentSection && !parentSection.classList.contains('expanded')) {
+                        parentSection.classList.add('expanded');
+                    }
+                }
 
                 // Auto-switch tab on page if function exists
                 var pagePath = window.location.pathname;
@@ -775,6 +794,26 @@
             });
         }
 
+        function scrollSidebarToActive() {
+            var sidebar = document.getElementById('persistentSidebar');
+            if (!sidebar) return;
+
+            var activeItem = sidebar.querySelector('.psb-item.active, .psb-subitem.active');
+            if (!activeItem) return;
+
+            // Delay to ensure sidebar is fully rendered
+            setTimeout(function() {
+                var sidebarRect = sidebar.getBoundingClientRect();
+                var itemRect = activeItem.getBoundingClientRect();
+
+                // Check if item is out of view
+                if (itemRect.top < sidebarRect.top || itemRect.bottom > sidebarRect.bottom) {
+                    var scrollTop = sidebar.scrollTop + (itemRect.top - sidebarRect.top) - (sidebarRect.height / 2) + (itemRect.height / 2);
+                    sidebar.scrollTo({ top: Math.max(0, scrollTop), behavior: 'smooth' });
+                }
+            }, 100);
+        }
+
         // Check authentication on page load
         window.addEventListener('DOMContentLoaded', function() {
             const token = localStorage.getItem('authToken');
@@ -798,6 +837,7 @@
 
             initTabNavigationScrollUX();
             initSidebarHashNav();
+            scrollSidebarToActive();
 
             if (document.getElementById('idpButtonsContainer')) {
                 loadIdentityProviderButtons();
@@ -1236,6 +1276,103 @@
 
         /* Make badge update function globally accessible */
         window.updateSidebarBadge = updateSidebarBadge;
+
+        /* ═══════════════════════════════════════════════════════════════
+           USER AVATAR WITH INITIALS
+           ═══════════════════════════════════════════════════════════════ */
+
+        function generateUserInitials() {
+            var avatar = document.getElementById('userAvatar');
+            if (!avatar) return;
+
+            var userName = localStorage.getItem('userName') || readCookieValue('userName') || '';
+            if (!userName) {
+                var userNameEl = document.querySelector('.user-name');
+                if (userNameEl) userName = userNameEl.textContent || '';
+            }
+
+            var initials = '';
+            var parts = userName.trim().split(/[\s@._-]+/).filter(Boolean);
+            if (parts.length >= 2) {
+                initials = (parts[0][0] + parts[1][0]).toUpperCase();
+            } else if (parts.length === 1 && parts[0].length >= 2) {
+                initials = parts[0].substring(0, 2).toUpperCase();
+            } else if (userName) {
+                initials = userName.substring(0, 2).toUpperCase();
+            } else {
+                initials = 'U';
+            }
+
+            avatar.textContent = initials;
+
+            // Generate a consistent color based on username
+            var colors = [
+                '#008C63', '#3B82F6', '#8B5CF6', '#EC4899', '#F59E0B',
+                '#10B981', '#6366F1', '#14B8A6', '#F97316', '#06B6D4'
+            ];
+            var hash = 0;
+            for (var i = 0; i < userName.length; i++) {
+                hash = userName.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            var colorIndex = Math.abs(hash) % colors.length;
+            avatar.style.background = 'linear-gradient(135deg, ' + colors[colorIndex] + ', ' + colors[(colorIndex + 3) % colors.length] + ')';
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        //   NOTIFICATION BELL
+        // ═══════════════════════════════════════════════════════════════
+
+        function toggleNotificationDropdown() {
+            var dropdown = document.getElementById('notificationDropdown');
+            if (dropdown) dropdown.classList.toggle('open');
+        }
+
+        function updateNotificationBadge(count) {
+            var badge = document.getElementById('notificationBadge');
+            if (!badge) return;
+            if (count > 0) {
+                badge.textContent = count > 99 ? '99+' : String(count);
+                badge.style.display = '';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+
+        function addNotification(title, time, icon) {
+            var body = document.getElementById('notificationDropdownBody');
+            if (!body) return;
+
+            // Remove empty state
+            var empty = body.querySelector('.notification-empty');
+            if (empty) empty.remove();
+
+            var item = document.createElement('div');
+            item.className = 'notification-item';
+            item.innerHTML = '<span class="notification-item-icon">' + (icon || '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>') + '</span>' +
+                '<div class="notification-item-content"><div class="notification-item-title">' + escapeHTML(title) + '</div><div class="notification-item-time">' + escapeHTML(time || 'Just now') + '</div></div>';
+            body.insertBefore(item, body.firstChild);
+
+            // Update badge count
+            var currentCount = parseInt(document.getElementById('notificationBadge')?.textContent || '0', 10);
+            updateNotificationBadge(currentCount + 1);
+        }
+
+        // Make notification functions globally accessible
+        window.updateNotificationBadge = updateNotificationBadge;
+        window.addNotification = addNotification;
+        window.toggleNotificationDropdown = toggleNotificationDropdown;
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(e) {
+            var bell = document.getElementById('notificationBell');
+            var dropdown = document.getElementById('notificationDropdown');
+            if (bell && dropdown && !bell.contains(e.target)) {
+                dropdown.classList.remove('open');
+            }
+        });
+
+        // Initialize user avatar on load
+        generateUserInitials();
     </script>
 </body>
 </html>
