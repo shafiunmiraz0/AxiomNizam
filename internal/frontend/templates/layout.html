@@ -140,7 +140,7 @@
                             <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
                             <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
                         </svg>
-                        <span class="notification-badge" id="notificationBadge" style="display:none">0</span>
+                        <span class="notification-badge" id="notificationBadge" role="status" aria-live="polite" aria-label="0 notifications" style="display:none">0</span>
                         <div class="notification-dropdown" id="notificationDropdown">
                             <div class="notification-dropdown-header">Notifications</div>
                             <div class="notification-dropdown-body" id="notificationDropdownBody">
@@ -713,10 +713,14 @@
             activateHashTab();
             window.addEventListener('hashchange', activateHashTab);
 
-            // Sub-item clicks: prevent reload if on same page, just switch tab
-            document.querySelectorAll('.psb-subitem').forEach(function(el) {
-                el.addEventListener('click', function(e) {
-                    var href = this.getAttribute('href');
+            // Sub-item clicks via event delegation (handles both original and cloned flyout items)
+            var sidebar = document.getElementById('persistentSidebar');
+            if (sidebar) {
+                sidebar.addEventListener('click', function(e) {
+                    var subitem = e.target.closest('.psb-subitem');
+                    if (!subitem) return;
+                    var href = subitem.getAttribute('href');
+                    if (!href) return;
                     var parts = href.split('#');
                     var targetPath = parts[0];
                     var targetHash = parts[1];
@@ -726,7 +730,7 @@
                         activateHashTab();
                     }
                 });
-            });
+            }
         }
 
         function initTabNavigationScrollUX() {
@@ -1735,8 +1739,10 @@
             if (count > 0) {
                 badge.textContent = count > 99 ? '99+' : String(count);
                 badge.style.display = '';
+                badge.setAttribute('aria-label', count + ' notification' + (count !== 1 ? 's' : ''));
             } else {
                 badge.style.display = 'none';
+                badge.setAttribute('aria-label', '0 notifications');
             }
         }
 
