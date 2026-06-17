@@ -814,6 +814,27 @@
             }, 100);
         }
 
+        function initMobileBottomSheetTriggers() {
+            if (!isMobileViewport()) return;
+
+            document.querySelectorAll('.psb-section').forEach(function(section) {
+                var subitems = section.querySelector(':scope > .psb-subitems');
+                if (!subitems) return;
+
+                var mainItem = section.querySelector(':scope > .psb-item');
+                if (!mainItem) return;
+
+                mainItem.addEventListener('click', function(e) {
+                    if (!isMobileViewport()) return;
+                    var href = mainItem.getAttribute('href');
+                    if (href && window.location.pathname === href.split('#')[0]) {
+                        e.preventDefault();
+                        openMobileBottomSheet(section);
+                    }
+                });
+            });
+        }
+
         // Check authentication on page load
         window.addEventListener('DOMContentLoaded', function() {
             const token = localStorage.getItem('authToken');
@@ -838,6 +859,7 @@
             initTabNavigationScrollUX();
             initSidebarHashNav();
             scrollSidebarToActive();
+            initMobileBottomSheetTriggers();
 
             if (document.getElementById('idpButtonsContainer')) {
                 loadIdentityProviderButtons();
@@ -1089,23 +1111,74 @@
            ═══════════════════════════════════════════════════════════════ */
 
         var cmdPaletteItems = [
-            { href: '/', label: 'Dashboard', icon: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>' },
-            { href: '/gis', label: 'GIS', icon: '<circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/>' },
-            { href: '/analytics', label: 'Analytics', icon: '<path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/>' },
-            { href: '/cdc-etl', label: 'CDC/ETL', icon: '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>' },
-            { href: '/netintel', label: 'NetIntel', icon: '<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>' },
-            { href: '/conductor', label: 'Conductor', icon: '<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>' },
-            { href: '/governance', label: 'Governance', icon: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>' },
-            { href: '/operations-center', label: 'Operations', icon: '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>' },
-            { href: '/lineage-version', label: 'Lineage', icon: '<polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>' },
-            { href: '/admin', label: 'Admin', icon: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>' },
-            { href: '/system-manager', label: 'System Manager', icon: '<rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>' },
-            { href: '/iam-admin', label: 'IAM Console', icon: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>' },
-            { href: '/object-storage', label: 'Object Storage', icon: '<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>' },
-            { href: '/two-factor', label: 'Two-Factor Auth', icon: '<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>' }
+            { href: '/', label: 'Dashboard', icon: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>', category: 'Core' },
+            { href: '/gis', label: 'GIS', icon: '<circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/>', category: 'Core' },
+            { href: '/analytics', label: 'Analytics', icon: '<path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/>', category: 'Core' },
+            { href: '/cdc-etl', label: 'CDC/ETL', icon: '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>', category: 'Core' },
+            { href: '/netintel', label: 'NetIntel', icon: '<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>', category: 'Core' },
+            { href: '/conductor', label: 'Conductor', icon: '<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>', category: 'Core' },
+            { href: '/governance', label: 'Governance', icon: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>', category: 'Core' },
+            { href: '/operations-center', label: 'Operations', icon: '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>', category: 'Core' },
+            { href: '/lineage-version', label: 'Lineage', icon: '<polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>', category: 'Core' },
+            { href: '/admin', label: 'Admin', icon: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>', category: 'Admin' },
+            { href: '/system-manager', label: 'System Manager', icon: '<rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>', category: 'Admin' },
+            { href: '/iam-admin', label: 'IAM Console', icon: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>', category: 'Admin' },
+            { href: '/object-storage', label: 'Object Storage', icon: '<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>', category: 'Admin' },
+            { href: '/two-factor', label: 'Two-Factor Auth', icon: '<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>', category: 'Security' }
         ];
 
         var cmdPaletteActiveIdx = 0;
+        var cmdPaletteRecentKey = 'cmdPaletteRecent';
+        var cmdPaletteMaxRecent = 5;
+
+        /* ── Recent pages tracking ─────────────────────────────────────── */
+        function getRecentPages() {
+            try {
+                return JSON.parse(localStorage.getItem(cmdPaletteRecentKey) || '[]');
+            } catch(e) { return []; }
+        }
+
+        function addRecentPage(href, label) {
+            var recent = getRecentPages();
+            recent = recent.filter(function(r) { return r.href !== href; });
+            recent.unshift({ href: href, label: label, time: Date.now() });
+            if (recent.length > cmdPaletteMaxRecent) recent = recent.slice(0, cmdPaletteMaxRecent);
+            try { localStorage.setItem(cmdPaletteRecentKey, JSON.stringify(recent)); } catch(e) {}
+        }
+
+        /* Track current page as recently visited */
+        (function trackCurrentPage() {
+            var currentPath = window.location.pathname;
+            var item = cmdPaletteItems.find(function(i) { return i.href === currentPath; });
+            if (item) addRecentPage(item.href, item.label);
+        })();
+
+        /* ── Fuzzy matching ────────────────────────────────────────────── */
+        function fuzzyMatch(text, query) {
+            text = text.toLowerCase();
+            query = query.toLowerCase();
+            if (text.indexOf(query) !== -1) return { match: true, score: 100 };
+
+            var ti = 0, qi = 0, score = 0, consecutive = 0, lastMatchIdx = -1;
+            while (ti < text.length && qi < query.length) {
+                if (text[ti] === query[qi]) {
+                    score += 10;
+                    if (lastMatchIdx === ti - 1) {
+                        consecutive++;
+                        score += consecutive * 5;
+                    } else {
+                        consecutive = 0;
+                    }
+                    if (ti === 0 || text[ti - 1] === ' ' || text[ti - 1] === '-' || text[ti - 1] === '/') {
+                        score += 15;
+                    }
+                    lastMatchIdx = ti;
+                    qi++;
+                }
+                ti++;
+            }
+            return { match: qi === query.length, score: score };
+        }
 
         function toggleCmdPalette() {
             var overlay = document.getElementById('cmdPaletteOverlay');
@@ -1137,25 +1210,73 @@
             var container = document.getElementById('cmdPaletteResults');
             if (!container) return;
             var q = query.toLowerCase().trim();
-            var filtered = q ? cmdPaletteItems.filter(function(item) {
-                return item.label.toLowerCase().indexOf(q) !== -1;
-            }) : cmdPaletteItems;
 
-            if (filtered.length === 0) {
+            var html = '';
+
+            /* Show recent pages when no query */
+            if (!q) {
+                var recent = getRecentPages();
+                if (recent.length > 0) {
+                    html += '<div class="cmd-palette-section">Recent</div>';
+                    recent.forEach(function(r, i) {
+                        var item = cmdPaletteItems.find(function(p) { return p.href === r.href; });
+                        var icon = item ? item.icon : '<circle cx="12" cy="12" r="10"/>';
+                        var activeClass = i === cmdPaletteActiveIdx ? ' active' : '';
+                        html += '<div class="cmd-palette-item' + activeClass + '" data-href="' + r.href + '" onclick="window.location.href=\'' + r.href + '\'">' +
+                            '<span class="psb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + icon + '</svg></span>' +
+                            '<span class="cmd-palette-item-label">' + escapeHTML(r.label) + '</span>' +
+                            '<span class="cmd-palette-item-path">' + r.href + '</span>' +
+                            '</div>';
+                    });
+                    cmdPaletteActiveIdx = 0;
+                }
+            }
+
+            /* Filter items with fuzzy matching */
+            var filtered = [];
+            if (q) {
+                cmdPaletteItems.forEach(function(item) {
+                    var result = fuzzyMatch(item.label, q);
+                    if (result.match) {
+                        filtered.push({ item: item, score: result.score });
+                    }
+                });
+                filtered.sort(function(a, b) { return b.score - a.score; });
+                filtered = filtered.map(function(f) { return f.item; });
+            } else {
+                filtered = cmdPaletteItems.slice();
+            }
+
+            if (filtered.length === 0 && !html) {
                 container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted)">No results found</div>';
                 return;
             }
 
-            var html = '';
-            filtered.forEach(function(item, i) {
-                var activeClass = i === cmdPaletteActiveIdx ? ' active' : '';
-                html += '<div class="cmd-palette-item' + activeClass + '" data-href="' + item.href + '" onclick="window.location.href=\'' + item.href + '\'">' +
-                    '<span class="psb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + item.icon + '</svg></span>' +
-                    '<span class="cmd-palette-item-label">' + item.label + '</span>' +
-                    '<span class="cmd-palette-item-path">' + item.href + '</span>' +
-                    '</div>';
+            /* Group by category */
+            var categoryOrder = ['Core', 'Admin', 'Security'];
+            var grouped = {};
+            filtered.forEach(function(item) {
+                var cat = item.category || 'Other';
+                if (!grouped[cat]) grouped[cat] = [];
+                grouped[cat].push(item);
             });
+
+            categoryOrder.forEach(function(cat) {
+                if (!grouped[cat] || grouped[cat].length === 0) return;
+                html += '<div class="cmd-palette-section">' + escapeHTML(cat) + '</div>';
+                grouped[cat].forEach(function(item) {
+                    var activeClass = '';
+                    html += '<div class="cmd-palette-item' + activeClass + '" data-href="' + item.href + '" onclick="window.location.href=\'' + item.href + '\'">' +
+                        '<span class="psb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + item.icon + '</svg></span>' +
+                        '<span class="cmd-palette-item-label">' + item.label + '</span>' +
+                        '<span class="cmd-palette-item-path">' + item.href + '</span>' +
+                        '</div>';
+                });
+            });
+
             container.innerHTML = html;
+            cmdPaletteActiveIdx = 0;
+            updateCmdPaletteActive(container.querySelectorAll('.cmd-palette-item'));
         }
 
         /* Command palette keyboard navigation */
@@ -1188,8 +1309,14 @@
         }
 
         /* ═══════════════════════════════════════════════════════════════
-           MOBILE GESTURE SUPPORT (swipe open/close)
+           MOBILE GESTURE SUPPORT (swipe open/close) + HAPTIC FEEDBACK
            ═══════════════════════════════════════════════════════════════ */
+
+        function triggerHaptic(pattern) {
+            if (navigator.vibrate) {
+                navigator.vibrate(pattern || [10]);
+            }
+        }
 
         (function initSwipeGesture() {
             var touchStartX = 0;
@@ -1227,12 +1354,80 @@
                     if (sidebar) sidebar.classList.add('open');
                     if (overlay) overlay.classList.add('open');
                     document.body.classList.add('mobile-sidebar-open');
+                    triggerHaptic([15]);
                 } else if (dx < -threshold && sidebar.classList.contains('open')) {
                     /* Swipe left: close sidebar */
                     closePersistentSidebar();
+                    triggerHaptic([10]);
                 }
             }, { passive: true });
         })();
+
+        /* ═══════════════════════════════════════════════════════════════
+           MOBILE BOTTOM SHEET (for collapsed sub-items)
+           ═══════════════════════════════════════════════════════════════ */
+
+        function openMobileBottomSheet(section) {
+            var subitems = section.querySelector(':scope > .psb-subitems');
+            var mainItem = section.querySelector(':scope > .psb-item');
+            if (!subitems || !mainItem) return;
+
+            var label = mainItem.querySelector('.psb-label');
+            var title = label ? label.textContent : 'Navigation';
+
+            /* Create overlay */
+            var overlay = document.createElement('div');
+            overlay.className = 'mobile-bottom-sheet-overlay';
+            overlay.onclick = function() { closeMobileBottomSheet(); };
+
+            /* Create sheet */
+            var sheet = document.createElement('div');
+            sheet.className = 'mobile-bottom-sheet';
+            sheet.id = 'mobileBottomSheet';
+
+            var handle = document.createElement('div');
+            handle.className = 'mobile-bottom-sheet-handle';
+            sheet.appendChild(handle);
+
+            var titleEl = document.createElement('div');
+            titleEl.className = 'mobile-bottom-sheet-title';
+            titleEl.textContent = title;
+            sheet.appendChild(titleEl);
+
+            /* Clone subitems */
+            var clonedSubitems = subitems.cloneNode(true);
+            clonedSubitems.style.display = '';
+            Array.from(clonedSubitems.children).forEach(function(child) {
+                var wrapper = document.createElement('a');
+                wrapper.className = 'mobile-bottom-sheet-item';
+                wrapper.href = child.getAttribute('href');
+                wrapper.innerHTML = child.innerHTML;
+                wrapper.onclick = function() { closeMobileBottomSheet(); };
+                sheet.appendChild(wrapper);
+            });
+
+            document.body.appendChild(overlay);
+            document.body.appendChild(sheet);
+
+            /* Trigger animation */
+            requestAnimationFrame(function() {
+                overlay.classList.add('open');
+                sheet.classList.add('open');
+            });
+
+            triggerHaptic([8]);
+        }
+
+        function closeMobileBottomSheet() {
+            var overlay = document.querySelector('.mobile-bottom-sheet-overlay');
+            var sheet = document.getElementById('mobileBottomSheet');
+            if (overlay) overlay.classList.remove('open');
+            if (sheet) sheet.classList.remove('open');
+            setTimeout(function() {
+                if (overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay);
+                if (sheet && sheet.parentNode) sheet.parentNode.removeChild(sheet);
+            }, 300);
+        }
 
         /* ═══════════════════════════════════════════════════════════════
            REMEMBER SCROLL POSITION

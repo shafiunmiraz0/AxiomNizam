@@ -4448,6 +4448,106 @@ button .ax-icon,
     margin-right: 4px;
 }
 
+/* Command palette section headers */
+.cmd-palette-section {
+    padding: 8px 14px 4px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-top: 1px solid var(--border-color);
+    margin-top: 4px;
+}
+
+.cmd-palette-section:first-child {
+    border-top: none;
+    margin-top: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   MOBILE BOTTOM SHEET
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.mobile-bottom-sheet-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1050;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+}
+
+.mobile-bottom-sheet-overlay.open {
+    display: block;
+    opacity: 1;
+}
+
+.mobile-bottom-sheet {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--darker-bg);
+    border-top: 1px solid var(--border-color);
+    border-radius: 16px 16px 0 0;
+    z-index: 1051;
+    transform: translateY(100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    max-height: 70vh;
+    overflow-y: auto;
+    padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+.mobile-bottom-sheet.open {
+    transform: translateY(0);
+}
+
+.mobile-bottom-sheet-handle {
+    width: 36px;
+    height: 4px;
+    background: var(--border-color);
+    border-radius: 2px;
+    margin: 12px auto 8px;
+}
+
+.mobile-bottom-sheet-title {
+    padding: 8px 20px 12px;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.mobile-bottom-sheet-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 20px;
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    transition: background 0.15s ease;
+    border-bottom: 1px solid rgba(var(--primary-rgb), 0.05);
+}
+
+.mobile-bottom-sheet-item:hover,
+.mobile-bottom-sheet-item:active {
+    background: rgba(var(--primary-rgb), 0.1);
+    color: var(--text-primary);
+}
+
+.mobile-bottom-sheet-item .psb-subicon {
+    color: var(--text-muted);
+}
+
+.mobile-bottom-sheet-item:hover .psb-subicon,
+.mobile-bottom-sheet-item:active .psb-subicon {
+    color: var(--primary-color);
+}
+
 /* Hide collapsed items inside sidebar when collapsed */
 .persistent-sidebar.collapsed .psb-badge,
 .persistent-sidebar.collapsed .psb-shortcut {

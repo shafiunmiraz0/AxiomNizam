@@ -1,7 +1,48 @@
 /* Responsive Design */
 
-/* Mobile: persistent sidebar becomes a drawer */
-@media (max-width: 1200px) {
+/* Tablets (1000-1200px): compact mode enabled as icon rail */
+@media (min-width: 1001px) and (max-width: 1200px) {
+    .persistent-sidebar.compact {
+        width: 60px;
+        min-width: 60px;
+        padding: 12px 6px;
+    }
+
+    .persistent-sidebar.compact .psb-label,
+    .persistent-sidebar.compact .psb-arrow,
+    .persistent-sidebar.compact .psb-subitems,
+    .persistent-sidebar.compact .psb-divider,
+    .persistent-sidebar.compact .psb-badge,
+    .persistent-sidebar.compact .psb-shortcut {
+        display: none !important;
+    }
+
+    .persistent-sidebar.compact .psb-item {
+        justify-content: center;
+        padding: 10px;
+        gap: 0;
+        border-left: 3px solid transparent;
+        padding-left: 7px;
+    }
+
+    .persistent-sidebar.compact .psb-section > .psb-item {
+        padding: 10px;
+        padding-left: 7px;
+    }
+
+    .persistent-sidebar.compact .psb-item.active {
+        border-left: 3px solid var(--primary-color);
+        padding-left: 7px;
+    }
+
+    body.sidebar-compact .main-content {
+        margin-left: 60px;
+        width: calc(100% - 60px);
+    }
+}
+
+/* Mobile (max-width: 1000px): persistent sidebar becomes a drawer */
+@media (max-width: 1000px) {
     .persistent-sidebar {
         position: fixed;
         left: -260px;
@@ -69,10 +110,6 @@
 
     .persistent-sidebar.compact .psb-flyout {
         display: none !important;
-    }
-
-    .sidebar-collapse-toggle {
-        display: none;
     }
 }
 
