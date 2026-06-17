@@ -1202,11 +1202,23 @@
             window.location.href = startURL;
         }
 
-        window.onclick = function(event) {
-            if (isMobileViewport() && !event.target.closest('.persistent-sidebar') && !event.target.closest('.mobile-sidebar-toggle')) {
-                closePersistentSidebar();
+        window.addEventListener('click', function(event) {
+            if (isMobileViewport()) {
+                if (!event.target.closest('.persistent-sidebar') && !event.target.closest('.mobile-sidebar-toggle')) {
+                    closePersistentSidebar();
+                }
+                return;
             }
-        };
+            /* Desktop: auto-collapse expanded sidebar sections when clicking main content */
+            if (event.target.closest('.main-content')) {
+                document.querySelectorAll('.psb-section.expanded').forEach(function(s) {
+                    var link = s.querySelector('a');
+                    var href = link ? link.getAttribute('href') : '';
+                    if (href && window.location.pathname.startsWith(href)) return;
+                    s.classList.remove('expanded');
+                });
+            }
+        });
 
         window.addEventListener('keydown', function(event) {
             if (event.key === 'Escape') {
