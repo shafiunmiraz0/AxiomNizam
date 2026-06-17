@@ -893,6 +893,16 @@
             sidebar.setAttribute('role', 'navigation');
             sidebar.setAttribute('aria-label', 'Main navigation');
 
+            /* Add role="menuitem" and tabindex to all sidebar items */
+            sidebar.querySelectorAll('.psb-item, .psb-subitem').forEach(function(el) {
+                el.setAttribute('role', 'menuitem');
+                el.setAttribute('tabindex', '-1');
+            });
+
+            /* Make the active item (or first item) tab-focusable */
+            var activeItem = sidebar.querySelector('.psb-item.active') || sidebar.querySelector('.psb-item');
+            if (activeItem) activeItem.setAttribute('tabindex', '0');
+
             /* Add aria-current to active items */
             sidebar.querySelectorAll('.psb-item.active, .psb-subitem.active').forEach(function(el) {
                 el.setAttribute('aria-current', 'page');
@@ -934,6 +944,115 @@
 
             sidebar.querySelectorAll('.psb-section').forEach(function(section) {
                 observer.observe(section, { attributes: true, attributeFilter: ['class'] });
+            });
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           ACCESSIBILITY: COMPACT FLYOUT KEYBOARD NAVIGATION
+           ═══════════════════════════════════════════════════════════════ */
+
+        function initFlyoutKeyboardNav() {
+            var sidebar = document.getElementById('persistentSidebar');
+            if (!sidebar) return;
+
+            /* Show flyout via CSS class when a child item receives focus */
+            function openFlyoutFor(section) {
+                if (!sidebar.classList.contains('compact')) return;
+                section.classList.add('flyout-open');
+            }
+            function closeAllFlyouts() {
+                sidebar.querySelectorAll('.psb-section.flyout-open').forEach(function(s) {
+                    s.classList.remove('flyout-open');
+                });
+            }
+
+            /* Collect all focusable items within a flyout (main clone + subitems) */
+            function getFlyoutItems(section) {
+                var flyout = section.querySelector(':scope > .psb-flyout');
+                if (!flyout) return [];
+                return Array.from(flyout.querySelectorAll('.psb-item, .psb-subitem'));
+            }
+
+            /* Focus handler: open flyout when a sidebar item gets keyboard focus */
+            sidebar.addEventListener('focusin', function(e) {
+                var item = e.target.closest('.psb-item, .psb-subitem');
+                if (!item) return;
+                var section = item.closest('.psb-section');
+                if (section) openFlyoutFor(section);
+            });
+
+            /* Blur handler: close flyout when focus leaves the section */
+            sidebar.addEventListener('focusout', function(e) {
+                var section = e.target.closest('.psb-section');
+                if (!section) return;
+                /* Delay to check if focus moved within the same section */
+                setTimeout(function() {
+                    var active = document.activeElement;
+                    if (!section.contains(active)) {
+                        section.classList.remove('flyout-open');
+                    }
+                }, 0);
+            });
+
+            /* Keyboard handler for flyout navigation */
+            sidebar.addEventListener('keydown', function(e) {
+                var current = e.target;
+                if (!current.classList.contains('psb-item') && !current.classList.contains('psb-subitem')) return;
+
+                var section = current.closest('.psb-section');
+                var inFlyout = current.closest('.psb-flyout');
+                var isCompact = sidebar.classList.contains('compact');
+
+                if (!isCompact || !section) return;
+
+                var flyoutItems = getFlyoutItems(section);
+                if (flyoutItems.length === 0) return;
+
+                var idx = flyoutItems.indexOf(current);
+
+                switch (e.key) {
+                    case 'ArrowDown':
+                        e.preventDefault();
+                        if (idx < flyoutItems.length - 1) {
+                            flyoutItems[idx + 1].focus();
+                        } else {
+                            flyoutItems[0].focus(); /* wrap */
+                        }
+                        break;
+
+                    case 'ArrowUp':
+                        e.preventDefault();
+                        if (idx > 0) {
+                            flyoutItems[idx - 1].focus();
+                        } else {
+                            flyoutItems[flyoutItems.length - 1].focus(); /* wrap */
+                        }
+                        break;
+
+                    case 'Home':
+                        e.preventDefault();
+                        flyoutItems[0].focus();
+                        break;
+
+                    case 'End':
+                        e.preventDefault();
+                        flyoutItems[flyoutItems.length - 1].focus();
+                        break;
+
+                    case 'Escape':
+                        e.preventDefault();
+                        closeAllFlyouts();
+                        /* Return focus to the main section item */
+                        var mainItem = section.querySelector(':scope > .psb-item');
+                        if (mainItem) mainItem.focus();
+                        break;
+
+                    case 'Enter':
+                    case ' ':
+                        e.preventDefault();
+                        current.click();
+                        break;
+                }
             });
         }
 
@@ -1022,6 +1141,7 @@
             scrollSidebarToActive();
             initMobileBottomSheetTriggers();
             initSidebarARIA();
+            initFlyoutKeyboardNav();
             initSkipToContent();
 
             if (document.getElementById('idpButtonsContainer')) {

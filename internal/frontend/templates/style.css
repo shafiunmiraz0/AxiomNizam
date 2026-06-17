@@ -4345,7 +4345,8 @@ button .ax-icon,
     pointer-events: none;
 }
 
-.persistent-sidebar.compact .psb-section:hover > .psb-flyout {
+.persistent-sidebar.compact .psb-section:hover > .psb-flyout,
+.persistent-sidebar.compact .psb-section.flyout-open > .psb-flyout {
     opacity: 1;
     visibility: visible;
     transform: translateX(0);
