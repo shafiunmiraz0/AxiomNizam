@@ -42,6 +42,38 @@
         width: 100%;
         padding: 20px 16px;
     }
+
+    body.sidebar-compact .main-content {
+        margin-left: 0;
+        width: 100%;
+    }
+
+    .persistent-sidebar.compact {
+        width: 250px;
+        min-width: 250px;
+        padding: 12px 8px;
+    }
+
+    .persistent-sidebar.compact .psb-label,
+    .persistent-sidebar.compact .psb-arrow,
+    .persistent-sidebar.compact .psb-badge {
+        display: inline !important;
+    }
+
+    .persistent-sidebar.compact .psb-item {
+        justify-content: flex-start;
+        padding: 9px 12px;
+        gap: 10px;
+        border-left: none;
+    }
+
+    .persistent-sidebar.compact .psb-flyout {
+        display: none !important;
+    }
+
+    .sidebar-collapse-toggle {
+        display: none;
+    }
 }
 
 /* Tablets (768px and below) */

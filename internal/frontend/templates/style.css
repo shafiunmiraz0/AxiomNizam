@@ -314,6 +314,17 @@ body.sidebar-collapsed .main-content {
     width: 100%;
 }
 
+/* Compact mode: main content shifts left */
+body.sidebar-compact .main-content {
+    margin-left: 60px;
+    width: calc(100% - 60px);
+}
+
+body.sidebar-compact.sidebar-collapsed .main-content {
+    margin-left: 0;
+    width: 100%;
+}
+
 /* Mobile sidebar toggle button in navbar */
 .mobile-sidebar-toggle {
     display: none;
@@ -4999,6 +5010,170 @@ button .ax-icon,
 .persistent-sidebar.collapsed:hover .psb-item::before {
     opacity: 0 !important;
     pointer-events: none;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   COMPACT MODE (GitLab-style: icon rail with per-item flyout)
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* Hide flyouts by default — only show in compact mode */
+.psb-flyout {
+    display: none;
+}
+
+.persistent-sidebar.compact {
+    width: 60px;
+    min-width: 60px;
+    padding: 12px 6px;
+    overflow: visible;
+}
+
+/* Hide all text, arrows, badges, shortcuts, dividers, sub-items */
+.persistent-sidebar.compact .psb-label,
+.persistent-sidebar.compact .psb-arrow,
+.persistent-sidebar.compact .psb-subitems,
+.persistent-sidebar.compact .psb-divider,
+.persistent-sidebar.compact .psb-badge,
+.persistent-sidebar.compact .psb-shortcut {
+    display: none !important;
+}
+
+/* Center icons */
+.persistent-sidebar.compact .psb-item {
+    justify-content: center;
+    padding: 10px;
+    gap: 0;
+    border-left: 3px solid transparent;
+    padding-left: 7px;
+}
+
+.persistent-sidebar.compact .psb-section > .psb-item {
+    padding: 10px;
+    padding-left: 7px;
+}
+
+/* Active indicator still visible in compact */
+.persistent-sidebar.compact .psb-item.active {
+    border-left: 3px solid var(--primary-color);
+    padding-left: 7px;
+}
+
+/* ── Compact flyout: per-section panel on hover ────────────────────── */
+.persistent-sidebar.compact .psb-section {
+    position: relative;
+}
+
+/* Flyout panel that appears next to the hovered icon */
+.persistent-sidebar.compact .psb-flyout {
+    display: none;
+    position: absolute;
+    left: calc(100% + 6px);
+    top: -8px;
+    min-width: 200px;
+    max-width: 260px;
+    background: var(--dark-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    padding: 6px;
+    z-index: 1100;
+    animation: flyoutIn 0.12s ease;
+}
+
+@keyframes flyoutIn {
+    from { opacity: 0; transform: translateX(-4px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+.persistent-sidebar.compact .psb-section:hover > .psb-flyout {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+/* Flyout: show labels, arrows, sub-items inside */
+.persistent-sidebar.compact .psb-flyout .psb-label {
+    display: inline;
+}
+
+.persistent-sidebar.compact .psb-flyout .psb-arrow {
+    display: none;
+}
+
+.persistent-sidebar.compact .psb-flyout .psb-subitems {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    padding: 2px 0 0 0;
+    border-top: 1px solid var(--border-color);
+    margin-top: 4px;
+}
+
+.persistent-sidebar.compact .psb-flyout .psb-item {
+    justify-content: flex-start;
+    padding: 8px 10px;
+    gap: 10px;
+    border-left: none;
+    font-size: 13px;
+}
+
+.persistent-sidebar.compact .psb-flyout .psb-item.active {
+    border-left: 3px solid var(--primary-color);
+    padding-left: 7px;
+}
+
+/* Flyout arrow (caret pointing left) */
+.persistent-sidebar.compact .psb-section > .psb-flyout::before {
+    content: '';
+    position: absolute;
+    left: -6px;
+    top: 18px;
+    border: 5px solid transparent;
+    border-right-color: var(--border-color);
+}
+
+.persistent-sidebar.compact .psb-section > .psb-flyout::after {
+    content: '';
+    position: absolute;
+    left: -5px;
+    top: 19px;
+    border: 4px solid transparent;
+    border-right-color: var(--dark-bg);
+}
+
+/* ── Compact: tooltip for non-section items (Dashboard, Manager) ──── */
+.persistent-sidebar.compact .psb-item[data-tooltip] {
+    position: relative;
+}
+
+.persistent-sidebar.compact .psb-item[data-tooltip]::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    left: calc(100% + 12px);
+    top: 50%;
+    transform: translateY(-50%);
+    background: var(--dark-bg);
+    color: var(--text-primary);
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    z-index: 1100;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    border: 1px solid var(--border-color);
+}
+
+.persistent-sidebar.compact .psb-item[data-tooltip]:hover::after {
+    opacity: 1;
+}
+
+/* Don't show tooltip if section has a flyout (it handles its own) */
+.persistent-sidebar.compact .psb-section .psb-item::after {
+    display: none !important;
 }
 
 /* ── 6. Badge counters ─────────────────────────────────────────────── */
