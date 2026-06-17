@@ -360,7 +360,7 @@
             group.push(circle);
         });
 
-        heatmapLayer = L.layerGroup(group).addTo(heatmapInstance);
+        heatmapLayer = window.__axm.layerGroup(group).addTo(heatmapInstance);
 
         // Fit bounds
         if (pts.length > 0) {
