@@ -4790,6 +4790,26 @@ button:active:not(:disabled),
 /* ═══════════════════════════════════════════════════════════════════════
    DARK SCROLLBAR ENHANCEMENT (expand on hover)
    ═══════════════════════════════════════════════════════════════════════ */
+body::-webkit-scrollbar {
+    width: 6px;
+}
+body::-webkit-scrollbar-track {
+    background: transparent;
+}
+body::-webkit-scrollbar-thumb {
+    background: rgba(var(--primary-rgb), 0.3);
+    border-radius: 3px;
+    transition: width 0.2s ease, background 0.2s ease;
+}
+body:hover::-webkit-scrollbar-thumb {
+    width: 8px;
+    background: rgba(var(--primary-rgb), 0.5);
+}
+body {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(var(--primary-rgb), 0.3) transparent;
+}
+
 .persistent-sidebar::-webkit-scrollbar {
     width: 6px;
 }
