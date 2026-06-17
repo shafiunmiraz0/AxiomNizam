@@ -409,6 +409,7 @@
         window.addEventListener('resize', resizeDfCanvas);
 
         function drawDf() {
+            if (dfPaused) return;
             dfCtx.clearRect(0, 0, dfCanvas.width, dfCanvas.height);
             var w = dfCanvas.width, h = dfCanvas.height;
             var time = Date.now() * 0.001;
@@ -588,13 +589,24 @@
             requestAnimationFrame(drawDf);
         }
 
-        // Start when visible
+        // Pause/resume based on visibility
+        var dfAnimId = null;
+        var dfPaused = false;
+
         var dfObserver = new IntersectionObserver(function(entries) {
-            if (entries[0].isIntersecting) {
-                drawDf();
-                dfObserver.unobserve(dfCanvas);
-            }
-        }, { threshold: 0.2 });
+            entries.forEach(function(entry) {
+                if (entry.isIntersecting) {
+                    dfPaused = false;
+                    drawDf();
+                } else {
+                    dfPaused = true;
+                    if (dfAnimId) {
+                        cancelAnimationFrame(dfAnimId);
+                        dfAnimId = null;
+                    }
+                }
+            });
+        }, { threshold: 0.1 });
         dfObserver.observe(dfCanvas);
     }
 
@@ -659,7 +671,7 @@
 
     // Draw the API lifecycle canvas
     function drawApiCanvas() {
-        if (!apiCtx || !apiCanvas) return;
+        if (!apiCtx || !apiCanvas || apiCanvasPaused) return;
         apiCtx.clearRect(0, 0, apiCanvas.width, apiCanvas.height);
         var w = apiCanvas.width, h = apiCanvas.height;
         var time = Date.now() * 0.001;
@@ -789,6 +801,9 @@
         apiAnimId = requestAnimationFrame(drawApiCanvas);
     }
 
+    // Pause/resume API canvas based on visibility
+    var apiCanvasPaused = false;
+
     function activateNode(idx) {
         var nodes = apiStage ? apiStage.querySelectorAll('.api-lifecycle__node') : [];
         nodes.forEach(function(n, i) {
@@ -847,16 +862,27 @@
 
     if (apiStage) {
         var apiObserver = new IntersectionObserver(function(entries) {
-            if (entries[0].isIntersecting) {
-                drawApiCanvas();
-                runApiCycle();
-                apiCycleTimer = setInterval(runApiCycle, 4000);
-                apiObserver.unobserve(apiStage);
-            } else {
-                clearInterval(apiCycleTimer);
-                if (apiAnimId) cancelAnimationFrame(apiAnimId);
-            }
-        }, { threshold: 0.3 });
+            entries.forEach(function(entry) {
+                if (entry.isIntersecting) {
+                    apiCanvasPaused = false;
+                    drawApiCanvas();
+                    if (!apiCycleTimer) {
+                        runApiCycle();
+                        apiCycleTimer = setInterval(runApiCycle, 4000);
+                    }
+                } else {
+                    apiCanvasPaused = true;
+                    if (apiCycleTimer) {
+                        clearInterval(apiCycleTimer);
+                        apiCycleTimer = null;
+                    }
+                    if (apiAnimId) {
+                        cancelAnimationFrame(apiAnimId);
+                        apiAnimId = null;
+                    }
+                }
+            });
+        }, { threshold: 0.1 });
         apiObserver.observe(apiStage);
     }
 
@@ -2951,7 +2977,7 @@
         if (storageDemo) storageObserver.observe(storageDemo);
     }
 
-    // ---- Particle System ----
+    // ---- Particle System (with visibility-based pause) ----
     var canvas = document.getElementById('particleCanvas');
     if (canvas) {
         var ctx = canvas.getContext('2d');
@@ -2959,6 +2985,8 @@
         var particleCount = 80;
         var connectionDistance = 150;
         var mouseParticle = { x: -1000, y: -1000, radius: 150 };
+        var particleAnimId = null;
+        var particlePaused = false;
 
         function resizeCanvas() {
             canvas.width = canvas.offsetWidth;
@@ -2988,6 +3016,7 @@
         });
 
         function animateParticles() {
+            if (particlePaused) return;
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
             for (var i = 0; i < particles.length; i++) {
@@ -3055,9 +3084,25 @@
                 }
             }
 
-            requestAnimationFrame(animateParticles);
+            particleAnimId = requestAnimationFrame(animateParticles);
         }
-        animateParticles();
+
+        // Pause/resume based on visibility
+        var particleObserver = new IntersectionObserver(function(entries) {
+            entries.forEach(function(entry) {
+                if (entry.isIntersecting) {
+                    particlePaused = false;
+                    animateParticles();
+                } else {
+                    particlePaused = true;
+                    if (particleAnimId) {
+                        cancelAnimationFrame(particleAnimId);
+                        particleAnimId = null;
+                    }
+                }
+            });
+        }, { threshold: 0.1 });
+        particleObserver.observe(canvas);
     }
 
     // ---- Enhanced Cursor System ----

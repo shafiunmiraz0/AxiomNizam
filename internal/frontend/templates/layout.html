@@ -835,6 +835,111 @@
             });
         }
 
+        /* ═══════════════════════════════════════════════════════════════
+           ACCESSIBILITY: ARIA ATTRIBUTES
+           ═══════════════════════════════════════════════════════════════ */
+
+        function initSidebarARIA() {
+            var sidebar = document.getElementById('persistentSidebar');
+            if (!sidebar) return;
+
+            /* Add role and aria-label to sidebar */
+            sidebar.setAttribute('role', 'navigation');
+            sidebar.setAttribute('aria-label', 'Main navigation');
+
+            /* Add aria-current to active items */
+            sidebar.querySelectorAll('.psb-item.active, .psb-subitem.active').forEach(function(el) {
+                el.setAttribute('aria-current', 'page');
+            });
+
+            /* Add aria-expanded to sections with subitems */
+            sidebar.querySelectorAll('.psb-section').forEach(function(section) {
+                var subitems = section.querySelector(':scope > .psb-subitems');
+                if (!subitems) return;
+
+                var mainItem = section.querySelector(':scope > .psb-item');
+                if (!mainItem) return;
+
+                var isExpanded = section.classList.contains('expanded');
+                mainItem.setAttribute('aria-expanded', String(isExpanded));
+                mainItem.setAttribute('aria-haspopup', 'true');
+
+                /* Generate unique ID for subitems */
+                var subId = 'psb-subitems-' + (mainItem.getAttribute('href') || '').replace(/[^a-z0-9]/gi, '-');
+                subitems.setAttribute('id', subId);
+                mainItem.setAttribute('aria-controls', subId);
+            });
+
+            /* Update aria-expanded when sections expand/collapse */
+            var observer = new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
+                    if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                        var section = mutation.target;
+                        if (section.classList.contains('psb-section')) {
+                            var mainItem = section.querySelector(':scope > .psb-item');
+                            if (mainItem) {
+                                var isExpanded = section.classList.contains('expanded');
+                                mainItem.setAttribute('aria-expanded', String(isExpanded));
+                            }
+                        }
+                    }
+                });
+            });
+
+            sidebar.querySelectorAll('.psb-section').forEach(function(section) {
+                observer.observe(section, { attributes: true, attributeFilter: ['class'] });
+            });
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           ACCESSIBILITY: FOCUS TRAP IN COMMAND PALETTE
+           ═══════════════════════════════════════════════════════════════ */
+
+        function trapFocusInCmdPalette(e) {
+            var overlay = document.getElementById('cmdPaletteOverlay');
+            if (!overlay || !overlay.classList.contains('open')) return;
+            if (e.key !== 'Tab') return;
+
+            var focusableElements = overlay.querySelectorAll('input, .cmd-palette-item[tabindex], [href]');
+            if (focusableElements.length === 0) return;
+
+            var firstElement = overlay.querySelector('input') || focusableElements[0];
+            var lastElement = focusableElements[focusableElements.length - 1];
+
+            if (e.shiftKey) {
+                if (document.activeElement === firstElement) {
+                    e.preventDefault();
+                    lastElement.focus();
+                }
+            } else {
+                if (document.activeElement === lastElement) {
+                    e.preventDefault();
+                    firstElement.focus();
+                }
+            }
+        }
+
+        document.addEventListener('keydown', trapFocusInCmdPalette);
+
+        /* ═══════════════════════════════════════════════════════════════
+           ACCESSIBILITY: SKIP-TO-CONTENT LINK
+           ═══════════════════════════════════════════════════════════════ */
+
+        function initSkipToContent() {
+            var skipLink = document.createElement('a');
+            skipLink.href = '#main-content';
+            skipLink.className = 'skip-to-content';
+            skipLink.textContent = 'Skip to main content';
+            skipLink.setAttribute('tabindex', '0');
+            document.body.insertBefore(skipLink, document.body.firstChild);
+
+            /* Add id to main content */
+            var mainContent = document.querySelector('.main-content');
+            if (mainContent && !mainContent.id) {
+                mainContent.id = 'main-content';
+            }
+        }
+
         // Check authentication on page load
         window.addEventListener('DOMContentLoaded', function() {
             const token = localStorage.getItem('authToken');
@@ -860,6 +965,8 @@
             initSidebarHashNav();
             scrollSidebarToActive();
             initMobileBottomSheetTriggers();
+            initSidebarARIA();
+            initSkipToContent();
 
             if (document.getElementById('idpButtonsContainer')) {
                 loadIdentityProviderButtons();

@@ -4553,3 +4553,55 @@ button .ax-icon,
 .persistent-sidebar.collapsed .psb-shortcut {
     display: none;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   ACCESSIBILITY: SKIP-TO-CONTENT LINK
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.skip-to-content {
+    position: absolute;
+    top: -100%;
+    left: 16px;
+    z-index: 10000;
+    padding: 12px 24px;
+    background: var(--primary-color);
+    color: white;
+    font-weight: 600;
+    font-size: 14px;
+    border-radius: 0 0 8px 8px;
+    text-decoration: none;
+    transition: top 0.2s ease;
+}
+
+.skip-to-content:focus {
+    top: 0;
+    outline: 2px solid var(--primary-light);
+    outline-offset: 2px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   PERFORMANCE: CSS CONTAINMENT
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.persistent-sidebar {
+    contain: layout style;
+}
+
+.modal {
+    contain: layout style;
+}
+
+.stat-card,
+.feature-card,
+.arch-card,
+.overview-card {
+    contain: layout style paint;
+}
+
+.cmd-palette {
+    contain: layout style;
+}
+
+.mobile-bottom-sheet {
+    contain: layout style;
+}
