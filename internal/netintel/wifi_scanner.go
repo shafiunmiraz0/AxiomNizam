@@ -126,6 +126,156 @@ func (ws *WiFiScanner) GetHistory() []*WiFiScanResult {
 	return result
 }
 
+// WiFiNetworkDiff represents changes between two scans.
+type WiFiNetworkDiff struct {
+	Timestamp       time.Time      `json:"timestamp"`
+	Added           []WiFiNetwork  `json:"added"`
+	Removed         []WiFiNetwork  `json:"removed"`
+	SignalChanges   []SignalChange `json:"signal_changes"`
+	TotalBefore     int            `json:"total_before"`
+	TotalAfter      int            `json:"total_after"`
+	ChangesDetected bool           `json:"changes_detected"`
+}
+
+// SignalChange represents a signal strength change for a network between scans.
+type SignalChange struct {
+	SSID       string `json:"ssid"`
+	BSSID      string `json:"bssid"`
+	OldSignal  int    `json:"old_signal_dbm"`
+	NewSignal  int    `json:"new_signal_dbm"`
+	Delta      int    `json:"delta_dbm"`
+}
+
+// CompareScans compares two scan results and returns the diff.
+func (ws *WiFiScanner) CompareScans(old, new *WiFiScanResult) *WiFiNetworkDiff {
+	if old == nil || new == nil {
+		return &WiFiNetworkDiff{Timestamp: time.Now()}
+	}
+
+	oldMap := make(map[string]WiFiNetwork)
+	for _, n := range old.Networks {
+		key := n.BSSID
+		if key == "" {
+			key = n.SSID
+		}
+		oldMap[key] = n
+	}
+
+	newMap := make(map[string]WiFiNetwork)
+	for _, n := range new.Networks {
+		key := n.BSSID
+		if key == "" {
+			key = n.SSID
+		}
+		newMap[key] = n
+	}
+
+	diff := &WiFiNetworkDiff{
+		Timestamp:   time.Now(),
+		TotalBefore: len(old.Networks),
+		TotalAfter:  len(new.Networks),
+		Added:       make([]WiFiNetwork, 0),
+		Removed:     make([]WiFiNetwork, 0),
+		SignalChanges: make([]SignalChange, 0),
+	}
+
+	// Find added and signal-changed networks
+	for key, net := range newMap {
+		if oldNet, exists := oldMap[key]; !exists {
+			diff.Added = append(diff.Added, net)
+		} else if oldNet.SignalDBM != net.SignalDBM {
+			diff.SignalChanges = append(diff.SignalChanges, SignalChange{
+				SSID:      net.SSID,
+				BSSID:     net.BSSID,
+				OldSignal: oldNet.SignalDBM,
+				NewSignal: net.SignalDBM,
+				Delta:     net.SignalDBM - oldNet.SignalDBM,
+			})
+		}
+	}
+
+	// Find removed networks
+	for key, net := range oldMap {
+		if _, exists := newMap[key]; !exists {
+			diff.Removed = append(diff.Removed, net)
+		}
+	}
+
+	diff.ChangesDetected = len(diff.Added) > 0 || len(diff.Removed) > 0 || len(diff.SignalChanges) > 0
+	return diff
+}
+
+// CompareLastTwoScans compares the two most recent scans.
+func (ws *WiFiScanner) CompareLastTwoScans() *WiFiNetworkDiff {
+	ws.mu.RLock()
+	defer ws.mu.RUnlock()
+
+	if len(ws.scanHistory) < 2 {
+		return &WiFiNetworkDiff{
+			Timestamp:   time.Now(),
+			TotalBefore: 0,
+			TotalAfter:  0,
+		}
+	}
+
+	old := ws.scanHistory[len(ws.scanHistory)-2]
+	new := ws.scanHistory[len(ws.scanHistory)-1]
+
+	return ws.compareLocked(old, new)
+}
+
+func (ws *WiFiScanner) compareLocked(old, new *WiFiScanResult) *WiFiNetworkDiff {
+	oldMap := make(map[string]WiFiNetwork)
+	for _, n := range old.Networks {
+		key := n.BSSID
+		if key == "" {
+			key = n.SSID
+		}
+		oldMap[key] = n
+	}
+
+	newMap := make(map[string]WiFiNetwork)
+	for _, n := range new.Networks {
+		key := n.BSSID
+		if key == "" {
+			key = n.SSID
+		}
+		newMap[key] = n
+	}
+
+	diff := &WiFiNetworkDiff{
+		Timestamp:   time.Now(),
+		TotalBefore: len(old.Networks),
+		TotalAfter:  len(new.Networks),
+		Added:       make([]WiFiNetwork, 0),
+		Removed:     make([]WiFiNetwork, 0),
+		SignalChanges: make([]SignalChange, 0),
+	}
+
+	for key, net := range newMap {
+		if oldNet, exists := oldMap[key]; !exists {
+			diff.Added = append(diff.Added, net)
+		} else if oldNet.SignalDBM != net.SignalDBM {
+			diff.SignalChanges = append(diff.SignalChanges, SignalChange{
+				SSID:      net.SSID,
+				BSSID:     net.BSSID,
+				OldSignal: oldNet.SignalDBM,
+				NewSignal: net.SignalDBM,
+				Delta:     net.SignalDBM - oldNet.SignalDBM,
+			})
+		}
+	}
+
+	for key, net := range oldMap {
+		if _, exists := newMap[key]; !exists {
+			diff.Removed = append(diff.Removed, net)
+		}
+	}
+
+	diff.ChangesDetected = len(diff.Added) > 0 || len(diff.Removed) > 0 || len(diff.SignalChanges) > 0
+	return diff
+}
+
 // --- Windows: netsh wlan show networks ---
 
 func (ws *WiFiScanner) scanWindows() ([]WiFiNetwork, string, error) {
