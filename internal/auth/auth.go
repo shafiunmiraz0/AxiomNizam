@@ -4,6 +4,7 @@ import (
 	"axiomnizam.bitbd.net/axiomnizam/internal/logging"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -229,7 +230,13 @@ func (tv *TokenValidator) refreshPublicKeys() error {
 		return fmt.Errorf("token validator: JWKS endpoint is not configured")
 	}
 
-	resp, err := http.Get(jwksURL)
+	// Use InsecureSkipVerify so self-signed TLS certs work for JWKS fetch
+	insecureClient := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		},
+	}
+	resp, err := insecureClient.Get(jwksURL)
 	if err != nil {
 		return fmt.Errorf("failed to fetch JWKS: %w", err)
 	}
