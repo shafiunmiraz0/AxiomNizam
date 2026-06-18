@@ -315,6 +315,50 @@ var netintelAlertsCmd = &cobra.Command{
 }
 
 // ====================================
+// NETINTEL WIFI COMMANDS
+// ====================================
+
+var netintelWiFiCmd = &cobra.Command{
+	Use:   "wifi",
+	Short: "WiFi network scanning and monitoring",
+}
+
+var netintelWiFiScanCmd = &cobra.Command{
+	Use:   "scan",
+	Short: "Scan nearby WiFi networks",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return postAndPrint("/api/v1/netintel/wifi/scan", nil)
+	},
+}
+
+var netintelWiFiNetworksCmd = &cobra.Command{
+	Use:   "networks",
+	Short: "List cached WiFi scan results",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return getAndPrint("/api/v1/netintel/wifi/networks")
+	},
+}
+
+var netintelWiFiHistoryCmd = &cobra.Command{
+	Use:   "history",
+	Short: "Show WiFi scan history",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return getAndPrint("/api/v1/netintel/wifi/history")
+	},
+}
+
+var netintelWiFiStreamCmd = &cobra.Command{
+	Use:   "stream",
+	Short: "Live stream WiFi scan results via WebSocket",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		fmt.Println("WebSocket streaming requires a WebSocket client.")
+		fmt.Println("Connect to: ws://<host>:<port>/api/v1/netintel/wifi/stream")
+		fmt.Println("Use a tool like websocat: websocat ws://localhost:8000/api/v1/netintel/wifi/stream")
+		return nil
+	},
+}
+
+// ====================================
 // GIS COMMANDS
 // ====================================
 
@@ -591,7 +635,8 @@ func registerExtendedCommands(root *cobra.Command) {
 	root.AddCommand(StorageCmd)
 
 	// NetIntel
-	NetIntelCmd.AddCommand(netintelSummaryCmd, netintelTopologyCmd, netintelAnomaliesCmd, netintelAlertsCmd)
+	NetIntelCmd.AddCommand(netintelSummaryCmd, netintelTopologyCmd, netintelAnomaliesCmd, netintelAlertsCmd, netintelWiFiCmd)
+	netintelWiFiCmd.AddCommand(netintelWiFiScanCmd, netintelWiFiNetworksCmd, netintelWiFiHistoryCmd, netintelWiFiStreamCmd)
 	root.AddCommand(NetIntelCmd)
 
 	// GIS
