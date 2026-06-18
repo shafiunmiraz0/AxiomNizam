@@ -232,6 +232,7 @@ func (tv *TokenValidator) refreshPublicKeys() error {
 
 	// Use InsecureSkipVerify so self-signed TLS certs work for JWKS fetch
 	insecureClient := &http.Client{
+		Timeout: 3 * time.Second,
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 		},
