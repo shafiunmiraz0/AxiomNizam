@@ -59,6 +59,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     curl \
     libpq5 \
+    iw \
+    wpasupplicant \
+    wireless-tools \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user (Phase 12 — principle of least privilege)

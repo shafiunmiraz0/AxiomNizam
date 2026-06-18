@@ -49,6 +49,7 @@ type WiFiScanner struct {
 	lastResult  *WiFiScanResult
 	scanHistory []*WiFiScanResult
 	maxHistory  int
+	simulate    bool // when true, returns simulated scan data
 }
 
 // NewWiFiScanner creates a new WiFiScanner.
@@ -59,9 +60,32 @@ func NewWiFiScanner() *WiFiScanner {
 	}
 }
 
+// SetSimulate enables or disables simulation mode.
+func (ws *WiFiScanner) SetSimulate(on bool) {
+	ws.mu.Lock()
+	defer ws.mu.Unlock()
+	ws.simulate = on
+}
+
+// SimulateMode returns whether simulation mode is active.
+func (ws *WiFiScanner) SimulateMode() bool {
+	ws.mu.RLock()
+	defer ws.mu.RUnlock()
+	return ws.simulate
+}
+
 // Scan triggers a WiFi scan on the default wireless interface and returns results.
 func (ws *WiFiScanner) Scan() (*WiFiScanResult, error) {
 	start := time.Now()
+
+	ws.mu.RLock()
+	simulate := ws.simulate
+	ws.mu.RUnlock()
+
+	// If simulate mode is on, skip OS scan
+	if simulate {
+		return ws.simulateScan(start), nil
+	}
 
 	var networks []WiFiNetwork
 	var iface string
@@ -79,6 +103,13 @@ func (ws *WiFiScanner) Scan() (*WiFiScanResult, error) {
 	}
 
 	if err != nil {
+		// Auto-enable simulation on tool-not-found errors
+		if isToolNotFoundError(err) {
+			ws.mu.Lock()
+			ws.simulate = true
+			ws.mu.Unlock()
+			return ws.simulateScan(start), nil
+		}
 		return &WiFiScanResult{
 			Interface:  iface,
 			Networks:   []WiFiNetwork{},
@@ -108,6 +139,14 @@ func (ws *WiFiScanner) Scan() (*WiFiScanResult, error) {
 	ws.mu.Unlock()
 
 	return result, nil
+}
+
+// isToolNotFoundError returns true when the error is caused by missing WiFi tools.
+func isToolNotFoundError(err error) bool {
+	msg := err.Error()
+	return strings.Contains(msg, "executable file not found") ||
+		strings.Contains(msg, "no such file or directory") ||
+		strings.Contains(msg, "not found in")
 }
 
 // GetLastResult returns the most recent scan result without triggering a new scan.
@@ -274,6 +313,52 @@ func (ws *WiFiScanner) compareLocked(old, new *WiFiScanResult) *WiFiNetworkDiff 
 
 	diff.ChangesDetected = len(diff.Added) > 0 || len(diff.Removed) > 0 || len(diff.SignalChanges) > 0
 	return diff
+}
+
+// --- Simulation Fallback ---
+
+func (ws *WiFiScanner) simulateScan(start time.Time) *WiFiScanResult {
+	now := time.Now()
+	networks := []WiFiNetwork{
+		{SSID: "AxiomNizam-Corp", BSSID: "aa:bb:cc:dd:ee:01", Signal: 92, SignalDBM: -34, Channel: 6, Frequency: 2437, Band: "2.4GHz", Encryption: "WPA2-PSK", Auth: "PSK", Cipher: "CCMP", Radio: "802.11n", Distance: 1.2},
+		{SSID: "AxiomNizam-5G", BSSID: "aa:bb:cc:dd:ee:02", Signal: 85, SignalDBM: -38, Channel: 36, Frequency: 5180, Band: "5GHz", Encryption: "WPA3-SAE", Auth: "SAE", Cipher: "CCMP", Radio: "802.11ac", Distance: 2.1},
+		{SSID: "Guest-WiFi", BSSID: "aa:bb:cc:dd:ee:03", Signal: 78, SignalDBM: -42, Channel: 11, Frequency: 2462, Band: "2.4GHz", Encryption: "WPA2-PSK", Auth: "PSK", Cipher: "CCMP", Radio: "802.11n", Distance: 3.5},
+		{SSID: "IoT-Network", BSSID: "aa:bb:cc:dd:ee:04", Signal: 70, SignalDBM: -46, Channel: 1, Frequency: 2412, Band: "2.4GHz", Encryption: "WPA2-PSK", Auth: "PSK", Cipher: "TKIP", Radio: "802.11g", Distance: 5.0},
+		{SSID: "", BSSID: "de:ad:be:ef:00:01", Signal: 55, SignalDBM: -54, Channel: 44, Frequency: 5220, Band: "5GHz", Encryption: "Open", Auth: "Open", Cipher: "", Radio: "802.11ac", Distance: 8.3},
+		{SSID: "Lab-5GHz", BSSID: "aa:bb:cc:dd:ee:06", Signal: 48, SignalDBM: -58, Channel: 149, Frequency: 5745, Band: "5GHz", Encryption: "WPA3-SAE", Auth: "SAE", Cipher: "CCMP", Radio: "802.11ax", Distance: 10.7},
+		{SSID: "Eduroam", BSSID: "11:22:33:44:55:01", Signal: 42, SignalDBM: -61, Channel: 36, Frequency: 5180, Band: "5GHz", Encryption: "WPA2-802.1X", Auth: "802.1X", Cipher: "CCMP", Radio: "802.11ac", Distance: 14.2},
+		{SSID: "Neighbors-WiFi", BSSID: "ff:ee:dd:cc:bb:01", Signal: 25, SignalDBM: -72, Channel: 9, Frequency: 2452, Band: "2.4GHz", Encryption: "WPA2-PSK", Auth: "PSK", Cipher: "CCMP", Radio: "802.11n", Distance: 28.5},
+		{SSID: "TP-Link_2.4G", BSSID: "50:c7:bf:12:34:56", Signal: 18, SignalDBM: -76, Channel: 13, Frequency: 2472, Band: "2.4GHz", Encryption: "WPA2-PSK", Auth: "PSK", Cipher: "CCMP", Radio: "802.11n", Distance: 35.0},
+		{SSID: "AndroidAP", BSSID: "02:00:00:00:00:01", Signal: 12, SignalDBM: -80, Channel: 6, Frequency: 2437, Band: "2.4GHz", Encryption: "WPA2-PSK", Auth: "PSK", Cipher: "CCMP", Radio: "802.11n", Distance: 45.0},
+	}
+
+	// Add slight random signal jitter so consecutive scans differ
+	for i := range networks {
+		jitter := int(now.UnixNano()%7 - 3) // -3 to +3
+		networks[i].SignalDBM += jitter
+		networks[i].Signal = signalDBMToPct(networks[i].SignalDBM)
+		networks[i].Distance = estimateDistance(networks[i].SignalDBM, networks[i].Frequency)
+	}
+
+	result := &WiFiScanResult{
+		Interface:  "wlan0 (simulated)",
+		Networks:   networks,
+		Total:      len(networks),
+		ScanTime:   now,
+		DurationMs: time.Since(start).Milliseconds(),
+		Platform:   runtime.GOOS,
+		Error:      "",
+	}
+
+	ws.mu.Lock()
+	ws.lastResult = result
+	ws.scanHistory = append(ws.scanHistory, result)
+	if len(ws.scanHistory) > ws.maxHistory {
+		ws.scanHistory = ws.scanHistory[1:]
+	}
+	ws.mu.Unlock()
+
+	return result
 }
 
 // --- Windows: netsh wlan show networks ---

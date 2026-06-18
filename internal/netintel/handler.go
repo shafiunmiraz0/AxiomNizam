@@ -127,6 +127,7 @@ func (h *Handler) RegisterRoutes(group *gin.RouterGroup) {
 	group.GET("/wifi/stream", h.WiFiStream)
 	group.POST("/wifi/schedule", h.ScheduleWiFiScan)
 	group.GET("/wifi/diff", h.WiFiDiff)
+	group.POST("/wifi/simulate", h.ToggleWiFiSimulate)
 
 	// Health / Metrics / Audit
 	group.GET("/health", h.Health)
@@ -522,7 +523,7 @@ func (h *Handler) ScanWiFi(c *gin.Context) {
 		if h.auditLog != nil {
 			h.auditLog.Log(audit.SeverityError, audit.CategoryIngest, audit.ActionEntryIngested, "wifi scan failed: "+err.Error())
 		}
-		c.JSON(http.StatusInternalServerError, WiFiScanResponse{
+		c.JSON(http.StatusServiceUnavailable, WiFiScanResponse{
 			Status: "error",
 			Result: result,
 		})
@@ -787,4 +788,29 @@ func (h *Handler) AuditLogEndpoint(c *gin.Context) {
 	}
 	events := h.auditLog.List()
 	c.JSON(http.StatusOK, AuditLogResponse{Events: events, Count: len(events)})
+}
+
+// ToggleWiFiSimulate POST /api/v1/netintel/wifi/simulate
+func (h *Handler) ToggleWiFiSimulate(c *gin.Context) {
+	var body struct {
+		Simulate *bool `json:"simulate"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, MessageResponse{Error: err.Error()})
+		return
+	}
+
+	if body.Simulate != nil {
+		h.wifiScanner.SetSimulate(*body.Simulate)
+	} else {
+		// Toggle current state
+		current := h.wifiScanner.SimulateMode()
+		h.wifiScanner.SetSimulate(!current)
+	}
+
+	mode := h.wifiScanner.SimulateMode()
+	c.JSON(http.StatusOK, MessageResponse{
+		Message: fmt.Sprintf("WiFi simulation mode: %v", mode),
+		Name:    fmt.Sprintf("simulate=%v", mode),
+	})
 }
