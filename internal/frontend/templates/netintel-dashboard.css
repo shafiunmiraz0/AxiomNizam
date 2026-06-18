@@ -632,6 +632,112 @@
 .ni-risk-med    { background: var(--warning-color); }
 .ni-risk-high   { background: var(--danger-color); }
 
+/* WiFi Scan */
+.ni-wifi-signal {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+.wifi-sig-good { background: color-mix(in srgb, var(--success-color) 18%, transparent); color: var(--success-color); }
+.wifi-sig-mid  { background: color-mix(in srgb, var(--warning-color) 14%, transparent); color: var(--warning-color); }
+.wifi-sig-low  { background: color-mix(in srgb, var(--danger-color) 16%, transparent); color: var(--danger-color); }
+
+.ni-wifi-changes {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+.ni-wifi-change {
+    padding: 0.5rem 0.8rem;
+    border-radius: 6px;
+    font-size: 0.82rem;
+    font-family: monospace;
+}
+.ni-wifi-added {
+    background: color-mix(in srgb, var(--success-color) 12%, transparent);
+    color: var(--success-color);
+    border-left: 3px solid var(--success-color);
+}
+.ni-wifi-removed {
+    background: color-mix(in srgb, var(--danger-color) 12%, transparent);
+    color: var(--danger-color);
+    border-left: 3px solid var(--danger-color);
+}
+
+.ni-change-badge {
+    font-size: 0.7rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: 10px;
+    background: rgba(var(--ni-primary-rgb), 0.18);
+    color: var(--primary-color);
+    margin-left: 0.5rem;
+    font-weight: 500;
+}
+
+.ni-wifi-history {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+.ni-wifi-history-item {
+    display: flex;
+    gap: 1.5rem;
+    padding: 0.4rem 0.8rem;
+    background: var(--card-bg, var(--card-bg, #1e293b));
+    border: 1px solid var(--border-color, var(--border-color, #334155));
+    border-radius: 6px;
+    font-size: 0.8rem;
+    color: var(--text-secondary, var(--text-secondary, #94a3b8));
+}
+
+.ni-toggle-label {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.82rem;
+    color: var(--text-secondary, var(--text-secondary, #94a3b8));
+    cursor: pointer;
+}
+.ni-toggle-label input { cursor: pointer; }
+
+.ni-btn-active {
+    background: var(--primary-color, var(--accent-color, #3b82f6)) !important;
+    border-color: var(--primary-color, var(--accent-color, #3b82f6)) !important;
+    color: #fff !important;
+}
+
+.ni-wifi-stream-indicator {
+    position: fixed;
+    bottom: 1rem;
+    right: 1rem;
+    background: var(--card-bg, var(--card-bg, #1e293b));
+    border: 1px solid var(--primary-color, var(--accent-color, #3b82f6));
+    border-radius: 8px;
+    padding: 0.6rem 1rem;
+    font-size: 0.8rem;
+    color: var(--text-primary, #e2e8f0);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+.ni-stream-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--success-color, #22c55e);
+    animation: niPulse 1.5s ease-in-out infinite;
+}
+@keyframes niPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
+.ni-spin { animation: niSpin 1s linear infinite; display: inline-block; }
+@keyframes niSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
 /* Responsive */
 @media (max-width: 768px) {
     .netintel-container { padding: 0.7rem; }
