@@ -154,6 +154,12 @@ type WiFiHistoryResponse struct {
 	Total   int         `json:"total"`
 }
 
+// WiFiDiffResponse is the response for WiFi network comparison.
+type WiFiDiffResponse struct {
+	Status string      `json:"status"`
+	Diff   interface{} `json:"diff"`
+}
+
 // --- Modes Response DTOs ---
 
 // ModesListResponse is the modes list response.
