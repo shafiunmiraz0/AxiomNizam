@@ -27,6 +27,10 @@
         <button class="ni-tab" data-tab="parsers" onclick="NI.switchTab('parsers')">
             <span class="tab-icon"><svg viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></span> Parsers
         </button>
+        <button class="ni-tab" data-tab="wifi" onclick="NI.switchTab('wifi')">
+            <span class="tab-icon"><svg viewBox="0 0 24 24"><path d="M12 20h.01"/><path d="M2 8.82a15 15 0 0 1 20 0"/><path d="M5 12.86a10 10 0 0 1 14 0"/><path d="M8.5 16.43a5 5 0 0 1 7 0"/></svg></span> WiFi Scan
+            <span class="ni-badge" id="wifiBadge" style="display:none">0</span>
+        </button>
     </div>
 
     <!-- ====== OVERVIEW TAB ====== -->
@@ -284,6 +288,89 @@
                     <tbody id="parserTableBody"></tbody>
                 </table>
             </div>
+        </div>
+    </div>
+
+    <!-- ====== WIFI SCAN TAB ====== -->
+    <div class="ni-panel" id="panel-wifi">
+        <div class="ni-toolbar">
+            <span class="ni-toolbar-label">Nearby WiFi Networks</span>
+            <button class="ni-btn ni-btn-primary" id="wifiScanBtn" onclick="NI.scanWiFi()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-radar"><path d="M19.07 4.93A10 10 0 0 0 6.99 3.34"/><path d="M4 6h.01"/><path d="M2.29 9.62A10 10 0 1 0 21.31 8.35"/><path d="M16.24 7.76A6 6 0 1 0 8.23 16.67"/><path d="M12 18h.01"/><path d="M17.99 11.66A6 6 0 0 1 15.77 16.67"/></svg>
+                Scan Now
+            </button>
+            <button class="ni-btn" onclick="NI.loadWiFiNetworks()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-refresh-cw"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg> Cached
+            </button>
+            <button class="ni-btn ni-btn-secondary" onclick="NI.toggleWiFiStream()" id="wifiStreamBtn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-radio"><path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"/><path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"/><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"/><path d="M19.1 4.9C23 8.8 23 15.2 19.1 19.1"/></svg>
+                Live Stream
+            </button>
+            <label class="ni-toggle-label">
+                <input type="checkbox" id="wifiAutoScan" onchange="NI.toggleAutoScan()">
+                Auto-scan (30s)
+            </label>
+        </div>
+
+        <div class="ni-kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); margin-bottom:1rem">
+            <div class="ni-kpi-card">
+                <div class="ni-kpi-value" id="wifiTotal">0</div>
+                <div class="ni-kpi-label">Networks Found</div>
+            </div>
+            <div class="ni-kpi-card">
+                <div class="ni-kpi-value" id="wifiSecured">0</div>
+                <div class="ni-kpi-label">Secured</div>
+            </div>
+            <div class="ni-kpi-card">
+                <div class="ni-kpi-value" id="wifiOpen">0</div>
+                <div class="ni-kpi-label">Open</div>
+            </div>
+            <div class="ni-kpi-card">
+                <div class="ni-kpi-value" id="wifiScanTime">—</div>
+                <div class="ni-kpi-label">Last Scan</div>
+            </div>
+            <div class="ni-kpi-card">
+                <div class="ni-kpi-value" id="wifiScanDuration">—</div>
+                <div class="ni-kpi-label">Duration</div>
+            </div>
+        </div>
+
+        <div class="ni-section">
+            <h3>Network Changes
+                <span class="ni-change-badge" id="wifiChangeBadge" style="display:none"></span>
+            </h3>
+            <div class="ni-wifi-changes" id="wifiChanges"></div>
+        </div>
+
+        <div class="ni-section">
+            <h3>Discovered Networks</h3>
+            <div class="ni-table-wrap ni-table-scroll">
+                <table class="ni-table">
+                    <thead>
+                        <tr>
+                            <th>SSID</th>
+                            <th>BSSID</th>
+                            <th>Signal</th>
+                            <th>Channel</th>
+                            <th>Band</th>
+                            <th>Encryption</th>
+                            <th>Radio</th>
+                            <th>Distance</th>
+                        </tr>
+                    </thead>
+                    <tbody id="wifiTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="ni-section">
+            <h3>Scan History</h3>
+            <div class="ni-wifi-history" id="wifiHistory"></div>
+        </div>
+
+        <!-- Live stream indicator -->
+        <div class="ni-wifi-stream-indicator" id="wifiStreamIndicator" style="display:none">
+            <span class="ni-stream-dot"></span> Live streaming — updates will appear automatically
         </div>
     </div>
 
