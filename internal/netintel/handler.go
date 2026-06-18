@@ -1,15 +1,18 @@
 package netintel
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
+	"sync"
 	"time"
 
 	"axiomnizam.bitbd.net/axiomnizam/internal/netintel/audit"
 	nmetrics "axiomnizam.bitbd.net/axiomnizam/internal/netintel/metrics"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gorilla/websocket"
 )
 
 // ===================================================
@@ -25,6 +28,9 @@ type Handler struct {
 	metrics     *nmetrics.MetricsCollector
 	auditLog    *audit.Logger
 	wifiScanner *WiFiScanner
+	upgrader    websocket.Upgrader
+	wsMu        sync.RWMutex
+	wsClients   map[*websocket.Conn]bool
 }
 
 func NewHandler() *Handler {
@@ -38,6 +44,10 @@ func NewHandler() *Handler {
 		metrics:     nmetrics.Collector,
 		auditLog:    nil,
 		wifiScanner: NewWiFiScanner(),
+		upgrader: websocket.Upgrader{
+			CheckOrigin: func(r *http.Request) bool { return true },
+		},
+		wsClients: make(map[*websocket.Conn]bool),
 	}
 }
 
@@ -50,6 +60,10 @@ func NewHandlerWithDeps(parser *ParserEngine, analytics *AnalyticsEngine, topo *
 		metrics:     metrics,
 		auditLog:    auditLog,
 		wifiScanner: NewWiFiScanner(),
+		upgrader: websocket.Upgrader{
+			CheckOrigin: func(r *http.Request) bool { return true },
+		},
+		wsClients: make(map[*websocket.Conn]bool),
 	}
 }
 
@@ -110,6 +124,9 @@ func (h *Handler) RegisterRoutes(group *gin.RouterGroup) {
 	group.POST("/wifi/scan", h.ScanWiFi)
 	group.GET("/wifi/networks", h.ListWiFiNetworks)
 	group.GET("/wifi/history", h.WiFiScanHistory)
+	group.GET("/wifi/stream", h.WiFiStream)
+	group.POST("/wifi/schedule", h.ScheduleWiFiScan)
+	group.GET("/wifi/diff", h.WiFiDiff)
 
 	// Health / Metrics / Audit
 	group.GET("/health", h.Health)
@@ -577,6 +594,161 @@ func (h *Handler) WiFiScanHistory(c *gin.Context) {
 		History: history,
 		Total:   len(history),
 	})
+}
+
+// WiFiStream GET /api/v1/netintel/wifi/stream (WebSocket)
+func (h *Handler) WiFiStream(c *gin.Context) {
+	conn, err := h.upgrader.Upgrade(c.Writer, c.Request, nil)
+	if err != nil {
+		return
+	}
+
+	h.wsMu.Lock()
+	h.wsClients[conn] = true
+	h.wsMu.Unlock()
+
+	defer func() {
+		h.wsMu.Lock()
+		delete(h.wsClients, conn)
+		h.wsMu.Unlock()
+		conn.Close()
+	}()
+
+	// Send initial scan result if available
+	if last := h.wifiScanner.GetLastResult(); last != nil {
+		data, _ := json.Marshal(last)
+		conn.WriteMessage(websocket.TextMessage, data)
+	}
+
+	// Keep connection alive and send periodic scans
+	ticker := time.NewTicker(30 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			result, err := h.wifiScanner.Scan()
+			if err != nil {
+				continue
+			}
+			data, err := json.Marshal(result)
+			if err != nil {
+				continue
+			}
+			h.wsMu.RLock()
+			for client := range h.wsClients {
+				if err := client.WriteMessage(websocket.TextMessage, data); err != nil {
+					client.Close()
+					delete(h.wsClients, client)
+				}
+			}
+			h.wsMu.RUnlock()
+		default:
+			// Read messages (client can send "scan" to trigger immediate scan)
+			_, msg, err := conn.ReadMessage()
+			if err != nil {
+				return
+			}
+			if string(msg) == "scan" {
+				result, err := h.wifiScanner.Scan()
+				if err != nil {
+					continue
+				}
+				data, _ := json.Marshal(result)
+				conn.WriteMessage(websocket.TextMessage, data)
+			}
+		}
+	}
+}
+
+// ScheduledScanConfig holds scheduled scan configuration.
+type ScheduledScanConfig struct {
+	Enabled  bool   `json:"enabled"`
+	Interval int    `json:"interval_seconds"` // scan interval in seconds
+	MaxScans int    `json:"max_scans"`        // max scans to keep in history (0 = unlimited)
+	AutoIngest bool `json:"auto_ingest"`      // auto-ingest results as log entries
+}
+
+// ScheduleWiFiScan POST /api/v1/netintel/wifi/schedule
+func (h *Handler) ScheduleWiFiScan(c *gin.Context) {
+	var config ScheduledScanConfig
+	if err := c.ShouldBindJSON(&config); err != nil {
+		c.JSON(http.StatusBadRequest, MessageResponse{Error: err.Error()})
+		return
+	}
+
+	if config.Interval < 10 {
+		config.Interval = 10
+	}
+	if config.Interval > 3600 {
+		config.Interval = 3600
+	}
+
+	// Start background scheduler
+	go h.runScheduledScan(config)
+
+	c.JSON(http.StatusOK, MessageResponse{
+		Message: fmt.Sprintf("Scheduled WiFi scan every %d seconds", config.Interval),
+	})
+}
+
+func (h *Handler) runScheduledScan(config ScheduledScanConfig) {
+	ticker := time.NewTicker(time.Duration(config.Interval) * time.Second)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		if !config.Enabled {
+			return
+		}
+		result, err := h.wifiScanner.Scan()
+		if err != nil {
+			continue
+		}
+
+		if config.AutoIngest {
+			for _, net := range result.Networks {
+				if net.SSID != "" {
+					entry := ParsedEntry{
+						LogType:   LogWiFiProbe,
+						Source:    "wifi-scanner-scheduled",
+						Severity:  "info",
+						Message:   fmt.Sprintf("Scheduled WiFi scan: %s (%s) ch=%d signal=%ddBm", net.SSID, net.BSSID, net.Channel, net.SignalDBM),
+						DeviceMAC: net.BSSID,
+						SSID:      net.SSID,
+						Signal:    net.SignalDBM,
+						Fields: map[string]interface{}{
+							"bssid":      net.BSSID,
+							"channel":    net.Channel,
+							"frequency":  net.Frequency,
+							"band":       net.Band,
+							"encryption": net.Encryption,
+							"distance_m": net.Distance,
+							"signal_pct": net.Signal,
+							"scheduled":  true,
+						},
+					}
+					_ = h.parser.IngestLog(entry)
+				}
+			}
+		}
+
+		// Broadcast to WebSocket clients
+		data, _ := json.Marshal(result)
+		h.wsMu.RLock()
+		for client := range h.wsClients {
+			if err := client.WriteMessage(websocket.TextMessage, data); err != nil {
+				client.Close()
+				delete(h.wsClients, client)
+			}
+		}
+		h.wsMu.RUnlock()
+	}
+}
+
+// WiFiDiff GET /api/v1/netintel/wifi/diff
+func (h *Handler) WiFiDiff(c *gin.Context) {
+	diff := h.wifiScanner.CompareLastTwoScans()
+	c.JSON(http.StatusOK, WiFiDiffResponse{Status: "success", Diff: diff})
 }
 
 // ========================
