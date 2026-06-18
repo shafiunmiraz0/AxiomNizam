@@ -92,6 +92,7 @@
             case 'alerts': loadAlerts(); loadAnomalies(); break;
             case 'predictions': loadPredictions(); loadTracks(); break;
             case 'parsers': loadParsers(); loadLogTypes(); break;
+            case 'wifi': loadWiFiNetworks(); break;
         }
     }
 
@@ -650,6 +651,170 @@
     }
 
     // ==================
+    // WiFi Scan
+    // ==================
+    let wifiStreamWs = null;
+    let wifiAutoScanInterval = null;
+    let wifiLastScan = null;
+
+    async function scanWiFi() {
+        const btn = document.getElementById('wifiScanBtn');
+        if (btn) { btn.disabled = true; btn.innerHTML = '<span class="ni-spin">Scanning...</span>'; }
+        const data = await postJSON(BASE + '/wifi/scan', {});
+        if (btn) { btn.disabled = false; btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-radar"><path d="M19.07 4.93A10 10 0 0 0 6.99 3.34"/><path d="M4 6h.01"/><path d="M2.29 9.62A10 10 0 1 0 21.31 8.35"/><path d="M16.24 7.76A6 6 0 1 0 8.23 16.67"/><path d="M12 18h.01"/><path d="M17.99 11.66A6 6 0 0 1 15.77 16.67"/></svg> Scan Now'; }
+        if (data && data.status === 'success' && data.result) {
+            wifiLastScan = data.result;
+            renderWiFiScanResult(data.result);
+        } else if (data && data.result && data.result.error) {
+            renderWiFiError(data.result.error);
+        }
+    }
+
+    async function loadWiFiNetworks() {
+        const data = await fetchJSON(BASE + '/wifi/networks');
+        if (data && data.status === 'success') {
+            renderWiFiNetworks(data.networks || [], data.total);
+            loadWiFiHistory();
+        }
+    }
+
+    async function loadWiFiHistory() {
+        const data = await fetchJSON(BASE + '/wifi/history');
+        if (!data || data.status !== 'success') return;
+        const el = document.getElementById('wifiHistory');
+        if (!el) return;
+        const history = data.history || [];
+        el.innerHTML = history.slice(-10).reverse().map(h => {
+            const t = new Date(h.scan_at);
+            const sec = h.duration_ms ? (h.duration_ms / 1000).toFixed(1) + 's' : '—';
+            return `<div class="ni-wifi-history-item">
+                <span>${t.toLocaleString()}</span>
+                <span>${h.total} networks</span>
+                <span>${h.interface || '—'}</span>
+                <span>${sec}</span>
+            </div>`;
+        }).join('') || '<p style="color:var(--text-secondary)">No scan history yet.</p>';
+    }
+
+    function renderWiFiScanResult(result) {
+        setText('wifiScanTime', new Date(result.scan_at).toLocaleTimeString());
+        setText('wifiScanDuration', result.duration_ms ? (result.duration_ms / 1000).toFixed(1) + 's' : '—');
+        renderWiFiNetworks(result.networks || [], result.total);
+        if (wifiLastScan && wifiLastScan._prevTotal !== undefined) {
+            showWiFiChanges(wifiLastScan, result);
+        }
+        wifiLastScan = result;
+        wifiLastScan._prevTotal = (result.networks || []).length;
+        loadWiFiHistory();
+    }
+
+    function renderWiFiNetworks(networks, total) {
+        setText('wifiTotal', total || networks.length);
+        const secured = networks.filter(n => n.encryption && n.encryption !== 'Open').length;
+        setText('wifiSecured', secured);
+        setText('wifiOpen', networks.length - secured);
+
+        const badge = document.getElementById('wifiBadge');
+        if (badge) {
+            badge.textContent = networks.length;
+            badge.style.display = networks.length > 0 ? 'inline-block' : 'none';
+        }
+
+        const body = document.getElementById('wifiTableBody');
+        if (!body) return;
+        body.innerHTML = (networks || []).map(n => {
+            const sigClass = n.signal_pct >= 70 ? 'wifi-sig-good' : n.signal_pct >= 40 ? 'wifi-sig-mid' : 'wifi-sig-low';
+            const encIcon = n.encryption && n.encryption !== 'Open' ? '🔒' : '🔓';
+            return `<tr>
+                <td><strong>${esc(n.ssid || '(Hidden)')}</strong></td>
+                <td><code>${n.bssid}</code></td>
+                <td><span class="ni-wifi-signal ${sigClass}">${n.signal_dbm} dBm (${n.signal_pct}%)</span></td>
+                <td>${n.channel}</td>
+                <td>${n.band}</td>
+                <td>${encIcon} ${n.encryption || '—'}</td>
+                <td>${n.radio || '—'}</td>
+                <td>${n.distance_m ? n.distance_m.toFixed(1) + 'm' : '—'}</td>
+            </tr>`;
+        }).join('') || '<tr><td colspan="8" style="text-align:center;color:var(--text-secondary)">No networks found. Click "Scan Now" to discover nearby WiFi.</td></tr>';
+    }
+
+    function showWiFiChanges(prev, curr) {
+        const prevSSIDs = new Set((prev.networks || []).map(n => n.ssid));
+        const currSSIDs = new Set((curr.networks || []).map(n => n.ssid));
+        const added = (curr.networks || []).filter(n => !prevSSIDs.has(n.ssid));
+        const removed = (prev.networks || []).filter(n => !currSSIDs.has(n.ssid));
+        const el = document.getElementById('wifiChanges');
+        const badge = document.getElementById('wifiChangeBadge');
+        if (!el) return;
+
+        if (added.length === 0 && removed.length === 0) {
+            el.innerHTML = '<p style="color:var(--text-secondary);font-size:0.85rem">No changes detected.</p>';
+            if (badge) badge.style.display = 'none';
+            return;
+        }
+
+        if (badge) {
+            badge.textContent = `${added.length} new, ${removed.length} removed`;
+            badge.style.display = 'inline-block';
+        }
+
+        let html = '';
+        if (added.length > 0) {
+            html += added.map(n => `<div class="ni-wifi-change ni-wifi-added">+ ${esc(n.ssid || '(Hidden)')} (${n.bssid}) — ${n.signal_dbm} dBm</div>`).join('');
+        }
+        if (removed.length > 0) {
+            html += removed.map(n => `<div class="ni-wifi-change ni-wifi-removed">- ${esc(n.ssid || '(Hidden)')} (${n.bssid})</div>`).join('');
+        }
+        el.innerHTML = html;
+    }
+
+    function renderWiFiError(msg) {
+        const body = document.getElementById('wifiTableBody');
+        if (body) {
+            body.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--danger-color)">
+                Scan failed: ${esc(msg)}. Ensure WiFi adapter is available.
+            </td></tr>`;
+        }
+    }
+
+    function toggleWiFiStream() {
+        if (wifiStreamWs) {
+            wifiStreamWs.close();
+            wifiStreamWs = null;
+            document.getElementById('wifiStreamIndicator').style.display = 'none';
+            document.getElementById('wifiStreamBtn').classList.remove('ni-btn-active');
+        } else {
+            const wsProto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = wsProto + '//' + location.host + '/api/v1/netintel/wifi/stream';
+            wifiStreamWs = new WebSocket(wsUrl);
+            wifiStreamWs.onmessage = function(evt) {
+                try {
+                    const data = JSON.parse(evt.data);
+                    if (data.networks) renderWiFiScanResult(data);
+                } catch(e) {}
+            };
+            wifiStreamWs.onclose = function() {
+                document.getElementById('wifiStreamIndicator').style.display = 'none';
+                document.getElementById('wifiStreamBtn').classList.remove('ni-btn-active');
+                wifiStreamWs = null;
+            };
+            document.getElementById('wifiStreamIndicator').style.display = 'flex';
+            document.getElementById('wifiStreamBtn').classList.add('ni-btn-active');
+        }
+    }
+
+    function toggleAutoScan() {
+        if (wifiAutoScanInterval) {
+            clearInterval(wifiAutoScanInterval);
+            wifiAutoScanInterval = null;
+        }
+        if (document.getElementById('wifiAutoScan').checked) {
+            wifiAutoScanInterval = setInterval(scanWiFi, 30000);
+            scanWiFi();
+        }
+    }
+
+    // ==================
     // Chart Helpers
     // ==================
     function renderDoughnut(canvasId, dataMap) {
@@ -779,7 +944,9 @@
         loadAlerts, loadAnomalies, loadPredictions,
         loadParsers, showCreateParser, closeParserModal,
         createParser, updateParser, deleteParser,
-        ackAlert, resolveAlert, ackAnomaly, resolveAnomaly
+        ackAlert, resolveAlert, ackAnomaly, resolveAnomaly,
+        scanWiFi, loadWiFiNetworks, loadWiFiHistory,
+        toggleWiFiStream, toggleAutoScan
     };
 
     // Auto-load overview on page load
@@ -787,6 +954,11 @@
         if (document.querySelector('.netintel-container')) {
             loadOverview();
             loadLogTypes(); // populate dropdowns
+            // Handle hash-based tab switching from sidebar
+            var hash = window.location.hash.replace('#', '');
+            if (hash && document.getElementById('panel-' + hash)) {
+                switchTab(hash);
+            }
         }
     });
 })();
