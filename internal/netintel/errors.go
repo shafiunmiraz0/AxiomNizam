@@ -35,6 +35,15 @@ var (
 
 	// ErrEngineStopped is returned when operations are attempted on a stopped engine.
 	ErrEngineStopped = errors.New("netintel: engine stopped")
+
+	// ErrWiFiScanFailed is returned when the OS-level WiFi scan command fails.
+	ErrWiFiScanFailed = errors.New("netintel: WiFi scan failed")
+
+	// ErrWiFiNotSupported is returned when WiFi scanning is not supported on the current platform.
+	ErrWiFiNotSupported = errors.New("netintel: WiFi scanning not supported on this platform")
+
+	// ErrWiFiInterfaceNotFound is returned when no wireless interface is detected.
+	ErrWiFiInterfaceNotFound = errors.New("netintel: no wireless interface found")
 )
 
 // ParserError wraps a parser operation failure with context.

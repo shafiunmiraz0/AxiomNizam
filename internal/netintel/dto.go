@@ -132,6 +132,28 @@ type AuditLogResponse struct {
 	Count  int         `json:"count"`
 }
 
+// --- WiFi Scan Response DTOs ---
+
+// WiFiScanResponse is the response for a WiFi scan trigger.
+type WiFiScanResponse struct {
+	Status string      `json:"status"`
+	Result interface{} `json:"result"`
+}
+
+// WiFiNetworksResponse is the response for listing cached WiFi networks.
+type WiFiNetworksResponse struct {
+	Status   string      `json:"status"`
+	Networks interface{} `json:"networks"`
+	Total    int         `json:"total"`
+}
+
+// WiFiHistoryResponse is the response for WiFi scan history.
+type WiFiHistoryResponse struct {
+	Status  string      `json:"status"`
+	History interface{} `json:"history"`
+	Total   int         `json:"total"`
+}
+
 // --- Modes Response DTOs ---
 
 // ModesListResponse is the modes list response.

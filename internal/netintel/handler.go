@@ -1,6 +1,7 @@
 package netintel
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -18,11 +19,12 @@ import (
 // ===================================================
 
 type Handler struct {
-	parser    *ParserEngine
-	analytics *AnalyticsEngine
-	topology  *TopologyEngine
-	metrics   *nmetrics.MetricsCollector
-	auditLog  *audit.Logger
+	parser      *ParserEngine
+	analytics   *AnalyticsEngine
+	topology    *TopologyEngine
+	metrics     *nmetrics.MetricsCollector
+	auditLog    *audit.Logger
+	wifiScanner *WiFiScanner
 }
 
 func NewHandler() *Handler {
@@ -30,22 +32,24 @@ func NewHandler() *Handler {
 	analytics := NewAnalyticsEngine(parser)
 	topo := NewTopologyEngine()
 	return &Handler{
-		parser:    parser,
-		analytics: analytics,
-		topology:  topo,
-		metrics:   nmetrics.Collector,
-		auditLog:  nil,
+		parser:      parser,
+		analytics:   analytics,
+		topology:    topo,
+		metrics:     nmetrics.Collector,
+		auditLog:    nil,
+		wifiScanner: NewWiFiScanner(),
 	}
 }
 
 // NewHandlerWithDeps creates a handler with injected dependencies.
 func NewHandlerWithDeps(parser *ParserEngine, analytics *AnalyticsEngine, topo *TopologyEngine, metrics *nmetrics.MetricsCollector, auditLog *audit.Logger) *Handler {
 	return &Handler{
-		parser:    parser,
-		analytics: analytics,
-		topology:  topo,
-		metrics:   metrics,
-		auditLog:  auditLog,
+		parser:      parser,
+		analytics:   analytics,
+		topology:    topo,
+		metrics:     metrics,
+		auditLog:    auditLog,
+		wifiScanner: NewWiFiScanner(),
 	}
 }
 
@@ -101,6 +105,11 @@ func (h *Handler) RegisterRoutes(group *gin.RouterGroup) {
 	// Forecasts
 	group.GET("/forecasts", h.ListForecasts)
 	group.GET("/forecasts/:metric", h.GetForecast)
+
+	// WiFi Scan
+	group.POST("/wifi/scan", h.ScanWiFi)
+	group.GET("/wifi/networks", h.ListWiFiNetworks)
+	group.GET("/wifi/history", h.WiFiScanHistory)
 
 	// Health / Metrics / Audit
 	group.GET("/health", h.Health)
@@ -480,6 +489,94 @@ func (h *Handler) GetForecast(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, ForecastResponse{Status: "success", Forecast: forecast})
+}
+
+// ========================
+// WiFi Scan
+// ========================
+
+// ScanWiFi POST /api/v1/netintel/wifi/scan
+func (h *Handler) ScanWiFi(c *gin.Context) {
+	result, err := h.wifiScanner.Scan()
+	if err != nil {
+		if h.metrics != nil {
+			h.metrics.RecordLogEntry("wifi_scan", "error")
+		}
+		if h.auditLog != nil {
+			h.auditLog.Log(audit.SeverityError, audit.CategoryIngest, audit.ActionEntryIngested, "wifi scan failed: "+err.Error())
+		}
+		c.JSON(http.StatusInternalServerError, WiFiScanResponse{
+			Status: "error",
+			Result: result,
+		})
+		return
+	}
+
+	// Ingest scanned networks as WiFi probe entries
+	for _, net := range result.Networks {
+		if net.SSID != "" {
+			entry := ParsedEntry{
+				LogType:   LogWiFiProbe,
+				Source:    "wifi-scanner",
+				Severity:  "info",
+				Message:   fmt.Sprintf("WiFi scan: %s (%s) ch=%d signal=%ddBm", net.SSID, net.BSSID, net.Channel, net.SignalDBM),
+				DeviceMAC: net.BSSID,
+				SSID:      net.SSID,
+				Signal:    net.SignalDBM,
+				Fields: map[string]interface{}{
+					"bssid":      net.BSSID,
+					"channel":    net.Channel,
+					"frequency":  net.Frequency,
+					"band":       net.Band,
+					"encryption": net.Encryption,
+					"auth":       net.Auth,
+					"cipher":     net.Cipher,
+					"radio":      net.Radio,
+					"distance_m": net.Distance,
+					"signal_pct": net.Signal,
+				},
+			}
+			_ = h.parser.IngestLog(entry)
+		}
+	}
+
+	if h.metrics != nil {
+		h.metrics.RecordLogEntry("wifi_scan", "info")
+	}
+	if h.auditLog != nil {
+		h.auditLog.Log(audit.SeverityInfo, audit.CategoryIngest, audit.ActionEntryIngested,
+			fmt.Sprintf("wifi scan completed: %d networks found on %s in %dms", result.Total, result.Interface, result.DurationMs))
+	}
+
+	c.JSON(http.StatusOK, WiFiScanResponse{Status: "success", Result: result})
+}
+
+// ListWiFiNetworks GET /api/v1/netintel/wifi/networks
+func (h *Handler) ListWiFiNetworks(c *gin.Context) {
+	result := h.wifiScanner.GetLastResult()
+	if result == nil {
+		c.JSON(http.StatusOK, WiFiNetworksResponse{
+			Status:   "success",
+			Networks: []WiFiNetwork{},
+			Total:    0,
+		})
+		return
+	}
+	c.JSON(http.StatusOK, WiFiNetworksResponse{
+		Status:   "success",
+		Networks: result.Networks,
+		Total:    result.Total,
+	})
+}
+
+// WiFiScanHistory GET /api/v1/netintel/wifi/history
+func (h *Handler) WiFiScanHistory(c *gin.Context) {
+	history := h.wifiScanner.GetHistory()
+	c.JSON(http.StatusOK, WiFiHistoryResponse{
+		Status:  "success",
+		History: history,
+		Total:   len(history),
+	})
 }
 
 // ========================
